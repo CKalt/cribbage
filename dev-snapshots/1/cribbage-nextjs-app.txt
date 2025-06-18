@@ -1,0 +1,303 @@
+# Cribbage Game - Next.js Application
+
+## Project Structure
+```
+cribbage-game/
+├── package.json
+├── next.config.js
+├── tailwind.config.js
+├── postcss.config.js
+├── app/
+│   ├── layout.js
+│   ├── page.js
+│   └── globals.css
+├── components/
+│   ├── ui/
+│   │   ├── card.jsx
+│   │   └── button.jsx
+│   └── CribbageGame.jsx
+└── README.md
+```
+
+## Installation Instructions
+
+### Prerequisites
+- Node.js 18+ installed
+- npm or yarn package manager
+
+### Setup Steps
+
+1. **Create a new directory and navigate to it:**
+```bash
+mkdir cribbage-game
+cd cribbage-game
+```
+
+2. **Create package.json:**
+```bash
+npm init -y
+```
+
+3. **Install dependencies:**
+```bash
+npm install next@latest react@latest react-dom@latest
+npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
+npm install class-variance-authority clsx tailwind-merge
+```
+
+4. **Initialize Tailwind CSS:**
+```bash
+npx tailwindcss init -p
+```
+
+## File Contents
+
+### 1. package.json
+```json
+{
+  "name": "cribbage-game",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0"
+  }
+}
+```
+
+### 2. next.config.js
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+}
+
+module.exports = nextConfig
+```
+
+### 3. tailwind.config.js
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+### 4. postcss.config.js
+```javascript
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+
+### 5. app/layout.js
+```javascript
+import './globals.css'
+
+export const metadata = {
+  title: 'Cribbage Game',
+  description: 'Play Cribbage against the computer',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+### 6. app/page.js
+```javascript
+import CribbageGame from '@/components/CribbageGame'
+
+export default function Home() {
+  return <CribbageGame />
+}
+```
+
+### 7. app/globals.css
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+}
+```
+
+### 8. components/ui/card.jsx
+```javascript
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Card = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
+
+const CardContent = React.forwardRef(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
+
+export { Card, CardHeader, CardTitle, CardContent }
+```
+
+### 9. components/ui/button.jsx
+```javascript
+import * as React from "react"
+import { cva } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+const Button = React.forwardRef(({ className, variant, size, ...props }, ref) => {
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size, className }))}
+      ref={ref}
+      {...props}
+    />
+  )
+})
+Button.displayName = "Button"
+
+export { Button, buttonVariants }
+```
+
+### 10. lib/utils.js
+Create a `lib` folder in the root directory and add:
+```javascript
+import { clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs) {
+  return twMerge(clsx(inputs))
+}
+```
+
+### 11. components/CribbageGame.jsx
+[This file contains the complete game code - see the next artifact]
+
+## Build and Run Instructions
+
+### Development Mode
+```bash
+npm run dev
+```
+Visit http://localhost:3000
+
+### Production Build
+```bash
+npm run build
+npm run start
+```
+
+### Deploy to Production
+You can deploy to Vercel (recommended for Next.js):
+```bash
+npm install -g vercel
+vercel
+```
+
+Or build for static hosting:
+```bash
+npm run build
+npm run export
+```
+
+## Troubleshooting
+
+If you encounter any issues:
+
+1. **Module not found errors**: Make sure all dependencies are installed
+```bash
+rm -rf node_modules
+npm install
+```
+
+2. **Tailwind not working**: Ensure the tailwind.config.js paths are correct
+
+3. **Port already in use**: 
+```bash
+npm run dev -- -p 3001
+```
+
+## Notes
+- The game is fully responsive and works on mobile devices
+- All game state is managed client-side
+- No database or external APIs required
