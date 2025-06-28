@@ -997,7 +997,34 @@ export default function CribbageGame() {
       
       setTimeout(() => {
         addDebugLog('Proceeding to next counting phase after accept');
-        proceedToNextCountingPhase();
+        // Use the updated handsCountedThisRound value instead of closure
+        if (newHandsCountedThisRound >= 3) {
+          addDebugLog('All counting complete via setTimeout - checking for game end');
+          setCountingTurn('');
+          setCounterIsComputer(null);
+          
+          // Check for game end (this will use current scores from state)
+          setTimeout(() => {
+            setGameState(prevState => {
+              // Check scores at time of execution
+              if (playerScore >= 121 || computerScore >= 121) {
+                setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+                return 'gameOver';
+              } else {
+                setMessage('Hand complete - Dealing next hand...');
+                setTimeout(() => {
+                  setDealer(dealer === 'player' ? 'computer' : 'player');
+                  const newDeck = shuffleDeck(createDeck());
+                  setDeck(newDeck);
+                  dealHands(newDeck);
+                }, 1500);
+                return prevState;
+              }
+            });
+          }, 100);
+        } else {
+          proceedToNextCountingPhase();
+        }
       }, 1500);
     }
   };
@@ -1052,8 +1079,12 @@ export default function CribbageGame() {
     setShowBreakdown(false);
     setIsProcessingCount(false);
     
+    // Get current hands counted from state
+    const currentHandsCounted = handsCountedThisRound;
+    addDebugLog(`Current hands counted in proceedToNextCountingPhase: ${currentHandsCounted}`);
+    
     // Determine next counting turn based on handsCountedThisRound and dealer
-    if (handsCountedThisRound === 1) {
+    if (currentHandsCounted === 1) {
       // First hand counted (non-dealer), now dealer counts their hand
       if (dealer === 'player') {
         addDebugLog('Computer (non-dealer) done -> Player (dealer) counts hand');
@@ -1066,7 +1097,7 @@ export default function CribbageGame() {
         setCounterIsComputer(true);
         setMessage('Computer counts (dealer)');
       }
-    } else if (handsCountedThisRound === 2) {
+    } else if (currentHandsCounted === 2) {
       // Both hands counted, now dealer counts crib
       if (dealer === 'player') {
         addDebugLog('Player (dealer) counts crib');
@@ -1079,7 +1110,7 @@ export default function CribbageGame() {
         setCounterIsComputer(true);
         setMessage('Computer counts crib');
       }
-    } else if (handsCountedThisRound >= 3) {
+    } else if (currentHandsCounted >= 3) {
       addDebugLog('All counting complete - checking for game end');
       // IMPORTANT: Clear counting turn immediately to prevent any pending timers
       setCountingTurn('');
@@ -1099,7 +1130,7 @@ export default function CribbageGame() {
         }, 1500);
       }
     } else {
-      addDebugLog(`WARNING: Unexpected state - handsCountedThisRound: ${handsCountedThisRound}, dealer: ${dealer}`);
+      addDebugLog(`WARNING: Unexpected state - handsCountedThisRound: ${currentHandsCounted}, dealer: ${dealer}`);
     }
   };
 
