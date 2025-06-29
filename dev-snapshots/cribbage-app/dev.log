@@ -1,0 +1,16 @@
+
+> cribbage-app@0.1.0 dev
+> next dev
+
+   ▲ Next.js 14.0.4
+   - Local:        http://localhost:3000
+
+ ✓ Ready in 1262ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1287ms (444 modules)
+ ✓ Compiled in 148ms (230 modules)
+ ✓ Compiled in 101ms (230 modules)
+ ✓ Compiled in 103ms (430 modules)
+ ✓ Compiled in 66ms (230 modules)
+ ✓ Compiled in 127ms (447 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.

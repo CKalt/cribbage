@@ -1,0 +1,41 @@
+CRIBBAGE GAME - NEXT.JS APP WITH CLAUDE CODE INTEGRATION
+
+Current Status:
+- Converted Claude artifact cribbage game to standalone Next.js application
+- Located at: /Users/chris/projects/cribbage/dev-snapshots/cribbage-app
+- Running locally on http://localhost:3000 with `npm run dev`
+
+Recent Bug Fixes Applied:
+1. Fixed player counting validation to prevent counting out of turn
+2. Enhanced state management in counting phase
+3. Fixed handsCountedThisRound tracking in objectToComputerCount
+4. Resolved closure issues with state variables
+5. Added comprehensive error handling for counting phase
+
+EC2 Deployment System Created:
+- Full deployment script at: deployment/setup-ec2.sh (nginx, PM2, Node.js 18)
+- Claude Monitor system in claude-monitor/monitor.js
+- Runs in screen session to watch for bug reports
+- Feedback API endpoint at /api/feedback
+- In-game "Report Bug to Claude" button (purple, bottom-right)
+
+Approval Workflow:
+- Users report bugs through in-game button
+- Claude monitors feedback directory and creates fix proposals
+- Notifies Chris in screen session for approval
+- Commands: `npm run approve-fix <id>` or `npm run reject-fix <id>`
+- Approved fixes are automatically deployed with PM2 reload
+
+Key Files:
+- Main game: components/CribbageGame.tsx (latest bug fixes applied)
+- Feedback button: components/FeedbackButton.tsx
+- Monitor: claude-monitor/monitor.js
+- Deployment guide: EC2-DEPLOYMENT.md
+
+To Deploy to EC2:
+1. Copy app to EC2: scp -r ./cribbage-app ubuntu@ec2-ip:/home/ubuntu/
+2. SSH in and run: bash deployment/setup-ec2.sh
+3. Start monitor: npm run start-monitor
+4. Attach to monitor: screen -r claude-monitor
+
+The system enables live bug fixing where Claude can propose fixes based on user reports, but requires Chris's approval before deployment. Creates interactive development environment with direct user→Claude→Chris→deployment pipeline.
