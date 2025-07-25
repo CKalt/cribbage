@@ -361,12 +361,130 @@ export default function CribbageGame() {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [counterIsComputer, setCounterIsComputer] = useState(null);
   const [handsCountedThisRound, setHandsCountedThisRound] = useState(0);
+  const [gameLog, setGameLog] = useState([]);
+  const [showGameLog, setShowGameLog] = useState(false);
+  const [replayMode, setReplayMode] = useState(false);
+  const [replayLog, setReplayLog] = useState(null);
+  const [replayIndex, setReplayIndex] = useState(0);
 
-  // Debug logging function
+  // Enhanced logging function that logs both debug and game events
   const addDebugLog = (message) => {
     const timestamp = new Date().toLocaleTimeString();
     setDebugLog(prev => [...prev.slice(-50), `[${timestamp}] ${message}`]);
     console.log(`[${timestamp}] ${message}`);
+  };
+
+  // Game event logging function
+  const logGameEvent = (eventType, data) => {
+    const event = {
+      timestamp: new Date().toISOString(),
+      type: eventType,
+      data: data,
+      gameState: {
+        state: gameState,
+        dealer: dealer,
+        playerScore: playerScore,
+        computerScore: computerScore,
+        currentCount: currentCount,
+        currentPlayer: currentPlayer
+      }
+    };
+    setGameLog(prev => [...prev, event]);
+    
+    // Also add to debug log for immediate visibility
+    addDebugLog(`GAME EVENT: ${eventType} - ${JSON.stringify(data)}`);
+  };
+
+  // Copy game log to clipboard
+  const copyGameLog = () => {
+    const logText = JSON.stringify(gameLog, null, 2);
+    navigator.clipboard.writeText(logText).then(() => {
+      alert('Game log copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy log:', err);
+      alert('Failed to copy log. Check console for details.');
+    });
+  };
+
+  // Load replay log
+  const loadReplayLog = () => {
+    const input = prompt('Paste the game log JSON here:');
+    if (input) {
+      try {
+        const log = JSON.parse(input);
+        setReplayLog(log);
+        setReplayMode(true);
+        setReplayIndex(0);
+        alert(`Loaded replay with ${log.length} events. Click "Next Event" to replay.`);
+      } catch (err) {
+        alert('Invalid log format. Please paste a valid JSON log.');
+      }
+    }
+  };
+
+  // Process next replay event
+  const nextReplayEvent = () => {
+    if (!replayLog || replayIndex >= replayLog.length) {
+      alert('Replay complete!');
+      setReplayMode(false);
+      return;
+    }
+
+    const event = replayLog[replayIndex];
+    addDebugLog(`REPLAY: ${event.type} - ${JSON.stringify(event.data)}`);
+    
+    // Process the event based on its type
+    switch (event.type) {
+      case 'GAME_START':
+        startNewGame();
+        break;
+      case 'CUT_FOR_DEALER':
+        // Simulate the cut based on logged data
+        setPlayerCutCard(event.data.playerCard);
+        setComputerCutCard(event.data.computerCard);
+        setDealer(event.data.dealer);
+        break;
+      case 'DEAL_HANDS':
+        setPlayerHand(event.data.playerHand);
+        setComputerHand(event.data.computerHand);
+        setGameState('cribSelect');
+        break;
+      case 'DISCARD_TO_CRIB':
+        // Apply the discard action
+        setPlayerHand(event.data.playerHand);
+        setComputerHand(event.data.computerHand);
+        setCrib(event.data.crib);
+        setCutCard(event.data.cutCard);
+        setGameState('play');
+        break;
+      case 'PLAY_CARD':
+        // Simulate card play
+        if (event.data.player === 'player') {
+          playerPlay(event.data.card);
+        } else {
+          // Simulate computer play
+          setComputerPlayHand(prev => prev.filter(c => !(c.rank === event.data.card.rank && c.suit === event.data.card.suit)));
+          setComputerPlayedCards(prev => [...prev, event.data.card]);
+          setAllPlayedCards(prev => [...prev, event.data.card]);
+          setCurrentCount(event.data.newCount);
+          setLastPlayedBy('computer');
+        }
+        break;
+      case 'PLAYER_GO':
+      case 'COMPUTER_GO':
+        setLastGoPlayer(event.data.player);
+        break;
+      case 'SCORE_POINTS':
+        if (event.data.player === 'player') {
+          setPlayerScore(prev => prev + event.data.points);
+        } else {
+          setComputerScore(prev => prev + event.data.points);
+        }
+        break;
+      // Add more event types as needed
+    }
+    
+    setReplayIndex(prev => prev + 1);
   };
 
   // Move to counting phase
@@ -398,6 +516,12 @@ export default function CribbageGame() {
     setPlayerCutCard(null);
     setComputerCutCard(null);
     setMessage('Cut the deck to determine dealer (low card deals)');
+    
+    // Log game start
+    logGameEvent('GAME_START', { 
+      deckSize: newDeck.length,
+      timestamp: new Date().toISOString()
+    });
   };
 
   // Player cuts the deck
@@ -428,14 +552,33 @@ export default function CribbageGame() {
         if (playerRank < computerRank) {
           setDealer('player');
           setMessage('You cut lower - you deal first!');
+          logGameEvent('CUT_FOR_DEALER', {
+            playerCard: card,
+            computerCard: compCard,
+            dealer: 'player',
+            playerRank: playerRank,
+            computerRank: computerRank
+          });
         } else if (computerRank < playerRank) {
           setDealer('computer');
           setMessage('Computer cut lower - computer deals first');
+          logGameEvent('CUT_FOR_DEALER', {
+            playerCard: card,
+            computerCard: compCard,
+            dealer: 'computer',
+            playerRank: playerRank,
+            computerRank: computerRank
+          });
         } else {
           // Tie - cut again
           setMessage('Same rank! Cut again');
           setPlayerCutCard(null);
           setComputerCutCard(null);
+          logGameEvent('CUT_FOR_DEALER_TIE', {
+            playerCard: card,
+            computerCard: compCard,
+            rank: playerRank
+          });
           return;
         }
         
@@ -475,6 +618,13 @@ export default function CribbageGame() {
     setLastGoPlayer(null);
     setGameState('cribSelect');
     setMessage('Select 2 cards for the crib');
+    
+    // Log the deal
+    logGameEvent('DEAL_HANDS', {
+      playerHand: playerCards,
+      computerHand: computerCards.map(c => ({ rank: c.rank, suit: c.suit })), // Log computer cards for replay
+      dealer: dealer
+    });
   };
 
   // Handle card selection for crib
@@ -553,6 +703,16 @@ export default function CribbageGame() {
     setLastPlayedBy(null);
     setLastGoPlayer(null);
     
+    // Log the crib discard
+    logGameEvent('DISCARD_TO_CRIB', {
+      playerDiscards: selectedCards,
+      computerDiscards: computerDiscards,
+      crib: newCrib,
+      cutCard: cut,
+      playerHand: newPlayerHand,
+      computerHand: newComputerHand
+    });
+    
     // Check for his heels (Jack as cut card)
     if (cut.rank === 'J') {
       setGameState('play'); // Go to play state first
@@ -583,6 +743,15 @@ export default function CribbageGame() {
     } else {
       setComputerScore(prev => prev + pendingScore.points);
     }
+    
+    // Log the score
+    logGameEvent('SCORE_POINTS', {
+      player: pendingScore.player,
+      points: pendingScore.points,
+      reason: pendingScore.reason,
+      newPlayerScore: pendingScore.player === 'player' ? playerScore + pendingScore.points : playerScore,
+      newComputerScore: pendingScore.player === 'computer' ? computerScore + pendingScore.points : computerScore
+    });
     
     const scoringPlayer = pendingScore.player;
     const wasGoPoint = pendingScore.reason === 'One for last card';
@@ -670,6 +839,16 @@ export default function CribbageGame() {
           setCurrentCount(newCount);
           setLastPlayedBy('computer');
           
+          // Log computer's play
+          logGameEvent('PLAY_CARD', {
+            player: 'computer',
+            card: card,
+            newCount: newCount,
+            score: score,
+            reason: reason,
+            remainingCards: newComputerPlayHand.length
+          });
+          
           // Check if this was computer's last card
           const isLastCard = newComputerPlayHand.length === 0;
           const playerOutOfCards = playerPlayHand.length === 0;
@@ -714,8 +893,30 @@ export default function CribbageGame() {
           setMessage('Computer says "Go"');
           setLastGoPlayer('computer'); // Track who said go
           
-          // Now it's player's turn to either play or claim the point
-          setCurrentPlayer('player');
+          // Log computer's go
+          logGameEvent('COMPUTER_GO', {
+            player: 'computer',
+            currentCount: currentCount,
+            remainingCards: computerPlayHand.length
+          });
+          
+          // Check if player can still play
+          const playerCanStillPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
+          
+          if (playerCanStillPlay) {
+            // Player can still play, so it remains their turn
+            setCurrentPlayer('player');
+            setMessage('Computer says "Go" - You can still play');
+          } else {
+            // Player also can't play - whoever played last gets the point
+            if (lastPlayedBy === 'player') {
+              setPendingScore({ player: 'player', points: 1, reason: 'One for last card' });
+              setMessage('Computer says "Go" - You get 1 point for last card - Click Accept');
+            } else if (lastPlayedBy === 'computer') {
+              setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
+              setMessage('Computer says "Go" and gets 1 point for last card - Click Accept');
+            }
+          }
         }
       }, 1500);
       
@@ -741,6 +942,16 @@ export default function CribbageGame() {
     setAllPlayedCards(newAllPlayed);
     setCurrentCount(newCount);
     setLastPlayedBy('player');
+    
+    // Log the play
+    logGameEvent('PLAY_CARD', {
+      player: 'player',
+      card: card,
+      newCount: newCount,
+      score: score,
+      reason: reason,
+      remainingCards: newPlayerPlayHand.length
+    });
     
     // Check if this was player's last card
     const isLastCard = newPlayerPlayHand.length === 0;
@@ -777,6 +988,14 @@ export default function CribbageGame() {
     if (currentPlayer !== 'player' || pendingScore) return;
     
     setMessage('You say "Go"');
+    setLastGoPlayer('player'); // Track that player said go
+    
+    // Log the go
+    logGameEvent('PLAYER_GO', {
+      player: 'player',
+      currentCount: currentCount,
+      remainingCards: playerPlayHand.length
+    });
     
     // Check if computer can still play
     const computerCanPlay = computerPlayHand.some(card => currentCount + card.value <= 31);
@@ -838,13 +1057,17 @@ export default function CribbageGame() {
       hand = playerHand;
       handType = 'hand';
       addDebugLog('Player counting as non-dealer (hand)');
+    } else if (handsCountedThisRound === 0 && dealer === 'player') {
+      // This should never happen - computer counts first when player is dealer
+      addDebugLog('ERROR: Player trying to count when they should not (player is dealer, computer should count first)');
+      return;
     } else if (handsCountedThisRound === 1 && dealer === 'player') {
       // Player is dealer, counting their hand (second)
       hand = playerHand;
       handType = 'hand';
       addDebugLog('Player counting as dealer (hand)');
     } else if (handsCountedThisRound === 2 && dealer === 'player') {
-      // Player is dealer, counting the crib
+      // Player is dealer, counting the crib (third)
       hand = crib;
       handType = 'crib';
       addDebugLog('Player counting as dealer (crib)');
@@ -855,6 +1078,15 @@ export default function CribbageGame() {
     
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
     setActualScore({ score, breakdown });
+    
+    // Log the counting event
+    logGameEvent('PLAYER_COUNT', {
+      handType: handType,
+      claimed: claimed,
+      actual: score,
+      hand: hand,
+      handsCountedThisRound: handsCountedThisRound
+    });
     
     if (claimed === score) {
       setMessage(`Correct! ${score} points`);
@@ -876,14 +1108,24 @@ export default function CribbageGame() {
     addDebugLog(`Player count complete. Hands counted now: ${newHandsCountedThisRound}`);
     
     // After player counts, determine next turn
-    if (newHandsCountedThisRound === 1) {
-      // First hand counted, now it's dealer's turn (either computer or player)
-      setCounterIsComputer(dealer === 'computer');
-      addDebugLog(`After first count, switching to dealer. counterIsComputer: ${dealer === 'computer'}`);
+    if (newHandsCountedThisRound === 1 && dealer === 'computer') {
+      // Player (non-dealer) just counted, now computer (dealer) counts hand
+      setCounterIsComputer(true);
+      setCountingTurn('computer');
+      addDebugLog(`After first count, switching to computer dealer. counterIsComputer: true`);
+    } else if (newHandsCountedThisRound === 1 && dealer === 'player') {
+      // This should never happen - computer should count first when player is dealer
+      addDebugLog('ERROR: Unexpected state - player counted first but player is dealer');
     } else if (newHandsCountedThisRound === 2 && dealer === 'player') {
-      // Player is dealer and needs to count crib
+      // Player (dealer) just counted hand, now counts crib
       setCounterIsComputer(false);
+      setCountingTurn('crib');
       addDebugLog('Player (dealer) will count crib next');
+    } else if (newHandsCountedThisRound === 2 && dealer === 'computer') {
+      // Computer (dealer) just counted hand, now counts crib
+      setCounterIsComputer(true);
+      setCountingTurn('crib');
+      addDebugLog('Computer (dealer) will count crib next');
     } else {
       addDebugLog(`All counting complete. Hands counted: ${newHandsCountedThisRound}`);
     }
@@ -892,7 +1134,35 @@ export default function CribbageGame() {
     setTimeout(() => {
       setShowBreakdown(false);
       setActualScore(null);
-      proceedToNextCountingPhase();
+      // Use the updated handsCountedThisRound value instead of closure
+      if (newHandsCountedThisRound >= 3) {
+        addDebugLog('All counting complete via setTimeout - checking for game end');
+        setCountingTurn('');
+        setCounterIsComputer(null);
+        
+        // Check for game end (this will use current scores from state)
+        setTimeout(() => {
+          setGameState(prevState => {
+            // Check scores at time of execution
+            if (playerScore >= 121 || computerScore >= 121) {
+              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+              return 'gameOver';
+            } else {
+              setMessage('Hand complete - Dealing next hand...');
+              setTimeout(() => {
+                setDealer(dealer === 'player' ? 'computer' : 'player');
+                const newDeck = shuffleDeck(createDeck());
+                setDeck(newDeck);
+                dealHands(newDeck);
+              }, 1500);
+              return prevState;
+            }
+          });
+        }, 100);
+      } else {
+        addDebugLog(`Player setTimeout calling proceedToNextCountingPhase with newHandsCountedThisRound: ${newHandsCountedThisRound}`);
+        proceedToNextCountingPhase();
+      }
     }, claimed === score ? 2500 : (claimed > score ? 3000 : 2000));
   };
 
@@ -1037,34 +1307,117 @@ export default function CribbageGame() {
       setMessage(`Good catch! Muggins! Computer overcounted - claimed ${computerClaimedScore} but actual score is ${score}. Computer gets 0 points!`);
       setShowBreakdown(true);
       // Computer gets NO points for overcounting
+      
+      // Increment hands counted here too
+      const newHandsCountedThisRound = handsCountedThisRound + 1;
+      setHandsCountedThisRound(newHandsCountedThisRound);
+      addDebugLog(`Computer overcount caught. Hands counted now: ${newHandsCountedThisRound}`);
+      
       setTimeout(() => {
         setShowBreakdown(false);
         setActualScore(null);
         setComputerClaimedScore(0);
         setIsProcessingCount(false); // Reset the flag
-        proceedToNextCountingPhase();
+        
+        // Use the updated value instead of closure
+        if (newHandsCountedThisRound >= 3) {
+          addDebugLog('All counting complete after muggins - checking for game end');
+          setCountingTurn('');
+          setCounterIsComputer(null);
+          
+          setTimeout(() => {
+            if (playerScore >= 121 || computerScore >= 121) {
+              setGameState('gameOver');
+              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+            } else {
+              setMessage('Hand complete - Dealing next hand...');
+              setTimeout(() => {
+                setDealer(dealer === 'player' ? 'computer' : 'player');
+                const newDeck = shuffleDeck(createDeck());
+                setDeck(newDeck);
+                dealHands(newDeck);
+              }, 1500);
+            }
+          }, 100);
+        } else {
+          proceedToNextCountingPhase();
+        }
       }, 4000); // Give player time to enjoy their successful muggins call
     } else if (computerClaimedScore === score) {
       // Computer's count was correct
       setMessage(`Computer's count was correct. They get ${computerClaimedScore} points.`);
       setComputerScore(prev => prev + computerClaimedScore);
+      
+      // Increment hands counted here too
+      const newHandsCountedThisRound = handsCountedThisRound + 1;
+      setHandsCountedThisRound(newHandsCountedThisRound);
+      
       setTimeout(() => {
         setActualScore(null);
         setComputerClaimedScore(0);
         setIsProcessingCount(false); // Reset the flag
-        proceedToNextCountingPhase();
+        
+        if (newHandsCountedThisRound >= 3) {
+          addDebugLog('All counting complete after correct count - checking for game end');
+          setCountingTurn('');
+          setCounterIsComputer(null);
+          
+          setTimeout(() => {
+            if (playerScore >= 121 || computerScore >= 121) {
+              setGameState('gameOver');
+              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+            } else {
+              setMessage('Hand complete - Dealing next hand...');
+              setTimeout(() => {
+                setDealer(dealer === 'player' ? 'computer' : 'player');
+                const newDeck = shuffleDeck(createDeck());
+                setDeck(newDeck);
+                dealHands(newDeck);
+              }, 1500);
+            }
+          }, 100);
+        } else {
+          proceedToNextCountingPhase();
+        }
       }, 2000);
     } else {
       // Computer undercounted - they still get what they claimed
       setMessage(`Computer undercounted! They claimed ${computerClaimedScore} but could have had ${score}. They get ${computerClaimedScore} points.`);
       setComputerScore(prev => prev + computerClaimedScore);
       setShowBreakdown(true);
+      
+      // Increment hands counted here too
+      const newHandsCountedThisRound = handsCountedThisRound + 1;
+      setHandsCountedThisRound(newHandsCountedThisRound);
+      
       setTimeout(() => {
         setShowBreakdown(false);
         setActualScore(null);
         setComputerClaimedScore(0);
         setIsProcessingCount(false); // Reset the flag
-        proceedToNextCountingPhase();
+        
+        if (newHandsCountedThisRound >= 3) {
+          addDebugLog('All counting complete after undercount - checking for game end');
+          setCountingTurn('');
+          setCounterIsComputer(null);
+          
+          setTimeout(() => {
+            if (playerScore >= 121 || computerScore >= 121) {
+              setGameState('gameOver');
+              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+            } else {
+              setMessage('Hand complete - Dealing next hand...');
+              setTimeout(() => {
+                setDealer(dealer === 'player' ? 'computer' : 'player');
+                const newDeck = shuffleDeck(createDeck());
+                setDeck(newDeck);
+                dealHands(newDeck);
+              }, 1500);
+            }
+          }, 100);
+        } else {
+          proceedToNextCountingPhase();
+        }
       }, 3000);
     }
   };
@@ -1358,7 +1711,8 @@ export default function CribbageGame() {
                 </div>
                 
                 {/* Crib display during counting */}
-                {gameState === 'counting' && (countingTurn === 'crib' || (actualScore && computerClaimedScore >= 0)) && (
+                {gameState === 'counting' && ((countingTurn === 'crib' && handsCountedThisRound === 2) || 
+                 (actualScore && computerClaimedScore > 0 && handsCountedThisRound === 2 && dealer === 'computer')) && (
                   <div className="mb-6">
                     <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
                     <div className="flex flex-wrap gap-2">
@@ -1430,6 +1784,7 @@ export default function CribbageGame() {
                 {/* Action buttons for play phase */}
                 {gameState === 'play' && currentPlayer === 'player' && !pendingScore && (
                   <div className="text-center space-x-2">
+                    {/* Show Go button when count is above 21 and player has cards */}
                     {playerPlayHand.length > 0 && currentCount >= 21 && (
                       <Button onClick={playerGo} className="bg-red-600 hover:bg-red-700">
                         Go
@@ -1451,14 +1806,47 @@ export default function CribbageGame() {
                     </Button>
                   </div>
                 )}
+                
                 {/* Debug Log Toggle Button */}
-                <div className="text-center mt-4">
+                <div className="text-center mt-4 space-x-2">
                   <Button 
                     onClick={() => setShowDebugLog(!showDebugLog)} 
                     className="bg-gray-600 hover:bg-gray-700 text-sm"
                   >
                     {showDebugLog ? 'Hide' : 'Show'} Debug Log
                   </Button>
+                  
+                  <Button 
+                    onClick={() => setShowGameLog(!showGameLog)} 
+                    className="bg-purple-600 hover:bg-purple-700 text-sm"
+                  >
+                    {showGameLog ? 'Hide' : 'Show'} Game Log
+                  </Button>
+                  
+                  {gameLog.length > 0 && (
+                    <Button 
+                      onClick={copyGameLog} 
+                      className="bg-blue-600 hover:bg-blue-700 text-sm"
+                    >
+                      Copy Game Log
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    onClick={loadReplayLog} 
+                    className="bg-green-600 hover:bg-green-700 text-sm"
+                  >
+                    Load Replay
+                  </Button>
+                  
+                  {replayMode && (
+                    <Button 
+                      onClick={nextReplayEvent} 
+                      className="bg-yellow-600 hover:bg-yellow-700 text-sm"
+                    >
+                      Next Event ({replayIndex}/{replayLog?.length || 0})
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Debug Log Display */}
@@ -1467,6 +1855,19 @@ export default function CribbageGame() {
                     <div className="text-yellow-400 mb-1">Debug Log:</div>
                     {debugLog.slice(-10).map((log, idx) => (
                       <div key={idx} className="text-gray-300">{log}</div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Game Log Display */}
+                {showGameLog && gameLog.length > 0 && (
+                  <div className="mt-4 p-2 bg-purple-900 rounded text-xs font-mono max-h-60 overflow-y-auto">
+                    <div className="text-yellow-400 mb-1">Game Event Log ({gameLog.length} events):</div>
+                    {gameLog.slice(-20).map((event, idx) => (
+                      <div key={idx} className="text-gray-300 mb-2">
+                        <div className="text-green-400">[{new Date(event.timestamp).toLocaleTimeString()}] {event.type}</div>
+                        <div className="ml-4">{JSON.stringify(event.data, null, 2)}</div>
+                      </div>
                     ))}
                   </div>
                 )}
