@@ -7,11 +7,11 @@
 - [x] [1.2: Review generated project structure 🤖](#step-12-review-generated-project-structure-🤖)
 - [x] [1.3: Clean up default Next.js files 🤖](#step-13-clean-up-default-nextjs-files-🤖)
 
-### Phase 2: Extract Game Logic into Utilities
-- [ ] [2.1: Create types and interfaces file 🤖](#step-21-create-types-and-interfaces-file-🤖)
-- [ ] [2.2: Create card utilities module 🤖](#step-22-create-card-utilities-module-🤖)
-- [ ] [2.3: Create scoring utilities module 🤖](#step-23-create-scoring-utilities-module-🤖)
-- [ ] [2.4: Create game state types and constants 🤖](#step-24-create-game-state-types-and-constants-🤖)
+### Phase 2: Extract Game Logic into Utilities ✅
+- [x] [2.1: Create types and interfaces file 🤖](#step-21-create-types-and-interfaces-file-🤖)
+- [x] [2.2: Create card utilities module 🤖](#step-22-create-card-utilities-module-🤖)
+- [x] [2.3: Create scoring utilities module 🤖](#step-23-create-scoring-utilities-module-🤖)
+- [x] [2.4: Create game state types and constants 🤖](#step-24-create-game-state-types-and-constants-🤖)
 
 ### Phase 3: Create Game State Management
 - [ ] [3.1: Create game context provider 🤖](#step-31-create-game-context-provider-🤖)
@@ -223,6 +223,26 @@ Define game constants and additional helper types.
 **Expected Output:**
 - Centralized game configuration
 - Easy to modify game rules
+
+**Actual Implementation:**
+- ✅ Created `src/types/game.ts` with all type definitions:
+  - `Card`, `GamePhase`, `Player`, `PeggingPlay`, `GameState` interfaces
+- ✅ Created `src/lib/cardUtils.ts` with card utility functions:
+  - `createDeck()`, `shuffleDeck()`, `getCardValue()`, `getRankValue()`
+  - `isRun()`, `getCombinations()` (helper functions)
+- ✅ Created `src/lib/scoringUtils.ts` with scoring logic:
+  - `scorePegging()` - scores points during pegging phase
+  - `scoreHand()` - scores a complete hand with starter
+  - `count15s()`, `countPairs()`, `countRuns()` - scoring helpers
+- ✅ Created `src/lib/constants.ts` with game constants:
+  - `SUITS`, `RANKS`, `WINNING_SCORE`, `MAX_PEGGING_COUNT`
+  - `CARDS_PER_HAND`, `CARDS_TO_KEEP`, `CARDS_TO_DISCARD`
+  - `INITIAL_GAME_STATE` - complete initial state object
+- ✅ Moved original `cribbage-game.tsx` to `reference/` directory
+- ✅ Updated `tsconfig.json` to exclude `reference/` from compilation
+- ✅ Verified TypeScript compilation with `npm run build` - all files compile successfully
+
+**Phase 2 Status: ✅ COMPLETE**
 
 ---
 
