@@ -246,7 +246,7 @@ export const startPegging = (
   const firstPlayer = gameState.dealer === 'player' ? 'computer' : 'player';
   setters.setPeggingTurn(firstPlayer);
   setters.setGamePhase('pegging');
-  setters.setMessage(firstPlayer === 'player' ? 'Your turn to peg' : 'Computer is pegging...');
+  setters.setMessage(firstPlayer === 'player' ? 'Your turn! Select a card to play for pegging' : 'Computer is pegging...');
 
   if (firstPlayer === 'computer' && onComputerPeg) {
     setTimeout(() => onComputerPeg(), 1000);
@@ -424,6 +424,8 @@ export const computerPeg = (
           setters.setPeggingTurn(nextPlayer);
           if (nextPlayer === 'computer' && onComputerPeg) {
             setTimeout(() => onComputerPeg(), 1000);
+          } else if (nextPlayer === 'player') {
+            setters.setMessage('Your turn! Select a card to play');
           }
         }
       }, 1500);
@@ -431,6 +433,7 @@ export const computerPeg = (
     }
 
     setters.setPeggingTurn('player');
+    setters.setMessage('Computer says "Go". Your turn! Select a card to play');
     return;
   }
 
@@ -470,6 +473,8 @@ export const computerPeg = (
         setters.setPeggingTurn(nextPlayer);
         if (nextPlayer === 'computer' && onComputerPeg) {
           setTimeout(() => onComputerPeg(), 1000);
+        } else if (nextPlayer === 'player') {
+          setters.setMessage('Your turn! Select a card to play');
         }
       }
     }, 1500);
@@ -491,6 +496,10 @@ export const computerPeg = (
   }
 
   setters.setPeggingTurn('player');
+  // Update message to prompt player after a short delay
+  setTimeout(() => {
+    setters.setMessage('Your turn! Select a card to play');
+  }, 1000);
 };
 
 /**

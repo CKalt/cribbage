@@ -69,7 +69,7 @@ export default function GameControls({
         </button>
       )}
 
-      {gamePhase === 'cut-starter' && (
+      {gamePhase === 'cut-starter' && !starterCard && (
         <button
           onClick={onCutStarter}
           className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-lg font-bold text-lg shadow-lg transition-all"
@@ -111,6 +111,16 @@ export default function GameControls({
           className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold text-lg shadow-lg transition-all"
         >
           New Game
+        </button>
+      )}
+
+      {/* Restart button - always available */}
+      {gamePhase !== 'initial' && gamePhase !== 'game-over' && (
+        <button
+          onClick={onNewGame}
+          className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold text-sm shadow-lg transition-all border-2 border-gray-800"
+        >
+          🔄 Restart Game
         </button>
       )}
     </div>
