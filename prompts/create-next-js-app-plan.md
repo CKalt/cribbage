@@ -27,13 +27,13 @@
 - [x] [4.6: Create MessageDisplay component 🤖](#step-46-create-messagedisplay-component-🤖)
 - [x] [4.7: Create CuttingDeck component 🤖](#step-47-create-cuttingdeck-component-🤖)
 
-### Phase 5: Main Page Integration
-- [ ] [5.1: Create main game page component 🤖](#step-51-create-main-game-page-component-🤖)
-- [ ] [5.2: Integrate all components in main page 🤖](#step-52-integrate-all-components-in-main-page-🤖)
-- [ ] [5.3: Configure layout and metadata 🤖](#step-53-configure-layout-and-metadata-🤖)
+### Phase 5: Main Page Integration ✅
+- [x] [5.1: Create main game page component 🤖](#step-51-create-main-game-page-component-🤖)
+- [x] [5.2: Integrate all components in main page 🤖](#step-52-integrate-all-components-in-main-page-🤖)
+- [x] [5.3: Configure layout and metadata 🤖](#step-53-configure-layout-and-metadata-🤖)
 
 ### Phase 6: Testing and Verification
-- [ ] [6.1: Run development server 🤖](#step-61-run-development-server-🤖)
+- [x] [6.1: Run development server 🤖](#step-61-run-development-server-🤖)
 - [ ] [6.2: Test all game phases 👤](#step-62-test-all-game-phases-👤)
 - [ ] [6.3: Fix any issues found during testing 🤖](#step-63-fix-any-issues-found-during-testing-🤖)
 
@@ -537,6 +537,38 @@ Configure the app layout and metadata for proper display.
 - Proper page metadata
 - Correct styling application
 
+**Actual Implementation - Phase 5 Summary:**
+- ✅ Updated `src/app/page.tsx` (130 lines)
+  * Marked as 'use client' for client-side interactivity
+  * Imported all 7 components and context/hooks
+  * Uses useGameContext() to access game state
+  * Uses useGameActions() to access all game actions
+  * Destructured all needed state values from context
+  * Integrated all components with proper conditional rendering:
+    - CribbageBoard with scores always visible
+    - MessageDisplay always visible
+    - CuttingDeck shown during cutting phases
+    - Starter card shown when available
+    - PeggingArea shown during pegging phase
+    - Computer's hand (hidden) shown after cutting
+    - Player's hand with conditional selection/interaction
+    - Crib shown during counting phase
+    - GameControls with all action handlers wired up
+
+- ✅ Updated `src/app/layout.tsx` (35 lines)
+  * Imported GameProvider from contexts
+  * Wrapped children with GameProvider
+  * Metadata already configured: "Cribbage Game"
+  * Geist fonts configured and applied
+  * Tailwind CSS globals.css imported
+
+**Phase 5 Status: ✅ COMPLETE**
+- All components integrated into main page
+- Game state management fully wired up
+- All game actions connected to UI
+- Build succeeds with no errors
+- Application ready for testing
+
 ---
 
 ## Phase 6: Testing and Verification
@@ -553,6 +585,13 @@ Start the Next.js development server and verify it runs without errors.
 **Expected Output:**
 - Dev server running
 - No TypeScript or build errors
+
+**Actual Results:**
+- ✅ Dev server started successfully on http://localhost:3000
+- ✅ No TypeScript compilation errors
+- ✅ No build errors
+- ✅ Application ready for testing
+- ⚠️ Warning about workspace root (non-critical, due to parent directory lockfile)
 
 ---
 
