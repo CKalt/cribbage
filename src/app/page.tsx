@@ -13,6 +13,7 @@ import Card from '@/components/Card';
 import PeggingArea from '@/components/PeggingArea';
 import Hand from '@/components/Hand';
 import GameControls from '@/components/GameControls';
+import CopyLogButton from '@/components/CopyLogButton';
 
 export default function Home() {
   const context = useGameContext();
@@ -124,6 +125,11 @@ export default function Home() {
         onNextRound={actions.nextRound}
         onNewGame={actions.newGame}
       />
+
+      {/* Copy Log Button */}
+      <div className="mt-6 text-center">
+        <CopyLogButton />
+      </div>
     </div>
   );
 }

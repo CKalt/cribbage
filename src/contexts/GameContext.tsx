@@ -5,9 +5,10 @@
  * Manages all game state and provides it to child components
  */
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useRef } from 'react';
 import { GameState, Card, Player, PeggingPlay, GamePhase } from '@/types/game';
 import { INITIAL_GAME_STATE } from '@/lib/constants';
+import { GameLogger } from '@/lib/gameLogger';
 
 /**
  * Context value interface - includes state and setters
@@ -37,6 +38,10 @@ interface GameContextValue extends GameState {
   setComputerCutCard: (card: Card | null) => void;
   setDeckForCutting: (deck: Card[]) => void;
   setCutPosition: (position: number | null) => void;
+  // Logger functions
+  getGameLogs: () => string; // Returns JSONL format
+  clearGameLogs: () => void;
+  getLogger: () => GameLogger;
 }
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
@@ -45,6 +50,9 @@ const GameContext = createContext<GameContextValue | undefined>(undefined);
  * Game Provider Component
  */
 export function GameProvider({ children }: { children: ReactNode }) {
+  // Create logger instance (persists across renders)
+  const loggerRef = useRef(new GameLogger());
+
   const [gamePhase, setGamePhase] = useState<GamePhase>(INITIAL_GAME_STATE.gamePhase);
   const [deck, setDeck] = useState<Card[]>(INITIAL_GAME_STATE.deck);
   const [playerHand, setPlayerHand] = useState<Card[]>(INITIAL_GAME_STATE.playerHand);
@@ -68,6 +76,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [computerCutCard, setComputerCutCard] = useState<Card | null>(INITIAL_GAME_STATE.computerCutCard);
   const [deckForCutting, setDeckForCutting] = useState<Card[]>(INITIAL_GAME_STATE.deckForCutting);
   const [cutPosition, setCutPosition] = useState<number | null>(INITIAL_GAME_STATE.cutPosition);
+
+  // Logger functions
+  const getGameLogs = () => loggerRef.current.getJSONL();
+  const clearGameLogs = () => loggerRef.current.clear();
+  const getLogger = () => loggerRef.current;
 
   const value: GameContextValue = {
     // State
@@ -118,6 +131,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setComputerCutCard,
     setDeckForCutting,
     setCutPosition,
+    // Logger functions
+    getGameLogs,
+    clearGameLogs,
+    getLogger,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -9,12 +9,38 @@ import { useCallback } from 'react';
 import { useGameContext } from '@/contexts/GameContext';
 import * as gameActions from '@/lib/gameActions';
 import { Card } from '@/types/game';
+import { createLogEntry } from '@/lib/gameLogger';
 
 /**
  * Hook that provides game actions bound to the current game context
  */
 export function useGameActions() {
   const context = useGameContext();
+  const logger = context.getLogger();
+
+  // Helper to log current game state after an action
+  const logAction = (actionName: string, details?: Record<string, any>) => {
+    // Use setTimeout to log after state updates have been applied
+    setTimeout(() => {
+      logger.log(createLogEntry(actionName, {
+        gamePhase: context.gamePhase,
+        playerScore: context.playerScore,
+        computerScore: context.computerScore,
+        dealer: context.dealer,
+        message: context.message,
+        playerHand: context.playerHand,
+        computerHand: context.computerHand,
+        crib: context.crib,
+        starterCard: context.starterCard,
+        peggingPile: context.peggingPile,
+        peggingCount: context.peggingCount,
+        peggingTurn: context.peggingTurn,
+        playerCutCard: context.playerCutCard,
+        computerCutCard: context.computerCutCard,
+        selectedCards: context.selectedCards,
+      }, details));
+    }, 0);
+  };
 
   // Create setter object for passing to game actions
   const setters: gameActions.GameStateSetter = {
@@ -46,6 +72,7 @@ export function useGameActions() {
   // Wrap cutForDeal
   const cutForDeal = useCallback(() => {
     gameActions.cutForDeal(setters);
+    logAction('cutForDeal');
   }, [setters]);
 
   // Wrap handlePlayerCut
@@ -59,6 +86,7 @@ export function useGameActions() {
         },
         setters
       );
+      logAction('handlePlayerCut', { position });
     },
     [context.gamePhase, context.deckForCutting, setters]
   );
@@ -66,12 +94,14 @@ export function useGameActions() {
   // Wrap dealHands
   const dealHands = useCallback(() => {
     gameActions.dealHands(context.dealer, setters);
+    logAction('dealHands', { dealer: context.dealer });
   }, [context.dealer, setters]);
 
   // Wrap toggleCardSelection
   const toggleCardSelection = useCallback(
     (card: Card) => {
       gameActions.toggleCardSelection(card, context.selectedCards, setters);
+      logAction('toggleCardSelection', { card });
     },
     [context.selectedCards, setters]
   );
@@ -86,6 +116,7 @@ export function useGameActions() {
       },
       setters
     );
+    logAction('confirmDiscard');
   }, [context.selectedCards, context.playerHand, context.computerHand, setters]);
 
   // Wrap cutStarter
@@ -97,6 +128,7 @@ export function useGameActions() {
       },
       setters
     );
+    logAction('cutStarter');
   }, [context.deck, context.dealer, setters]);
 
   // Forward declarations for recursive callbacks
@@ -115,6 +147,7 @@ export function useGameActions() {
       setters,
       () => computerPegAction()
     );
+    logAction('startPegging');
   }, [context.playerHand, context.computerHand, context.dealer, setters]);
 
   // Wrap playerPeg
@@ -133,6 +166,7 @@ export function useGameActions() {
         () => startCountingAction(),
         () => computerPegAction()
       );
+      logAction('playerPeg', { card });
     },
     [
       context.peggingCount,
@@ -157,6 +191,7 @@ export function useGameActions() {
       () => startCountingAction(),
       () => computerPegAction()
     );
+    logAction('playerSayGo');
   }, [
     context.computerPassedGo,
     context.lastPegger,
@@ -180,6 +215,7 @@ export function useGameActions() {
       () => startCountingAction(),
       () => computerPegAction()
     );
+    logAction('computerPeg');
   }, [
     context.computerPeggingHand,
     context.peggingCount,
@@ -203,6 +239,7 @@ export function useGameActions() {
       setters,
       () => checkWinAction()
     );
+    logAction('startCounting');
   }, [
     context.dealer,
     context.computerHand,
@@ -221,16 +258,20 @@ export function useGameActions() {
       },
       setters
     );
+    logAction('checkWinAndContinue');
   }, [context.playerScore, context.computerScore, setters]);
 
   // Wrap nextRound
   const nextRound = useCallback(() => {
     gameActions.nextRound(context.dealer, setters);
+    logAction('nextRound');
   }, [context.dealer, setters]);
 
   // Wrap newGame
   const newGame = useCallback(() => {
     gameActions.newGame(setters);
+    logger.clear(); // Clear logs on new game
+    logAction('newGame');
   }, [setters]);
 
   // Assign the callbacks for recursive use
