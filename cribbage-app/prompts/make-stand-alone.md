@@ -32,9 +32,9 @@
   - [x] [5.2: Implement game phase handlers](#step-52-implement-game-phase-handlers-🤖)
   - [x] [5.3: Implement useEffect hooks for AI turns](#step-53-implement-useeffect-hooks-for-ai-turns-🤖)
   - [x] [5.4: Wire up all UI interactions](#step-54-wire-up-all-ui-interactions-🤖)
-- [ ] [Phase 6: Create Page and Layout](#phase-6-create-page-and-layout)
-  - [ ] [6.1: Create root layout with proper styling](#step-61-create-root-layout-with-proper-styling-🤖)
-  - [ ] [6.2: Create main page that renders CribbageGame](#step-62-create-main-page-that-renders-cribbagegame-🤖)
+- [x] [Phase 6: Create Page and Layout](#phase-6-create-page-and-layout)
+  - [x] [6.1: Create root layout with proper styling](#step-61-create-root-layout-with-proper-styling-🤖)
+  - [x] [6.2: Create main page that renders CribbageGame](#step-62-create-main-page-that-renders-cribbagegame-🤖)
 - [ ] [Phase 7: Testing and Verification](#phase-7-testing-and-verification)
   - [ ] [7.1: Verify visual appearance matches original](#step-71-verify-visual-appearance-matches-original-👤)
   - [ ] [7.2: Test all game phases](#step-72-test-all-game-phases-👤)
@@ -605,6 +605,11 @@ Ensure `globals.css` includes:
 - Tailwind directives
 - Any custom styles needed
 
+**Completion Notes (2025-11-29):**
+- Updated metadata from "Create Next App" to "Cribbage" / "Classic cribbage card game"
+- Kept Geist fonts from Next.js default for clean typography
+- globals.css already includes Tailwind v4 and shadcn CSS variables
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -627,6 +632,11 @@ The `'use client'` directive is required because CribbageGame uses:
 - useState, useEffect hooks
 - Browser APIs (clipboard, prompt)
 - Event handlers
+
+**Completion Notes (2025-11-29):**
+- page.js already correctly imports and renders CribbageGame (set up in Phase 2)
+- 'use client' not needed in page.js since CribbageGame.jsx has it
+- This follows Next.js pattern where server components render client components
 
 [Back to TOC](#table-of-contents)
 
@@ -905,6 +915,27 @@ Component files (components/):
 - `PlayingCard` (default) + `PlayedCard`, `LargeCard`, `CutCard`
 - `ScoreBreakdown` (default) + `ScoreResult`
 - `DebugPanel` with internal show/hide state
+
+**Build Status:** Successful
+
+---
+
+### Phase 6 Completed - 2025-11-29
+
+**Summary:** Page and layout configured for the cribbage game.
+
+**Files Updated:**
+
+| File | Change |
+|------|--------|
+| `app/layout.js` | Updated metadata title and description |
+| `app/page.js` | Already correctly imports CribbageGame (from Phase 2) |
+| `app/globals.css` | Already has Tailwind v4 and shadcn styles |
+
+**Notes:**
+- Kept Geist fonts from Next.js default for clean typography
+- page.js doesn't need 'use client' since CribbageGame.jsx has it
+- Build verified successful
 
 **Build Status:** Successful
 
