@@ -27,11 +27,11 @@
   - [x] [4.3: Create GameMessage component](#step-43-create-gamemessage-component-🤖)
   - [x] [4.4: Create ScoreBreakdown component](#step-44-create-scorebreakdown-component-🤖)
   - [x] [4.5: Create DebugPanel component](#step-45-create-debugpanel-component-🤖)
-- [ ] [Phase 5: Implement Main Game Component](#phase-5-implement-main-game-component)
-  - [ ] [5.1: Create CribbageGame component with state management](#step-51-create-cribbagegame-component-with-state-management-🤖)
-  - [ ] [5.2: Implement game phase handlers](#step-52-implement-game-phase-handlers-🤖)
-  - [ ] [5.3: Implement useEffect hooks for AI turns](#step-53-implement-useeffect-hooks-for-ai-turns-🤖)
-  - [ ] [5.4: Wire up all UI interactions](#step-54-wire-up-all-ui-interactions-🤖)
+- [x] [Phase 5: Implement Main Game Component](#phase-5-implement-main-game-component)
+  - [x] [5.1: Create CribbageGame component with state management](#step-51-create-cribbagegame-component-with-state-management-🤖)
+  - [x] [5.2: Implement game phase handlers](#step-52-implement-game-phase-handlers-🤖)
+  - [x] [5.3: Implement useEffect hooks for AI turns](#step-53-implement-useeffect-hooks-for-ai-turns-🤖)
+  - [x] [5.4: Wire up all UI interactions](#step-54-wire-up-all-ui-interactions-🤖)
 - [ ] [Phase 6: Create Page and Layout](#phase-6-create-page-and-layout)
   - [ ] [6.1: Create root layout with proper styling](#step-61-create-root-layout-with-proper-styling-🤖)
   - [ ] [6.2: Create main page that renders CribbageGame](#step-62-create-main-page-that-renders-cribbagegame-🤖)
@@ -453,6 +453,11 @@ Create `components/CribbageGame.jsx` with all game state:
 - Scoring: `pendingScore`
 - Debug: `debugLog`, `showDebugLog`, `gameLog`, `showGameLog`, `replayMode`, `replayLog`, `replayIndex`
 
+**Completion Notes (2025-11-29):**
+- Implemented 30+ useState hooks covering all game state
+- State organized into logical groups: game flow, deck/cards, scores, selection, play phase, counting phase, cutting phase, scoring, and debug
+- All state from original cribbage.jsx preserved
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -498,6 +503,11 @@ Implement all game phase logic functions:
 **Peg adjustment:**
 - `handlePegClick(player, adjustment)` - Manual score adjustment
 
+**Completion Notes (2025-11-29):**
+- All 20+ game phase handlers implemented exactly as in original
+- Preserved all timing (setTimeout delays for AI actions)
+- Maintained all edge case handling for Go, last card, and 31
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -521,6 +531,13 @@ Implement the useEffect hooks that drive AI behavior:
 **Pegging completion effect:**
 - Check if both players out of cards
 - Automatically transition to counting phase
+
+**Completion Notes (2025-11-29):**
+- Three useEffect hooks implemented:
+  1. Computer play effect (with 1500ms delay)
+  2. Computer counting effect (with all condition checks)
+  3. Pegging completion effect (automatic transition)
+- All cleanup functions for timers preserved
 
 [Back to TOC](#table-of-contents)
 
@@ -548,6 +565,14 @@ Implement the complete render tree:
 - Player hand
 - Message display
 - Debug panel
+
+**Completion Notes (2025-11-29):**
+- Complete UI rendering implemented using imported components
+- Uses PlayingCard, PlayedCard, LargeCard, CutCard for cards
+- Uses GameMessage for status messages
+- Uses ScoreBreakdown for counting phase display
+- Uses DebugPanel for debug/replay controls
+- All conditional rendering preserved from original
 
 [Back to TOC](#table-of-contents)
 
@@ -880,6 +905,28 @@ Component files (components/):
 - `PlayingCard` (default) + `PlayedCard`, `LargeCard`, `CutCard`
 - `ScoreBreakdown` (default) + `ScoreResult`
 - `DebugPanel` with internal show/hide state
+
+**Build Status:** Successful
+
+---
+
+### Phase 5 Completed - 2025-11-29
+
+**Summary:** Main CribbageGame component fully implemented with all game logic.
+
+**File Updated:**
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `components/CribbageGame.jsx` | 1380 | Complete game component with state, handlers, effects, and UI |
+
+**Implementation Details:**
+- 30+ useState hooks for all game state
+- 20+ game phase handlers (startNewGame, dealHands, discardToCrib, playerPlay, etc.)
+- 3 useEffect hooks for AI behavior and game flow
+- Complete UI rendering with conditional rendering for all game states
+- Imports from lib/: createDeck, shuffleDeck, calculateHandScore, calculatePeggingScore, computerSelectCrib, computerSelectPlay, rankOrder
+- Imports components: CribbageBoard, PlayingCard (PlayedCard, LargeCard, CutCard), GameMessage, ScoreBreakdown, DebugPanel
 
 **Build Status:** Successful
 
