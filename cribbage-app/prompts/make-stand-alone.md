@@ -1,32 +1,32 @@
 # Plan: Convert Cribbage Claude Artifact to Standalone Next.js Application
 
 **Created:** 2025-11-29
-**Status:** Not Started
+**Status:** In Progress
 **Objective:** Convert cribbage.jsx from a Claude artifact component to a fully functional standalone Next.js application with identical visual and functional behavior.
 
 ---
 
 ## Table of Contents
 
-- [ ] [Phase 1: Project Setup and Initialization](#phase-1-project-setup-and-initialization)
-  - [ ] [1.1: Create Next.js project with App Router](#step-11-create-nextjs-project-with-app-router-🤖)
-  - [ ] [1.2: Install and configure Tailwind CSS](#step-12-install-and-configure-tailwind-css-🤖)
-  - [ ] [1.3: Install and configure shadcn/ui](#step-13-install-and-configure-shadcnui-🤖)
-  - [ ] [1.4: Add required shadcn/ui components](#step-14-add-required-shadcnui-components-🤖)
-- [ ] [Phase 2: Project Structure and File Organization](#phase-2-project-structure-and-file-organization)
-  - [ ] [2.1: Create directory structure](#step-21-create-directory-structure-🤖)
-  - [ ] [2.2: Set up component file organization](#step-22-set-up-component-file-organization-🤖)
-- [ ] [Phase 3: Extract and Organize Game Logic](#phase-3-extract-and-organize-game-logic)
-  - [ ] [3.1: Create constants file for card data](#step-31-create-constants-file-for-card-data-🤖)
-  - [ ] [3.2: Extract scoring utility functions](#step-32-extract-scoring-utility-functions-🤖)
-  - [ ] [3.3: Extract deck utility functions](#step-33-extract-deck-utility-functions-🤖)
-  - [ ] [3.4: Extract AI logic functions](#step-34-extract-ai-logic-functions-🤖)
-- [ ] [Phase 4: Create React Components](#phase-4-create-react-components)
-  - [ ] [4.1: Create CribbageBoard component](#step-41-create-cribbageboard-component-🤖)
-  - [ ] [4.2: Create PlayingCard component](#step-42-create-playingcard-component-🤖)
-  - [ ] [4.3: Create GameMessage component](#step-43-create-gamemessage-component-🤖)
-  - [ ] [4.4: Create ScoreBreakdown component](#step-44-create-scorebreakdown-component-🤖)
-  - [ ] [4.5: Create DebugPanel component](#step-45-create-debugpanel-component-🤖)
+- [x] [Phase 1: Project Setup and Initialization](#phase-1-project-setup-and-initialization)
+  - [x] [1.1: Create Next.js project with App Router](#step-11-create-nextjs-project-with-app-router-🤖)
+  - [x] [1.2: Install and configure Tailwind CSS](#step-12-install-and-configure-tailwind-css-🤖)
+  - [x] [1.3: Install and configure shadcn/ui](#step-13-install-and-configure-shadcnui-🤖)
+  - [x] [1.4: Add required shadcn/ui components](#step-14-add-required-shadcnui-components-🤖)
+- [x] [Phase 2: Project Structure and File Organization](#phase-2-project-structure-and-file-organization)
+  - [x] [2.1: Create directory structure](#step-21-create-directory-structure-🤖)
+  - [x] [2.2: Set up component file organization](#step-22-set-up-component-file-organization-🤖)
+- [x] [Phase 3: Extract and Organize Game Logic](#phase-3-extract-and-organize-game-logic)
+  - [x] [3.1: Create constants file for card data](#step-31-create-constants-file-for-card-data-🤖)
+  - [x] [3.2: Extract scoring utility functions](#step-32-extract-scoring-utility-functions-🤖)
+  - [x] [3.3: Extract deck utility functions](#step-33-extract-deck-utility-functions-🤖)
+  - [x] [3.4: Extract AI logic functions](#step-34-extract-ai-logic-functions-🤖)
+- [x] [Phase 4: Create React Components](#phase-4-create-react-components)
+  - [x] [4.1: Create CribbageBoard component](#step-41-create-cribbageboard-component-🤖)
+  - [x] [4.2: Create PlayingCard component](#step-42-create-playingcard-component-🤖)
+  - [x] [4.3: Create GameMessage component](#step-43-create-gamemessage-component-🤖)
+  - [x] [4.4: Create ScoreBreakdown component](#step-44-create-scorebreakdown-component-🤖)
+  - [x] [4.5: Create DebugPanel component](#step-45-create-debugpanel-component-🤖)
 - [ ] [Phase 5: Implement Main Game Component](#phase-5-implement-main-game-component)
   - [ ] [5.1: Create CribbageGame component with state management](#step-51-create-cribbagegame-component-with-state-management-🤖)
   - [ ] [5.2: Implement game phase handlers](#step-52-implement-game-phase-handlers-🤖)
@@ -64,6 +64,12 @@ npx create-next-app@latest cribbage-app --app --tailwind --eslint --no-src-dir
 - App Router: Yes
 - Import alias: @/*
 
+**Completion Notes (2025-11-29 18:09):**
+- Created Next.js 16.0.5 project with React 19.2.0
+- Project created at `/Users/chris/projects/cribbage/cribbage-app/`
+- Used `--js --tailwind --eslint --app --no-src-dir --import-alias "@/*" --use-npm` flags
+- React Compiler: No (declined)
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -75,6 +81,12 @@ Tailwind CSS will be installed by create-next-app. Verify the configuration matc
 **Update tailwind.config.js:**
 - Ensure content paths include all component directories
 - Add any custom colors if needed (green-900, green-800, green-700 for felt)
+
+**Completion Notes (2025-11-29 18:09):**
+- Tailwind CSS v4 installed automatically with Next.js
+- Uses new CSS-based config via `@import "tailwindcss"` instead of tailwind.config.js
+- Configuration in `postcss.config.mjs` with `@tailwindcss/postcss` plugin
+- All standard Tailwind colors (green-900, green-800, etc.) available by default
 
 [Back to TOC](#table-of-contents)
 
@@ -94,6 +106,14 @@ npx shadcn-ui@latest init
 - Base color: Slate
 - CSS variables: Yes
 
+**Completion Notes (2025-11-29 18:11):**
+- Used `npx shadcn@latest init -d` (new CLI, with defaults)
+- Successfully detected Next.js and Tailwind CSS v4
+- Created `components.json` configuration file
+- Created `lib/utils.js` with `cn()` helper function
+- Updated `globals.css` with CSS variables for colors, radius, etc.
+- Installed dependencies: `clsx`, `tailwind-merge`, `tw-animate-css`, `lucide-react`
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -111,6 +131,13 @@ npx shadcn-ui@latest add button
 These components map directly to:
 - `@/components/ui/card` (Card, CardContent, CardHeader, CardTitle)
 - `@/components/ui/button` (Button)
+
+**Completion Notes (2025-11-29 18:12):**
+- Used `npx shadcn@latest add card button -y` to add both components
+- Created `components/ui/card.jsx` with Card, CardHeader, CardTitle, CardContent, etc.
+- Created `components/ui/button.jsx` with Button and buttonVariants
+- Installed `@radix-ui/react-slot` and `class-variance-authority` dependencies
+- Production build verified successful
 
 [Back to TOC](#table-of-contents)
 
@@ -144,6 +171,11 @@ cribbage-app/
 └── public/
 ```
 
+**Completion Notes (2025-11-29 18:15):**
+- Created all lib/ files: `constants.js`, `deck.js`, `scoring.js`, `ai.js`
+- Created all component files with placeholder implementations
+- Files contain stub functions with JSDoc comments for Phase 3-5 implementation
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -161,6 +193,17 @@ Determine how to split the monolithic 2140-line cribbage.jsx into manageable mod
 | Lines 390-501 | lib/ai.js | computerSelectCrib, computerSelectPlay |
 | Lines 33-204 | components/CribbageBoard.jsx | Visual board SVG |
 | Lines 504-2140 | components/CribbageGame.jsx | Main game logic/UI |
+
+**Completion Notes (2025-11-29 18:16):**
+- Created placeholder components with basic structure:
+  - `CribbageBoard.jsx` - Placeholder SVG board
+  - `CribbageGame.jsx` - Basic game shell with menu/playing states
+  - `PlayingCard.jsx` - Card rendering component
+  - `GameMessage.jsx` - Message display component
+  - `ScoreBreakdown.jsx` - Score breakdown panel
+  - `DebugPanel.jsx` - Debug/replay controls
+- Updated `app/page.js` to render CribbageGame component
+- Production build verified successful
 
 [Back to TOC](#table-of-contents)
 
@@ -186,6 +229,10 @@ export const rankOrder = {
 };
 ```
 
+**Completion Notes (2025-11-29 18:20):**
+- Created `lib/constants.js` with all card constants
+- Exports: `suits`, `ranks`, `rankValues`, `rankOrder`
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -203,6 +250,12 @@ Preserve all scoring logic including:
 - Flushes (4 or 5 same suit)
 - Nobs (Jack matching cut card suit)
 
+**Completion Notes (2025-11-29 18:20):**
+- Created `lib/scoring.js` with 188 lines of scoring logic
+- `calculateHandScore()` - Full hand scoring with breakdown array
+- `calculatePeggingScore()` - Pegging scoring (15s, 31s, pairs, runs)
+- Imports `rankOrder` from constants for run detection
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -212,6 +265,12 @@ Preserve all scoring logic including:
 Create `lib/deck.js` with:
 - `createDeck()` - Generate 52-card deck
 - `shuffleDeck(deck)` - Fisher-Yates shuffle
+
+**Completion Notes (2025-11-29 18:20):**
+- Created `lib/deck.js` with deck utilities
+- `createDeck()` - Creates 52-card deck using constants
+- `shuffleDeck()` - Fisher-Yates shuffle (immutable, returns new array)
+- Imports `suits`, `ranks`, `rankValues` from constants
 
 [Back to TOC](#table-of-contents)
 
@@ -227,6 +286,16 @@ Preserve AI strategy including:
 - Evaluating all 4-card combinations for crib selection
 - Considering fifteens, pairs, run potential, keeping 5s
 - Pegging: prefer scoring plays, avoid giving opponent easy points
+
+**Completion Notes (2025-11-29 18:21):**
+- Created `lib/ai.js` with 131 lines of AI logic
+- `computerSelectCrib()` - Evaluates all 15 possible 4-card keeps
+- `computerSelectPlay()` - Scores each valid play considering:
+  - Immediate pegging points (weighted x10)
+  - Avoiding giving opponent 15 or 31
+  - Keeping low cards for later
+  - Random factor for unpredictability
+- Imports `rankOrder` from constants, `calculatePeggingScore` from scoring
 
 [Back to TOC](#table-of-contents)
 
@@ -254,6 +323,11 @@ Create `components/CribbageBoard.jsx`:
 - `computerScore` (number)
 - `onPegClick` (function)
 
+**Completion Notes (2025-11-29 18:23):**
+- Created full SVG-based board (175 lines)
+- All features preserved: dual tracks, pegs, 5-hole markers, score legend
+- Manual +/- buttons for score adjustment
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -278,6 +352,11 @@ Create `components/PlayingCard.jsx` for consistent card rendering:
 - `onClick` (function)
 - `size` ('sm' | 'md' | 'lg')
 
+**Completion Notes (2025-11-29 18:24):**
+- Created main `PlayingCard` component with all states (125 lines)
+- Added `revealed` prop for computer's cards during counting
+- Additional exports: `PlayedCard`, `LargeCard`, `CutCard` for different contexts
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -293,6 +372,11 @@ Create `components/GameMessage.jsx` for game status messages:
 
 **Props:**
 - `message` (string)
+
+**Completion Notes (2025-11-29 18:24):**
+- Created simple message display component (24 lines)
+- Added `variant` prop ('default' | 'large')
+- Yellow text styling preserved
 
 [Back to TOC](#table-of-contents)
 
@@ -311,6 +395,11 @@ Create `components/ScoreBreakdown.jsx` for displaying score calculations:
 **Props:**
 - `breakdown` (array of strings)
 - `total` (number)
+
+**Completion Notes (2025-11-29 18:24):**
+- Created breakdown display component (60 lines)
+- Takes `actualScore` object with { score, breakdown }
+- Added `ScoreResult` export for showing claim results
 
 [Back to TOC](#table-of-contents)
 
@@ -336,6 +425,12 @@ Create `components/DebugPanel.jsx` for debug/replay features:
 - `onCopyLog` (function)
 - `onLoadReplay` (function)
 - `onNextEvent` (function)
+
+**Completion Notes (2025-11-29 18:24):**
+- Created debug/replay panel component (100 lines)
+- Internal state for show/hide toggles (useState)
+- All buttons and log displays preserved
+- 'use client' directive for client-side interactivity
 
 [Back to TOC](#table-of-contents)
 
@@ -684,7 +779,109 @@ All of the following must work identically:
 
 ## Feedback Log
 
-*(Implementation notes and timestamps will be added here as phases are completed)*
+### Phase 1 Completed - 2025-11-29 18:12
+
+**Summary:** Project setup and initialization complete.
+
+**Project Structure Created:**
+```
+cribbage-app/
+├── app/
+│   ├── globals.css      (Tailwind v4 + shadcn CSS variables)
+│   ├── layout.js
+│   └── page.js
+├── components/
+│   └── ui/
+│       ├── button.jsx   (shadcn Button component)
+│       └── card.jsx     (shadcn Card component)
+├── lib/
+│   └── utils.js         (cn() helper)
+├── public/
+├── components.json      (shadcn config)
+├── package.json
+├── postcss.config.mjs
+└── next.config.mjs
+```
+
+**Key Versions:**
+- Next.js: 16.0.5
+- React: 19.2.0
+- Tailwind CSS: 4.x
+- shadcn/ui: latest (3.5.1)
+
+**Build Status:** Successful
+
+---
+
+### Phase 2 Completed - 2025-11-29 18:16
+
+**Summary:** Project structure and file organization complete.
+
+**Files Created:**
+
+Library files (lib/):
+- `constants.js` - Card data constants (placeholder)
+- `deck.js` - Deck utilities (placeholder)
+- `scoring.js` - Scoring functions (placeholder)
+- `ai.js` - AI logic (placeholder)
+
+Component files (components/):
+- `CribbageBoard.jsx` - Visual board (placeholder)
+- `CribbageGame.jsx` - Main game component (basic shell)
+- `PlayingCard.jsx` - Card rendering
+- `GameMessage.jsx` - Message display
+- `ScoreBreakdown.jsx` - Score breakdown panel
+- `DebugPanel.jsx` - Debug/replay controls
+
+**Updated:**
+- `app/page.js` - Now renders CribbageGame component
+
+**Build Status:** Successful
+
+---
+
+### Phase 3 Completed - 2025-11-29 18:21
+
+**Summary:** Game logic extracted from original cribbage.jsx into modular lib/ files.
+
+**Files Updated:**
+
+| File | Lines | Exports |
+|------|-------|---------|
+| `lib/constants.js` | 19 | `suits`, `ranks`, `rankValues`, `rankOrder` |
+| `lib/deck.js` | 31 | `createDeck`, `shuffleDeck` |
+| `lib/scoring.js` | 188 | `calculateHandScore`, `calculatePeggingScore` |
+| `lib/ai.js` | 131 | `computerSelectCrib`, `computerSelectPlay` |
+
+**Dependencies:**
+- `deck.js` imports from `constants.js`
+- `scoring.js` imports from `constants.js`
+- `ai.js` imports from `constants.js` and `scoring.js`
+
+**Build Status:** Successful
+
+---
+
+### Phase 4 Completed - 2025-11-29 18:24
+
+**Summary:** React components created for the cribbage game UI.
+
+**Files Updated:**
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `components/CribbageBoard.jsx` | 175 | Full SVG board with pegs, tracks, markers |
+| `components/PlayingCard.jsx` | 125 | Card rendering with multiple exports |
+| `components/GameMessage.jsx` | 24 | Simple message display |
+| `components/ScoreBreakdown.jsx` | 60 | Score breakdown with results |
+| `components/DebugPanel.jsx` | 100 | Debug/replay controls |
+
+**Component Exports:**
+- `PlayingCard` (default) + `PlayedCard`, `LargeCard`, `CutCard`
+- `ScoreBreakdown` (default) + `ScoreResult`
+- `DebugPanel` with internal show/hide state
+
+**Build Status:** Successful
 
 ---
 

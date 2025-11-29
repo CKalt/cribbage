@@ -1,12 +1,12 @@
 // Playing Card Component
-// Will be populated in Phase 4.2
 
 /**
  * Renders a playing card with proper styling
  * @param {Object} card - Card object { rank, suit, value }
- * @param {boolean} selected - Whether card is selected
- * @param {boolean} disabled - Whether card is disabled
+ * @param {boolean} selected - Whether card is selected (yellow ring)
+ * @param {boolean} disabled - Whether card is disabled (grayed out)
  * @param {boolean} faceDown - Whether to show card back
+ * @param {boolean} revealed - Show face-up but with gray background (for computer's cards during counting)
  * @param {function} onClick - Click handler
  * @param {string} size - Card size ('sm' | 'md' | 'lg')
  */
@@ -15,6 +15,7 @@ export default function PlayingCard({
   selected = false,
   disabled = false,
   faceDown = false,
+  revealed = false,
   onClick,
   size = 'md'
 }) {
@@ -22,24 +23,101 @@ export default function PlayingCard({
 
   const isRed = card.suit === '♥' || card.suit === '♦';
 
+  // Size classes
+  const sizeClasses = {
+    sm: 'p-1 text-sm',
+    md: 'p-2 text-xl',
+    lg: 'p-3 text-3xl'
+  };
+
+  // Face-down card (unknown)
   if (faceDown) {
     return (
-      <div className="bg-gray-600 text-white rounded p-2 w-12 h-16 flex items-center justify-center">
+      <div className={`bg-gray-600 text-white rounded ${sizeClasses[size]} w-12 h-16 flex items-center justify-center font-bold`}>
         ?
       </div>
     );
   }
 
+  // Revealed card (computer's cards during counting - gray bg, face up)
+  if (revealed) {
+    return (
+      <div className={`bg-gray-600 text-white rounded ${sizeClasses[size]} w-12 h-16 flex items-center justify-center font-bold ${
+        isRed ? 'text-red-400' : ''
+      }`}>
+        {card.rank}{card.suit}
+      </div>
+    );
+  }
+
+  // Regular face-up card
   return (
     <div
       onClick={disabled ? undefined : onClick}
       className={`
-        bg-white rounded p-2 text-xl font-bold cursor-pointer transition-all
+        bg-white rounded ${sizeClasses[size]} font-bold cursor-pointer transition-all
         ${selected ? 'ring-4 ring-yellow-400' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
         ${isRed ? 'text-red-600' : 'text-black'}
       `}
     >
+      {card.rank}{card.suit}
+    </div>
+  );
+}
+
+/**
+ * Renders a small played card (for play area)
+ */
+export function PlayedCard({ card }) {
+  if (!card) return null;
+
+  const isRed = card.suit === '♥' || card.suit === '♦';
+
+  return (
+    <div className={`bg-white rounded p-1 text-sm font-bold ${
+      isRed ? 'text-red-600' : 'text-black'
+    }`}>
+      {card.rank}{card.suit}
+    </div>
+  );
+}
+
+/**
+ * Renders a large card (for cut cards during cutting phase)
+ */
+export function LargeCard({ card, placeholder = false }) {
+  if (placeholder || !card) {
+    return (
+      <div className="inline-block bg-gray-600 rounded p-3 w-16 h-20 flex items-center justify-center text-white font-bold">
+        ?
+      </div>
+    );
+  }
+
+  const isRed = card.suit === '♥' || card.suit === '♦';
+
+  return (
+    <div className={`inline-block bg-white rounded p-3 text-3xl font-bold ${
+      isRed ? 'text-red-600' : 'text-black'
+    }`}>
+      {card.rank}{card.suit}
+    </div>
+  );
+}
+
+/**
+ * Renders a medium card (for cut card display)
+ */
+export function CutCard({ card }) {
+  if (!card) return null;
+
+  const isRed = card.suit === '♥' || card.suit === '♦';
+
+  return (
+    <div className={`inline-block bg-white rounded p-2 text-2xl font-bold ${
+      isRed ? 'text-red-600' : 'text-black'
+    }`}>
       {card.rank}{card.suit}
     </div>
   );

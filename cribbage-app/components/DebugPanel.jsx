@@ -1,16 +1,14 @@
-// Debug Panel Component
-// Will be populated in Phase 4.5
+'use client';
 
+// Debug Panel Component
+
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
  * Debug and replay controls panel
  * @param {Array} debugLog - Debug log entries
  * @param {Array} gameLog - Game event log
- * @param {boolean} showDebugLog - Whether debug log is visible
- * @param {boolean} showGameLog - Whether game log is visible
- * @param {function} onToggleDebugLog - Toggle debug log visibility
- * @param {function} onToggleGameLog - Toggle game log visibility
  * @param {function} onCopyLog - Copy game log to clipboard
  * @param {function} onLoadReplay - Load replay from JSON
  * @param {boolean} replayMode - Whether in replay mode
@@ -21,10 +19,6 @@ import { Button } from '@/components/ui/button';
 export default function DebugPanel({
   debugLog = [],
   gameLog = [],
-  showDebugLog = false,
-  showGameLog = false,
-  onToggleDebugLog,
-  onToggleGameLog,
   onCopyLog,
   onLoadReplay,
   replayMode = false,
@@ -32,19 +26,22 @@ export default function DebugPanel({
   replayLength = 0,
   onNextEvent,
 }) {
+  const [showDebugLog, setShowDebugLog] = useState(false);
+  const [showGameLog, setShowGameLog] = useState(false);
+
   return (
     <>
       {/* Debug Log Toggle Buttons */}
       <div className="text-center mt-4 space-x-2">
         <Button
-          onClick={onToggleDebugLog}
+          onClick={() => setShowDebugLog(!showDebugLog)}
           className="bg-gray-600 hover:bg-gray-700 text-sm"
         >
           {showDebugLog ? 'Hide' : 'Show'} Debug Log
         </Button>
 
         <Button
-          onClick={onToggleGameLog}
+          onClick={() => setShowGameLog(!showGameLog)}
           className="bg-purple-600 hover:bg-purple-700 text-sm"
         >
           {showGameLog ? 'Hide' : 'Show'} Game Log
