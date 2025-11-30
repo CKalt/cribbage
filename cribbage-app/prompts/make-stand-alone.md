@@ -44,22 +44,22 @@
   - [ ] [8.1: Run production build](#step-81-run-production-build-🤖)
   - [ ] [8.2: Fix any build errors](#step-82-fix-any-build-errors-🤖)
   - [ ] [8.3: Verify production build works correctly](#step-83-verify-production-build-works-correctly-👤)
-- [ ] [Phase 9: Add Cognito Authentication](#phase-9-add-cognito-authentication)
-  - [ ] [9.1: AWS Cognito Setup](#step-91-aws-cognito-setup-👤)
-  - [ ] [9.2: Install Cognito dependencies](#step-92-install-cognito-dependencies-🤖)
-  - [ ] [9.3: Create environment configuration](#step-93-create-environment-configuration-🤖)
-  - [ ] [9.4: Create Cognito utility module](#step-94-create-cognito-utility-module-🤖)
-  - [ ] [9.5: Create Auth context provider](#step-95-create-auth-context-provider-🤖)
-  - [ ] [9.6: Create auth UI components](#step-96-create-auth-ui-components-🤖)
-  - [ ] [9.7: Create login page](#step-97-create-login-page-🤖)
-  - [ ] [9.8: Create signup page](#step-98-create-signup-page-🤖)
-  - [ ] [9.9: Create email confirmation page](#step-99-create-email-confirmation-page-🤖)
-  - [ ] [9.10: Create forgot password page](#step-910-create-forgot-password-page-🤖)
-  - [ ] [9.11: Create reset password page](#step-911-create-reset-password-page-🤖)
-  - [ ] [9.12: Create withAuth HOC for protected routes](#step-912-create-withauth-hoc-for-protected-routes-🤖)
-  - [ ] [9.13: Integrate AuthProvider in layout](#step-913-integrate-authprovider-in-layout-🤖)
-  - [ ] [9.14: Protect game route](#step-914-protect-game-route-🤖)
-  - [ ] [9.15: Test authentication flow](#step-915-test-authentication-flow-👤)
+- [x] [Phase 9: Add Cognito Authentication](#phase-9-add-cognito-authentication)
+  - [ ] [9.1: AWS Cognito Setup](#step-91-aws-cognito-setup-👤) (User task - configure in AWS Console)
+  - [x] [9.2: Install Cognito dependencies](#step-92-install-cognito-dependencies-🤖)
+  - [x] [9.3: Create environment configuration](#step-93-create-environment-configuration-🤖)
+  - [x] [9.4: Create Cognito utility module](#step-94-create-cognito-utility-module-🤖)
+  - [x] [9.5: Create Auth context provider](#step-95-create-auth-context-provider-🤖)
+  - [x] [9.6: Create auth UI components](#step-96-create-auth-ui-components-🤖)
+  - [x] [9.7: Create login page](#step-97-create-login-page-🤖)
+  - [x] [9.8: Create signup page](#step-98-create-signup-page-🤖)
+  - [x] [9.9: Create email confirmation page](#step-99-create-email-confirmation-page-🤖)
+  - [x] [9.10: Create forgot password page](#step-910-create-forgot-password-page-🤖)
+  - [x] [9.11: Create reset password page](#step-911-create-reset-password-page-🤖)
+  - [x] [9.12: Create withAuth HOC for protected routes](#step-912-create-withauth-hoc-for-protected-routes-🤖)
+  - [x] [9.13: Integrate AuthProvider in layout](#step-913-integrate-authprovider-in-layout-🤖)
+  - [x] [9.14: Protect game route](#step-914-protect-game-route-🤖)
+  - [ ] [9.15: Test authentication flow](#step-915-test-authentication-flow-👤) (User task - test all flows)
 
 ---
 
@@ -788,29 +788,78 @@ This phase adds AWS Cognito authentication to protect the cribbage game, followi
 
 **Create a Cognito User Pool in AWS Console:**
 
-1. **Navigate to Amazon Cognito** in the AWS Console
-2. **Create a new User Pool:**
+1. **Navigate to Amazon Cognito:**
+   - Go to https://console.aws.amazon.com/cognito/
+   - Select your preferred region (e.g., `us-east-2` for Ohio)
+   - Click "User pools" in the left sidebar
    - Click "Create user pool"
-   - Select "Email" as sign-in option
-   - Configure password policy:
+
+2. **Step 1 - Configure sign-in experience:**
+   - Provider types: Select "Cognito user pool"
+   - Cognito user pool sign-in options: Check "Email"
+   - Click "Next"
+
+3. **Step 2 - Configure security requirements:**
+   - Password policy mode: Select "Cognito defaults" (or customize)
      - Minimum length: 8 characters
-     - Require uppercase letters
-     - Require lowercase letters
-     - Require numbers
-     - Require special characters
-   - Enable self-registration
-   - Enable email verification
-   - Select "Send email with Cognito" for email delivery
+     - Require uppercase, lowercase, numbers, special characters
+   - Multi-factor authentication: Select "No MFA" (simplest for testing)
+   - User account recovery: Check "Enable self-service account recovery"
+     - Delivery method: "Email only"
+   - Click "Next"
 
-3. **Configure App Client:**
-   - Create an app client (no client secret for browser apps)
-   - Enable: ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH
-   - Note the Client ID
+4. **Step 3 - Configure sign-up experience:**
+   - Self-registration: Check "Enable self-registration"
+   - Attribute verification: Check "Allow Cognito to automatically send messages..."
+   - Attributes to verify: Select "Email"
+   - Required attributes: "email" should already be selected
+   - Click "Next"
 
-4. **Record the following values:**
-   - Region (e.g., `us-east-2`)
-   - User Pool ID (e.g., `us-east-2_xxxxxxxxx`)
-   - App Client ID (e.g., `xxxxxxxxxxxxxxxxxxxxxxxxxx`)
+5. **Step 4 - Configure message delivery:**
+   - Email provider: Select "Send email with Cognito" (free tier: 50 emails/day)
+   - FROM email address: Use default or customize
+   - Click "Next"
+
+6. **Step 5 - Integrate your app:**
+   - User pool name: Enter "cribbage-users" (or your preferred name)
+   - Hosted authentication pages: Uncheck "Use the Cognito Hosted UI"
+   - Initial app client:
+     - App type: Select "Public client"
+     - App client name: Enter "cribbage-web-client"
+     - Client secret: Select "Don't generate a client secret"
+   - Click "Next"
+
+7. **Step 6 - Review and create:**
+   - Review all settings
+   - Click "Create user pool"
+
+8. **Record Your Configuration Values:**
+
+   After creation, you'll be on the User Pool details page:
+
+   - **Region**: Look at your browser URL or the top-right of the console
+     - Example: `us-east-2`
+
+   - **User Pool ID**: Found on the "User pool overview" section
+     - Example: `us-east-2_AbC123xYz`
+
+   - **App Client ID**: Click "App integration" tab → scroll to "App clients and analytics"
+     - Click on your app client name
+     - Copy the "Client ID"
+     - Example: `1abc2defg3hijklmn4opqrst5u`
+
+9. **Update Your .env.local File:**
+
+   Edit `/Users/chris/projects/cribbage/cribbage-app/.env.local`:
+
+   ```bash
+   # AWS Cognito Configuration
+   NEXT_PUBLIC_COGNITO_REGION='us-east-2'
+   NEXT_PUBLIC_COGNITO_USER_POOL_ID='us-east-2_YourPoolId'
+   NEXT_PUBLIC_COGNITO_CLIENT_ID='YourClientIdHere'
+   ```
+
+   Replace the placeholder values with your actual values from step 8.
 
 [Back to TOC](#table-of-contents)
 
@@ -1923,6 +1972,61 @@ Component files (components/):
 - Imports components: CribbageBoard, PlayingCard (PlayedCard, LargeCard, CutCard), GameMessage, ScoreBreakdown, DebugPanel
 
 **Build Status:** Successful
+
+---
+
+### Phase 9 Completed - 2025-11-29
+
+**Summary:** AWS Cognito authentication fully implemented following pgui application pattern.
+
+**Dependencies Installed:**
+- `amazon-cognito-identity-js` - Cognito JavaScript SDK
+- `@aws-sdk/client-cognito-identity-provider` - AWS SDK for Cognito operations
+- `nookies` - Cookie management for Next.js
+
+**Files Created:**
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `.env.example` | 5 | Environment template for Cognito config |
+| `.env.local` | 4 | Local Cognito configuration (gitignored) |
+| `lib/cognito.js` | 17 | Cognito utility module with userPool, cognitoClient exports |
+| `contexts/AuthContext.jsx` | 55 | Auth context provider with useAuth hook, signOut |
+| `components/PasswordInput.jsx` | 44 | Password input with show/hide toggle |
+| `components/PasswordRequirements.jsx` | 33 | Real-time password validation display |
+| `components/withAuth.jsx` | 71 | HOC for protecting routes with auth validation |
+| `components/Providers.jsx` | 11 | Client-side wrapper for AuthProvider |
+| `app/login/page.js` | 91 | Login page with CognitoUser.authenticateUser |
+| `app/signup/page.js` | 78 | Signup page with password requirements |
+| `app/confirm/page.js` | 80 | Email confirmation with resend code |
+| `app/forgot-password/page.js` | 92 | Forgot password with ForgotPasswordCommand |
+| `app/reset-password/page.js` | 87 | Reset password with ConfirmForgotPasswordCommand |
+
+**Files Updated:**
+
+| File | Change |
+|------|--------|
+| `app/layout.js` | Added Providers wrapper around children |
+| `app/page.js` | Added withAuth protection and logout button |
+
+**Notes:**
+- Created `components/Providers.jsx` as client wrapper to use AuthProvider inside server-side layout.js
+- Used Suspense wrapper for pages using `useSearchParams()` (confirm and reset-password)
+- withAuth HOC validates token cookie and Cognito session before rendering protected content
+- Logout button displays user email and positioned at top-right corner
+
+**Routes Created:**
+- `/login` - User login
+- `/signup` - New account creation
+- `/confirm` - Email confirmation after signup
+- `/forgot-password` - Request password reset code
+- `/reset-password` - Enter code and new password
+
+**User Tasks Remaining:**
+1. Step 9.1: Create Cognito User Pool in AWS Console and update `.env.local` with actual values
+2. Step 9.15: Test complete authentication flow
+
+**Build Status:** Successful - all routes compiled
 
 ---
 
