@@ -44,6 +44,22 @@
   - [ ] [8.1: Run production build](#step-81-run-production-build-🤖)
   - [ ] [8.2: Fix any build errors](#step-82-fix-any-build-errors-🤖)
   - [ ] [8.3: Verify production build works correctly](#step-83-verify-production-build-works-correctly-👤)
+- [ ] [Phase 9: Add Cognito Authentication](#phase-9-add-cognito-authentication)
+  - [ ] [9.1: AWS Cognito Setup](#step-91-aws-cognito-setup-👤)
+  - [ ] [9.2: Install Cognito dependencies](#step-92-install-cognito-dependencies-🤖)
+  - [ ] [9.3: Create environment configuration](#step-93-create-environment-configuration-🤖)
+  - [ ] [9.4: Create Cognito utility module](#step-94-create-cognito-utility-module-🤖)
+  - [ ] [9.5: Create Auth context provider](#step-95-create-auth-context-provider-🤖)
+  - [ ] [9.6: Create auth UI components](#step-96-create-auth-ui-components-🤖)
+  - [ ] [9.7: Create login page](#step-97-create-login-page-🤖)
+  - [ ] [9.8: Create signup page](#step-98-create-signup-page-🤖)
+  - [ ] [9.9: Create email confirmation page](#step-99-create-email-confirmation-page-🤖)
+  - [ ] [9.10: Create forgot password page](#step-910-create-forgot-password-page-🤖)
+  - [ ] [9.11: Create reset password page](#step-911-create-reset-password-page-🤖)
+  - [ ] [9.12: Create withAuth HOC for protected routes](#step-912-create-withauth-hoc-for-protected-routes-🤖)
+  - [ ] [9.13: Integrate AuthProvider in layout](#step-913-integrate-authprovider-in-layout-🤖)
+  - [ ] [9.14: Protect game route](#step-914-protect-game-route-🤖)
+  - [ ] [9.15: Test authentication flow](#step-915-test-authentication-flow-👤)
 
 ---
 
@@ -759,6 +775,953 @@ npm run start
 - [ ] All functionality works as in development
 - [ ] No console errors
 - [ ] Performance is acceptable
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Phase 9: Add Cognito Authentication
+
+This phase adds AWS Cognito authentication to protect the cribbage game, following the same pattern used in the pgui application.
+
+### Step 9.1: AWS Cognito Setup 👤
+
+**Create a Cognito User Pool in AWS Console:**
+
+1. **Navigate to Amazon Cognito** in the AWS Console
+2. **Create a new User Pool:**
+   - Click "Create user pool"
+   - Select "Email" as sign-in option
+   - Configure password policy:
+     - Minimum length: 8 characters
+     - Require uppercase letters
+     - Require lowercase letters
+     - Require numbers
+     - Require special characters
+   - Enable self-registration
+   - Enable email verification
+   - Select "Send email with Cognito" for email delivery
+
+3. **Configure App Client:**
+   - Create an app client (no client secret for browser apps)
+   - Enable: ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH
+   - Note the Client ID
+
+4. **Record the following values:**
+   - Region (e.g., `us-east-2`)
+   - User Pool ID (e.g., `us-east-2_xxxxxxxxx`)
+   - App Client ID (e.g., `xxxxxxxxxxxxxxxxxxxxxxxxxx`)
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.2: Install Cognito dependencies 🤖
+
+**Commands:**
+```bash
+npm install amazon-cognito-identity-js @aws-sdk/client-cognito-identity-provider nookies
+```
+
+**Packages:**
+- `amazon-cognito-identity-js` - Cognito JavaScript SDK for user authentication
+- `@aws-sdk/client-cognito-identity-provider` - AWS SDK for Cognito operations (forgot password, etc.)
+- `nookies` - Cookie management for Next.js
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.3: Create environment configuration 🤖
+
+Create `.env.local` file in project root:
+
+```bash
+# AWS Cognito Configuration
+NEXT_PUBLIC_COGNITO_REGION='us-east-2'
+NEXT_PUBLIC_COGNITO_USER_POOL_ID='us-east-2_XXXXXXXXX'
+NEXT_PUBLIC_COGNITO_CLIENT_ID='XXXXXXXXXXXXXXXXXXXXXXXXXX'
+```
+
+Create `.env.example` for documentation:
+
+```bash
+# AWS Cognito Configuration
+# Get these values from AWS Cognito Console
+NEXT_PUBLIC_COGNITO_REGION='us-east-2'
+NEXT_PUBLIC_COGNITO_USER_POOL_ID='your-user-pool-id'
+NEXT_PUBLIC_COGNITO_CLIENT_ID='your-client-id'
+```
+
+**Add to `.gitignore`:**
+```
+.env.local
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.4: Create Cognito utility module 🤖
+
+Create `lib/cognito.js`:
+
+```javascript
+// lib/cognito.js
+import { CognitoUserPool } from 'amazon-cognito-identity-js';
+import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
+
+const region = process.env.NEXT_PUBLIC_COGNITO_REGION;
+const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+
+const poolData = {
+  UserPoolId: userPoolId,
+  ClientId: clientId
+};
+
+const userPool = new CognitoUserPool(poolData);
+
+const cognitoClient = new CognitoIdentityProviderClient({
+  region: region,
+});
+
+export { userPool, cognitoClient, region, userPoolId, clientId };
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.5: Create Auth context provider 🤖
+
+Create `contexts/AuthContext.jsx`:
+
+```javascript
+'use client';
+
+import { createContext, useState, useEffect, useContext } from 'react';
+import { userPool } from '@/lib/cognito';
+
+export const AuthContext = createContext();
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const currentUser = userPool.getCurrentUser();
+    if (currentUser) {
+      currentUser.getSession((err, session) => {
+        if (err || !session || !session.isValid()) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        currentUser.getUserAttributes((attrErr, attributes) => {
+          if (!attrErr && attributes) {
+            const userAttributes = {};
+            attributes.forEach((attr) => {
+              userAttributes[attr.Name] = attr.Value;
+            });
+            currentUser.attributes = userAttributes;
+          }
+          setUser(currentUser);
+          setLoading(false);
+        });
+      });
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const signOut = () => {
+    const currentUser = userPool.getCurrentUser();
+    if (currentUser) {
+      currentUser.signOut();
+    }
+    setUser(null);
+
+    if (typeof window !== 'undefined') {
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      localStorage.removeItem('isLoggedIn');
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, setUser, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.6: Create auth UI components 🤖
+
+Create `components/PasswordInput.jsx`:
+
+```javascript
+'use client';
+
+import { useState } from 'react';
+
+export default function PasswordInput({ value, onChange, placeholder, className }) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={showPassword ? "text" : "password"}
+        value={value}
+        placeholder={placeholder}
+        onChange={onChange}
+        required
+        className={`${className} w-full p-2.5 pr-10 border border-gray-300 rounded text-base`}
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
+      >
+        {showPassword ? '👁' : '👁‍🗨'}
+      </button>
+    </div>
+  );
+}
+```
+
+Create `components/PasswordRequirements.jsx`:
+
+```javascript
+'use client';
+
+import { useEffect } from 'react';
+
+export default function PasswordRequirements({ password, onValidationChange }) {
+  const requirements = [
+    { key: 'minLength', label: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
+    { key: 'uppercase', label: 'At least one uppercase letter (A-Z)', test: (pwd) => /[A-Z]/.test(pwd) },
+    { key: 'lowercase', label: 'At least one lowercase letter (a-z)', test: (pwd) => /[a-z]/.test(pwd) },
+    { key: 'number', label: 'At least one number (0-9)', test: (pwd) => /[0-9]/.test(pwd) },
+    { key: 'special', label: 'At least one special character (!@#$%^&*)', test: (pwd) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pwd) }
+  ];
+
+  const requirementsMet = requirements.map(req => ({ ...req, met: req.test(password) }));
+  const allRequirementsMet = requirementsMet.every(req => req.met);
+
+  useEffect(() => {
+    if (onValidationChange) {
+      onValidationChange(allRequirementsMet);
+    }
+  }, [allRequirementsMet, onValidationChange]);
+
+  return (
+    <div className="my-2 p-3 bg-gray-100 rounded border border-gray-200">
+      <div className="text-sm font-semibold text-gray-700 mb-2">Password Requirements:</div>
+      <ul className="list-none p-0 m-0">
+        {requirementsMet.map((req) => (
+          <li key={req.key} className={`flex items-center py-1 text-sm ${req.met ? 'text-green-600' : 'text-gray-500'}`}>
+            <span className="w-5 font-bold mr-2">{req.met ? '✓' : '○'}</span>
+            <span>{req.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.7: Create login page 🤖
+
+Create `app/login/page.js`:
+
+```javascript
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { CognitoUser, AuthenticationDetails } from 'amazon-cognito-identity-js';
+import { userPool } from '@/lib/cognito';
+import { useAuth } from '@/contexts/AuthContext';
+import { setCookie } from 'nookies';
+import PasswordInput from '@/components/PasswordInput';
+
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const { setUser, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/');
+    }
+  }, [user, router]);
+
+  if (user) return null;
+
+  const login = async (event) => {
+    event.preventDefault();
+
+    const authenticationDetails = new AuthenticationDetails({
+      Username: email,
+      Password: password,
+    });
+
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    cognitoUser.authenticateUser(authenticationDetails, {
+      onSuccess: (result) => {
+        localStorage.setItem('isLoggedIn', 'true');
+
+        setCookie(null, 'token', result.getIdToken().getJwtToken(), {
+          maxAge: 30 * 24 * 60 * 60,
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production'
+        });
+
+        cognitoUser.getUserAttributes((err, attributes) => {
+          if (!err && attributes) {
+            const userAttributes = {};
+            attributes.forEach((attr) => {
+              userAttributes[attr.Name] = attr.Value;
+            });
+            cognitoUser.attributes = userAttributes;
+          }
+          setUser(cognitoUser);
+          router.push('/');
+        });
+      },
+      onFailure: (err) => {
+        setError(err.message || JSON.stringify(err));
+      },
+    });
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="w-96 p-10 bg-white rounded shadow-md">
+        <h1 className="text-xl text-center mb-5">Login</h1>
+        <form onSubmit={login} className="flex flex-col">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="mb-2 p-2.5 border border-gray-300 rounded text-base"
+          />
+          <PasswordInput
+            value={password}
+            placeholder="Password"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button type="submit" className="mt-4 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600">
+            Log in
+          </button>
+          <Link href="/signup" className="text-blue-500 text-sm text-center mt-4 hover:underline">
+            Create an account
+          </Link>
+          <Link href="/forgot-password" className="text-blue-500 text-sm text-center mt-2 hover:underline">
+            Forgot password
+          </Link>
+        </form>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+      </div>
+      <div className="text-gray-400 text-sm mt-5">
+        © 2024 Cribbage Game
+      </div>
+    </div>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.8: Create signup page 🤖
+
+Create `app/signup/page.js`:
+
+```javascript
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { CognitoUserAttribute } from 'amazon-cognito-identity-js';
+import { userPool } from '@/lib/cognito';
+import PasswordInput from '@/components/PasswordInput';
+import PasswordRequirements from '@/components/PasswordRequirements';
+
+export default function SignUp() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordValid, setPasswordValid] = useState(false);
+  const [error, setError] = useState(null);
+  const router = useRouter();
+
+  const signUp = async (event) => {
+    event.preventDefault();
+
+    const attributeList = [
+      new CognitoUserAttribute({
+        Name: 'email',
+        Value: email,
+      }),
+    ];
+
+    userPool.signUp(email, password, attributeList, null, (err, result) => {
+      if (err) {
+        setError(err.message || JSON.stringify(err));
+        return;
+      }
+      console.log(`User ${result.user.getUsername()} is signed up`);
+      router.push(`/confirm?email=${encodeURIComponent(email)}`);
+    });
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="w-96 p-10 bg-white rounded shadow-md">
+        <h1 className="text-xl text-center mb-5">Create Account</h1>
+        <form onSubmit={signUp} className="flex flex-col">
+          <input
+            type="email"
+            value={email}
+            placeholder="Enter your email"
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="mb-2 p-2.5 border border-gray-300 rounded text-base"
+          />
+          <PasswordInput
+            value={password}
+            placeholder="Enter your password"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <PasswordRequirements
+            password={password}
+            onValidationChange={(isValid) => setPasswordValid(isValid)}
+          />
+          <button
+            type="submit"
+            disabled={!passwordValid}
+            className="mt-4 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Sign Up
+          </button>
+          <Link href="/login" className="text-blue-500 text-sm text-center mt-4 hover:underline">
+            Back to login
+          </Link>
+        </form>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+      </div>
+      <div className="text-gray-400 text-sm mt-5">
+        © 2024 Cribbage Game
+      </div>
+    </div>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.9: Create email confirmation page 🤖
+
+Create `app/confirm/page.js`:
+
+```javascript
+'use client';
+
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CognitoUser } from 'amazon-cognito-identity-js';
+import { userPool } from '@/lib/cognito';
+
+function ConfirmForm() {
+  const [confirmationCode, setConfirmationCode] = useState('');
+  const [error, setError] = useState(null);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') || '';
+
+  const confirmSignUp = async (event) => {
+    event.preventDefault();
+
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    cognitoUser.confirmRegistration(confirmationCode, true, function(err, result) {
+      if (err) {
+        setError(err.message || JSON.stringify(err));
+        return;
+      }
+      console.log(`User ${cognitoUser.getUsername()} is confirmed`);
+      router.push('/login');
+    });
+  };
+
+  const resendCode = async () => {
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    cognitoUser.resendConfirmationCode((err) => {
+      if (err) {
+        setError(err.message || JSON.stringify(err));
+        return;
+      }
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 5000);
+    });
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="w-96 p-10 bg-white rounded shadow-md">
+        <h1 className="text-xl text-center mb-5">Confirm Your Email</h1>
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-5 text-sm text-blue-700">
+          A message containing your confirmation code was sent to the email address provided.
+        </div>
+        <form onSubmit={confirmSignUp} className="flex flex-col">
+          <input
+            type="text"
+            value={confirmationCode}
+            placeholder="Enter confirmation code"
+            onChange={(e) => setConfirmationCode(e.target.value)}
+            required
+            className="mb-2 p-2.5 border border-gray-300 rounded text-base"
+          />
+          <button type="submit" className="mt-2 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600">
+            Confirm Sign Up
+          </button>
+        </form>
+        <button
+          onClick={resendCode}
+          className="w-full mt-2 p-2.5 bg-white border border-blue-500 text-blue-500 rounded text-sm hover:bg-blue-50"
+        >
+          Resend Code
+        </button>
+        {resendSuccess && <p className="text-green-500 mt-2 text-sm">Another code has been sent to your email.</p>}
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+      </div>
+      <div className="text-gray-400 text-sm mt-5">
+        © 2024 Cribbage Game
+      </div>
+    </div>
+  );
+}
+
+export default function Confirm() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ConfirmForm />
+    </Suspense>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.10: Create forgot password page 🤖
+
+Create `app/forgot-password/page.js`:
+
+```javascript
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { ForgotPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { cognitoClient, clientId } from '@/lib/cognito';
+
+export default function ForgotPassword() {
+  const [email, setEmail] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeResent, setCodeResent] = useState(false);
+  const [error, setError] = useState(null);
+
+  const forgotPassword = async (event) => {
+    event.preventDefault();
+
+    try {
+      const command = new ForgotPasswordCommand({
+        ClientId: clientId,
+        Username: email,
+      });
+      await cognitoClient.send(command);
+      setCodeSent(true);
+    } catch (err) {
+      setError(err.message || JSON.stringify(err));
+    }
+  };
+
+  const resendCode = async (event) => {
+    event.preventDefault();
+    try {
+      const command = new ForgotPasswordCommand({
+        ClientId: clientId,
+        Username: email,
+      });
+      await cognitoClient.send(command);
+      setCodeResent(true);
+      setTimeout(() => setCodeResent(false), 3000);
+    } catch (err) {
+      setError(err.message || JSON.stringify(err));
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="w-96 p-10 bg-white rounded shadow-md">
+        <h1 className="text-xl text-center mb-5">Forgot Password</h1>
+        {!codeSent ? (
+          <form onSubmit={forgotPassword} className="flex flex-col">
+            <input
+              type="email"
+              placeholder="Email"
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="mb-2 p-2.5 border border-gray-300 rounded text-base"
+            />
+            <button type="submit" className="mt-2 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600">
+              Send Code
+            </button>
+            <Link href="/login" className="text-blue-500 text-sm text-center mt-4 hover:underline">
+              Back to Login
+            </Link>
+          </form>
+        ) : (
+          <div>
+            <p className="text-gray-600 mb-4">
+              A verification code has been sent to your email. Please check your inbox and spam folder.
+            </p>
+            <Link href={`/reset-password?email=${encodeURIComponent(email)}`}>
+              <button className="w-full p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600">
+                Enter Code
+              </button>
+            </Link>
+            <button onClick={resendCode} className="w-full mt-2 text-blue-500 text-sm hover:underline">
+              Resend Code
+            </button>
+            {codeResent && <p className="text-green-500 mt-2 text-sm">Code has been resent successfully!</p>}
+          </div>
+        )}
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+      </div>
+      <div className="text-gray-400 text-sm mt-5">
+        © 2024 Cribbage Game
+      </div>
+    </div>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.11: Create reset password page 🤖
+
+Create `app/reset-password/page.js`:
+
+```javascript
+'use client';
+
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ConfirmForgotPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { cognitoClient, clientId } from '@/lib/cognito';
+import PasswordInput from '@/components/PasswordInput';
+
+function ResetPasswordForm() {
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') || '';
+
+  const resetPassword = async (event) => {
+    event.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirm password do not match.');
+      return;
+    }
+
+    try {
+      const command = new ConfirmForgotPasswordCommand({
+        ClientId: clientId,
+        Username: email,
+        ConfirmationCode: code,
+        Password: newPassword,
+      });
+      await cognitoClient.send(command);
+      router.push('/login');
+    } catch (err) {
+      setError(err.message || JSON.stringify(err));
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="w-96 p-10 bg-white rounded shadow-md">
+        <h1 className="text-xl text-center mb-5">Reset Password</h1>
+        <form onSubmit={resetPassword} className="flex flex-col">
+          <input
+            type="text"
+            placeholder="Verification Code"
+            onChange={(e) => setCode(e.target.value)}
+            required
+            className="mb-2 p-2.5 border border-gray-300 rounded text-base"
+          />
+          <PasswordInput
+            value={newPassword}
+            placeholder="New Password"
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <div className="mt-2">
+            <PasswordInput
+              value={confirmPassword}
+              placeholder="Confirm Password"
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="mt-4 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600">
+            Reset Password
+          </button>
+        </form>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+      </div>
+      <div className="text-gray-400 text-sm mt-5">
+        © 2024 Cribbage Game
+      </div>
+    </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.12: Create withAuth HOC for protected routes 🤖
+
+Create `components/withAuth.jsx`:
+
+```javascript
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { parseCookies, destroyCookie } from 'nookies';
+import { useAuth } from '@/contexts/AuthContext';
+import { userPool } from '@/lib/cognito';
+
+export default function withAuth(WrappedComponent) {
+  return function AuthComponent(props) {
+    const router = useRouter();
+    const { user, loading } = useAuth();
+    const [isValidating, setIsValidating] = useState(true);
+
+    useEffect(() => {
+      const validateAuth = async () => {
+        const { token } = parseCookies();
+
+        if (!token) {
+          router.replace('/login');
+          return;
+        }
+
+        const currentUser = userPool.getCurrentUser();
+
+        if (!currentUser) {
+          destroyCookie(null, 'token', { path: '/' });
+          router.replace('/login');
+          return;
+        }
+
+        currentUser.getSession((err, session) => {
+          if (err || !session || !session.isValid()) {
+            currentUser.signOut();
+            destroyCookie(null, 'token', { path: '/' });
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('isLoggedIn');
+            }
+            router.replace('/login');
+            return;
+          }
+          setIsValidating(false);
+        });
+      };
+
+      if (!loading) {
+        validateAuth();
+      }
+    }, [loading, router]);
+
+    if (loading || isValidating) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Validating authentication...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!user) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      return null;
+    }
+
+    return <WrappedComponent {...props} />;
+  };
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.13: Integrate AuthProvider in layout 🤖
+
+Update `app/layout.js` to wrap the app with AuthProvider:
+
+```javascript
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata = {
+  title: "Cribbage",
+  description: "Classic cribbage card game",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.14: Protect game route 🤖
+
+Update `app/page.js` to use withAuth HOC:
+
+```javascript
+'use client';
+
+import CribbageGame from '@/components/CribbageGame';
+import withAuth from '@/components/withAuth';
+import { useAuth } from '@/contexts/AuthContext';
+
+function Home() {
+  const { signOut, user } = useAuth();
+
+  return (
+    <div>
+      {/* Optional: Add logout button */}
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          onClick={signOut}
+          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm"
+        >
+          Logout ({user?.attributes?.email || 'User'})
+        </button>
+      </div>
+      <CribbageGame />
+    </div>
+  );
+}
+
+export default withAuth(Home);
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.15: Test authentication flow 👤
+
+**Test Checklist:**
+
+- [ ] Create a new account (signup)
+- [ ] Receive email confirmation code
+- [ ] Confirm email with code
+- [ ] Login with credentials
+- [ ] Game loads after successful login
+- [ ] Logout works correctly
+- [ ] Forgot password sends reset code
+- [ ] Reset password with code works
+- [ ] Invalid credentials show error
+- [ ] Protected routes redirect to login when not authenticated
+- [ ] Session persists on page refresh
 
 [Back to TOC](#table-of-contents)
 
