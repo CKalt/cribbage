@@ -789,10 +789,13 @@ This phase adds AWS Cognito authentication to protect the cribbage game, followi
 **Create a Cognito User Pool in AWS Console:**
 
 1. **Navigate to Amazon Cognito:**
-   - Go to https://console.aws.amazon.com/cognito/
-   - Select your preferred region (e.g., `us-east-2` for Ohio)
-   - Click "User pools" in the left sidebar
-   - Click "Create user pool"
+   - Go to https://console.aws.amazon.com/ (the AWS Management Console, NOT docs.aws.amazon.com)
+   - **Select your region** in the top-right corner dropdown next to your account name
+     - Example: "US East (Ohio)" which is `us-east-2`
+     - This is a global AWS Console setting, not a Cognito-specific setting
+   - In the search bar at the top, type "Cognito" and click "Cognito" under Services
+   - You should see the Cognito dashboard with "User pools" in the left sidebar
+   - Click "User pools" then click "Create user pool"
 
 2. **Step 1 - Configure sign-in experience:**
    - Provider types: Select "Cognito user pool"
