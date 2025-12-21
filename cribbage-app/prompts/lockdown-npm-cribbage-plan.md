@@ -18,17 +18,17 @@
   - [x] [3.3 Run npm install](#33-run-npm-install-🤖)
   - [x] [3.4 Run npm audit](#34-run-npm-audit-🤖)
   - [x] [3.5 Git commit changes](#35-git-commit-changes-🤖)
-- [ ] [Phase 4: Create EC2 Instance 👤🤖](#phase-4-create-ec2-instance-👤🤖)
-  - [ ] [4.1 Create security group](#41-create-security-group-🤖)
-  - [ ] [4.2 Launch t3.small instance](#42-launch-t3small-instance-🤖)
-  - [ ] [4.3 Configure instance](#43-configure-instance-👤🤖)
-- [ ] [Phase 5: Deploy to EC2 👤🤖](#phase-5-deploy-to-ec2-👤🤖)
-  - [ ] [5.1 Clone repository](#51-clone-repository-🤖)
-  - [ ] [5.2 Install Node.js](#52-install-nodejs-🤖)
-  - [ ] [5.3 Clean install with npm ci](#53-clean-install-with-npm-ci-🤖)
-  - [ ] [5.4 Build application](#54-build-application-🤖)
-  - [ ] [5.5 Configure PM2](#55-configure-pm2-🤖)
-  - [ ] [5.6 Verify no malware](#56-verify-no-malware-🤖)
+- [x] [Phase 4: Create EC2 Instance 👤🤖](#phase-4-create-ec2-instance-👤🤖)
+  - [x] [4.1 Create security group](#41-create-security-group-🤖)
+  - [x] [4.2 Launch t3.small instance](#42-launch-t3small-instance-🤖)
+  - [x] [4.3 Configure instance](#43-configure-instance-👤🤖)
+- [x] [Phase 5: Deploy to EC2 👤🤖](#phase-5-deploy-to-ec2-👤🤖)
+  - [x] [5.1 Clone repository](#51-clone-repository-🤖)
+  - [x] [5.2 Install Node.js](#52-install-nodejs-🤖)
+  - [x] [5.3 Clean install with npm ci](#53-clean-install-with-npm-ci-🤖)
+  - [x] [5.4 Build application](#54-build-application-🤖)
+  - [x] [5.5 Configure PM2](#55-configure-pm2-🤖)
+  - [x] [5.6 Verify no malware](#56-verify-no-malware-🤖)
 
 ---
 
@@ -214,31 +214,45 @@ Files committed:
 
 ### 4.1 Create security group 🤖
 
-- [ ] Create security group `cribbage-sg` allowing:
+- [x] Create security group `cribbage-sg` allowing:
   - SSH (port 22) from your IP
   - HTTP (port 80) from anywhere
   - HTTPS (port 443) from anywhere
   - Next.js dev (port 3000) from your IP (optional)
 
+**Completed:** 2025-12-21 - Security group `sg-0e266eb1426434f9a` created with all rules
+
 [Back to TOC](#table-of-contents)
 
 ### 4.2 Launch t3.small instance 🤖
 
-- [ ] Launch EC2 instance with:
-  - AMI: Amazon Linux 2023
+- [x] Launch EC2 instance with:
+  - AMI: Amazon Linux 2023 (`ami-0e858a9b9fb8b4917`)
   - Instance type: t3.small
-  - Key pair: chriskoin2-key-pair (or create new)
+  - Key pair: chriskoin2-key-pair
   - Security group: cribbage-sg
   - Storage: 20 GB gp3
   - Region: us-east-2
+
+**Completed:** 2025-12-21
+
+| Property | Value |
+|----------|-------|
+| Instance ID | `i-019e6bfe19d70a54f` |
+| Public IP | `52.15.180.37` |
+| Public DNS | `ec2-52-15-180-37.us-east-2.compute.amazonaws.com` |
+
+**SSH Command:** `ssh -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@52.15.180.37`
 
 [Back to TOC](#table-of-contents)
 
 ### 4.3 Configure instance 👤🤖
 
-- [ ] User SSH into instance
-- [ ] Add swap space (2GB) for build memory
-- [ ] Install required packages
+- [x] User SSH into instance
+- [x] Add swap space (2GB) for build memory
+- [x] Install required packages
+
+**Completed:** 2025-12-21 - 2GB swap configured, Node.js 20.19.6 (via nvm), git, npm, PM2 installed
 
 [Back to TOC](#table-of-contents)
 
@@ -248,50 +262,68 @@ Files committed:
 
 ### 5.1 Clone repository 🤖
 
-- [ ] Set up git credentials
-- [ ] Clone cribbage-app repository
+- [x] Set up git credentials (SSH agent forwarding)
+- [x] Clone cribbage-app repository
+
+**Completed:** 2025-12-21 - Cloned via `git clone git@github.com:CKalt/cribbage.git` using SSH agent forwarding
 
 [Back to TOC](#table-of-contents)
 
 ### 5.2 Install Node.js 🤖
 
-- [ ] Install Node.js 20.x LTS via nvm or dnf
+- [x] Install Node.js 20.x LTS via nvm
+
+**Completed:** 2025-12-21 - Node.js v20.19.6 installed via nvm (Amazon Linux dnf had v18 which was incompatible with Next.js 16.1)
 
 [Back to TOC](#table-of-contents)
 
 ### 5.3 Clean install with npm ci 🤖
 
-- [ ] Run: `npm ci --ignore-scripts`
+- [x] Run: `npm ci --ignore-scripts`
 
 **Security Note:** The `--ignore-scripts` flag prevents execution of any `postinstall`, `preinstall`, or other lifecycle scripts in dependencies. This blocks the primary attack vector used in the Dec 2025 supply chain attack.
+
+**Completed:** 2025-12-21 - 465 packages installed, 2 low severity vulnerabilities (cookie/nookies - no fix available)
 
 [Back to TOC](#table-of-contents)
 
 ### 5.4 Build application 🤖
 
-- [ ] Run: `npm run build`
-- [ ] Verify build completes successfully
+- [x] Run: `npm run build`
+- [x] Verify build completes successfully
+
+**Completed:** 2025-12-21 - Next.js 16.1.0 (Turbopack) build successful. Required copying `.env.local` with Cognito configuration.
 
 [Back to TOC](#table-of-contents)
 
 ### 5.5 Configure PM2 🤖
 
-- [ ] Install PM2: `npm install -g pm2`
-- [ ] Start application: `pm2 start npm --name "cribbage" -- start`
-- [ ] Save PM2 config: `pm2 save`
-- [ ] Set up PM2 startup: `pm2 startup`
+- [x] Install PM2: `npm install -g pm2`
+- [x] Start application: `pm2 start npm --name "cribbage" -- start`
+- [x] Save PM2 config: `pm2 save`
+- [x] Set up PM2 startup: `pm2 startup`
+
+**Completed:** 2025-12-21 - PM2 v6.0.14 running, systemd startup configured
 
 [Back to TOC](#table-of-contents)
 
 ### 5.6 Verify no malware 🤖
 
-- [ ] Run malware checks:
+- [x] Run malware checks:
   ```bash
   ps aux --sort=-%cpu | head -15
   pgrep -af 'xmrig|c3pool|monero|runnv'
   grep -r "cdnapi.tech|li1.pics|45.134.174" node_modules/ 2>/dev/null | head -5
   ```
-- [ ] Verify system is clean
+- [x] Verify system is clean
+
+**Completed:** 2025-12-21 - All checks passed:
+- No malware processes found
+- No malware domains in node_modules
+- CPU usage normal (next-server at 0.4%)
+- App responding HTTP 200 on localhost:3000
+
+**App URL:** http://52.15.180.37:3000
 
 [Back to TOC](#table-of-contents)
 
