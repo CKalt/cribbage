@@ -69,9 +69,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="w-96 p-10 bg-white rounded shadow-md">
-        <h1 className="text-xl text-center mb-5 text-gray-800">Login</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-green-900">
+      <div className="w-96 p-10 bg-green-800 rounded-lg shadow-xl border border-green-700">
+        <h1 className="text-2xl font-bold text-center mb-6 text-white">Login</h1>
         <form onSubmit={login} className="flex flex-col">
           <input
             type="email"
@@ -79,26 +79,26 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mb-2 p-2.5 border border-gray-300 rounded text-base text-gray-800"
+            className="mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <PasswordInput
             value={password}
             placeholder="Password"
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="submit" className="mt-4 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600 cursor-pointer">
+          <button type="submit" className="mt-5 p-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-500 cursor-pointer transition-colors">
             Log in
           </button>
-          <Link href="/signup" className="text-blue-500 text-sm text-center mt-4 hover:underline">
+          <Link href="/signup" className="text-green-300 text-sm text-center mt-4 hover:text-green-200 hover:underline">
             Create an account
           </Link>
-          <Link href="/forgot-password" className="text-blue-500 text-sm text-center mt-2 hover:underline">
+          <Link href="/forgot-password" className="text-green-300 text-sm text-center mt-2 hover:text-green-200 hover:underline">
             Forgot password
           </Link>
         </form>
-        {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
+        {error && <p className="text-red-400 mt-4 text-sm bg-red-900/30 p-2 rounded">{error}</p>}
       </div>
-      <div className="text-gray-400 text-sm mt-5">
+      <div className="text-green-400 text-sm mt-5">
         Cribbage Game
       </div>
     </div>
