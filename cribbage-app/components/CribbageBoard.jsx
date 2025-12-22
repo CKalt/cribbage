@@ -73,7 +73,11 @@ export default function CribbageBoard({ playerScore, computerScore, onPegClick }
 
   return (
     <div className="mb-6 bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-xl">
-      <svg width={boardWidth} height={boardHeight} className="mx-auto">
+      <svg
+        viewBox={`0 0 ${boardWidth} ${boardHeight}`}
+        className="mx-auto w-full max-w-[620px]"
+        preserveAspectRatio="xMidYMid meet"
+      >
         {/* Board background */}
         <rect x="5" y="5" width={boardWidth - 10} height={boardHeight - 10} fill="#654321" rx="8" />
         <rect x="10" y="10" width={boardWidth - 20} height={boardHeight - 20} fill="#8B4513" rx="6" />
