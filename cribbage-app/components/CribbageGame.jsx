@@ -56,12 +56,13 @@ export default function CribbageGame() {
   // Counting phase state
   const [countingTurn, setCountingTurn] = useState('');
   const [playerCountInput, setPlayerCountInput] = useState('');
-  const [computerClaimedScore, setComputerClaimedScore] = useState(0);
+  const [computerClaimedScore, setComputerClaimedScore] = useState(null);
   const [actualScore, setActualScore] = useState(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [counterIsComputer, setCounterIsComputer] = useState(null);
   const [handsCountedThisRound, setHandsCountedThisRound] = useState(0);
   const [isProcessingCount, setIsProcessingCount] = useState(false);
+  const [pendingCountContinue, setPendingCountContinue] = useState(null); // Stores data for continuing after player acknowledges
 
   // Cutting phase state
   const [playerCutCard, setPlayerCutCard] = useState(null);
@@ -214,10 +215,11 @@ export default function CribbageGame() {
     setGameState('counting');
     setHandsCountedThisRound(0);
 
-    setComputerClaimedScore(0);
+    setComputerClaimedScore(null);
     setActualScore(null);
     setShowBreakdown(false);
     setIsProcessingCount(false);
+    setPendingCountContinue(null);
 
     const firstCounter = dealer === 'player' ? 'computer' : 'player';
     const isComputerFirst = firstCounter === 'computer';
@@ -325,7 +327,7 @@ export default function CribbageGame() {
     setSelectedCards([]);
     setCountingTurn('');
     setPlayerCountInput('');
-    setComputerClaimedScore(0);
+    setComputerClaimedScore(null);
     setActualScore(null);
     setShowBreakdown(false);
     setPendingScore(null);
@@ -728,73 +730,82 @@ export default function CribbageGame() {
       handsCountedThisRound: handsCountedThisRound
     });
 
+    const newHandsCountedThisRound = handsCountedThisRound + 1;
+    setHandsCountedThisRound(newHandsCountedThisRound);
+    setPlayerCountInput('');
+    setShowBreakdown(true);
+
     if (claimed === score) {
       setMessage(`Correct! ${score} points`);
       setPlayerScore(prev => prev + score);
-      setShowBreakdown(true);
+      addDebugLog(`Player count correct. Hands counted now: ${newHandsCountedThisRound}`);
+
+      // Auto-advance after short delay for correct counts
+      setTimeout(() => {
+        proceedAfterPlayerCount(newHandsCountedThisRound);
+      }, 2500);
     } else if (claimed < score) {
-      setMessage(`You undercounted! You claimed ${claimed} but it's ${score} - You only get ${claimed}`);
+      setMessage(`You undercounted! You claimed ${claimed} but it's ${score} - You only get ${claimed}. Review the breakdown and click Continue.`);
       setPlayerScore(prev => prev + claimed);
-      setShowBreakdown(true);
+      addDebugLog(`Player undercounted. Waiting for acknowledgment. Hands counted now: ${newHandsCountedThisRound}`);
+
+      // Wait for player to acknowledge
+      setPendingCountContinue({ newHandsCountedThisRound, type: 'undercount' });
     } else {
-      setMessage(`Muggins! You overcounted. You claimed ${claimed} but it's only ${score}`);
-      setShowBreakdown(true);
+      setMessage(`Muggins! You overcounted. You claimed ${claimed} but it's only ${score}. You get 0 points. Review the breakdown and click Continue.`);
+      // No points for overcounting
+      addDebugLog(`Player overcounted. Waiting for acknowledgment. Hands counted now: ${newHandsCountedThisRound}`);
+
+      // Wait for player to acknowledge
+      setPendingCountContinue({ newHandsCountedThisRound, type: 'overcount' });
     }
-    setPlayerCountInput('');
+  };
 
-    const newHandsCountedThisRound = handsCountedThisRound + 1;
-    setHandsCountedThisRound(newHandsCountedThisRound);
-    addDebugLog(`Player count complete. Hands counted now: ${newHandsCountedThisRound}`);
+  // Continue after player acknowledges their count result
+  const handleCountContinue = () => {
+    if (!pendingCountContinue) return;
 
-    if (newHandsCountedThisRound === 1 && dealer === 'computer') {
-      setCounterIsComputer(true);
-      setCountingTurn('computer');
-      addDebugLog(`After first count, switching to computer dealer. counterIsComputer: true`);
-    } else if (newHandsCountedThisRound === 2 && dealer === 'player') {
-      setCounterIsComputer(false);
+    const { newHandsCountedThisRound } = pendingCountContinue;
+    addDebugLog(`Player acknowledged count result. Continuing...`);
+    setPendingCountContinue(null);
+    proceedAfterPlayerCount(newHandsCountedThisRound);
+  };
+
+  // Common logic for proceeding after player count
+  const proceedAfterPlayerCount = (newHandsCountedThisRound) => {
+    setShowBreakdown(false);
+    setActualScore(null);
+
+    if (newHandsCountedThisRound >= 3) {
+      addDebugLog('All counting complete - checking for game end');
+      setCountingTurn('');
+      setCounterIsComputer(null);
+
+      setTimeout(() => {
+        if (playerScore >= 121 || computerScore >= 121) {
+          setGameState('gameOver');
+          setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+        } else {
+          setMessage('Hand complete - Dealing next hand...');
+          setTimeout(() => {
+            setDealer(dealer === 'player' ? 'computer' : 'player');
+            const newDeck = shuffleDeck(createDeck());
+            setDeck(newDeck);
+            dealHands(newDeck);
+          }, 1500);
+        }
+      }, 100);
+    } else if (newHandsCountedThisRound === 1) {
+      addDebugLog(`First count done by player, dealer (${dealer}) counts hand next`);
+      setCountingTurn(dealer);
+      setCounterIsComputer(dealer === 'computer');
+      setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
+    } else if (newHandsCountedThisRound === 2) {
+      addDebugLog(`Second count done by player, dealer (${dealer}) counts crib next`);
       setCountingTurn('crib');
-      addDebugLog('Player (dealer) will count crib next');
-    } else if (newHandsCountedThisRound === 2 && dealer === 'computer') {
-      setCounterIsComputer(true);
-      setCountingTurn('crib');
-      addDebugLog('Computer (dealer) will count crib next');
+      setCounterIsComputer(dealer === 'computer');
+      setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
     }
-
-    setTimeout(() => {
-      setShowBreakdown(false);
-      setActualScore(null);
-
-      if (newHandsCountedThisRound >= 3) {
-        addDebugLog('All counting complete - checking for game end');
-        setCountingTurn('');
-        setCounterIsComputer(null);
-
-        setTimeout(() => {
-          if (playerScore >= 121 || computerScore >= 121) {
-            setGameState('gameOver');
-            setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
-          } else {
-            setMessage('Hand complete - Dealing next hand...');
-            setTimeout(() => {
-              setDealer(dealer === 'player' ? 'computer' : 'player');
-              const newDeck = shuffleDeck(createDeck());
-              setDeck(newDeck);
-              dealHands(newDeck);
-            }, 1500);
-          }
-        }, 100);
-      } else if (newHandsCountedThisRound === 1) {
-        addDebugLog(`First count done by player, dealer (${dealer}) counts hand next`);
-        setCountingTurn(dealer);
-        setCounterIsComputer(dealer === 'computer');
-        setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
-      } else if (newHandsCountedThisRound === 2) {
-        addDebugLog(`Second count done by player, dealer (${dealer}) counts crib next`);
-        setCountingTurn('crib');
-        setCounterIsComputer(dealer === 'computer');
-        setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
-      }
-    }, claimed === score ? 2500 : (claimed > score ? 3000 : 2000));
   };
 
   // Computer counts
@@ -811,7 +822,7 @@ export default function CribbageGame() {
       return;
     }
 
-    if (computerClaimedScore > 0) {
+    if (computerClaimedScore !== null) {
       addDebugLog('BLOCKED: computerCounts() blocked - already has claimed score');
       return;
     }
@@ -874,7 +885,7 @@ export default function CribbageGame() {
       setMessage(`Computer scores ${computerClaimedScore} points`);
       setShowBreakdown(false);
       setActualScore(null);
-      setComputerClaimedScore(0);
+      setComputerClaimedScore(null);
       setIsProcessingCount(false);
 
       setTimeout(() => {
@@ -942,7 +953,7 @@ export default function CribbageGame() {
       setTimeout(() => {
         setShowBreakdown(false);
         setActualScore(null);
-        setComputerClaimedScore(0);
+        setComputerClaimedScore(null);
         setIsProcessingCount(false);
 
         if (newHandsCountedThisRound >= 3) {
@@ -985,7 +996,7 @@ export default function CribbageGame() {
 
       setTimeout(() => {
         setActualScore(null);
-        setComputerClaimedScore(0);
+        setComputerClaimedScore(null);
         setIsProcessingCount(false);
 
         if (newHandsCountedThisRound >= 3) {
@@ -1030,7 +1041,7 @@ export default function CribbageGame() {
       setTimeout(() => {
         setShowBreakdown(false);
         setActualScore(null);
-        setComputerClaimedScore(0);
+        setComputerClaimedScore(null);
         setIsProcessingCount(false);
 
         if (newHandsCountedThisRound >= 3) {
@@ -1082,7 +1093,7 @@ export default function CribbageGame() {
                                counterIsComputer === true &&
                                !pendingScore &&
                                !actualScore &&
-                               computerClaimedScore === 0 &&
+                               computerClaimedScore === null &&
                                !isProcessingCount &&
                                handsCountedThisRound < 3;
 
@@ -1309,7 +1320,7 @@ export default function CribbageGame() {
                 )}
 
                 {/* Computer count verification */}
-                {gameState === 'counting' && counterIsComputer && actualScore && !pendingScore && computerClaimedScore > 0 && (
+                {gameState === 'counting' && counterIsComputer && actualScore && !pendingScore && computerClaimedScore !== null && (
                   <div className="text-center mb-4">
                     <div className="bg-yellow-900 border-2 border-yellow-500 rounded p-4 mb-4 inline-block">
                       <div className="text-yellow-300 font-bold mb-2">
@@ -1332,6 +1343,18 @@ export default function CribbageGame() {
 
                 {/* Score breakdown */}
                 <ScoreBreakdown actualScore={actualScore} show={gameState === 'counting'} />
+
+                {/* Continue button after player miscount */}
+                {pendingCountContinue && (
+                  <div className="text-center mb-4">
+                    <Button
+                      onClick={handleCountContinue}
+                      className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-lg"
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                )}
 
                 {/* Actions */}
                 {gameState === 'cribSelect' && (
@@ -1382,6 +1405,8 @@ export default function CribbageGame() {
                     handsCountedThisRound,
                     counterIsComputer,
                     countingTurn,
+                    computerClaimedScore,
+                    pendingCountContinue,
                     playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
                     computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
