@@ -1,14 +1,15 @@
 'use client';
 
-// Debug Panel Component
+// Debug Panel Component with Bug Reporting
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
- * Debug and replay controls panel
+ * Debug and replay controls panel with bug reporting
  * @param {Array} debugLog - Debug log entries
  * @param {Array} gameLog - Game event log
+ * @param {Object} gameState - Current game state for bug reports
  * @param {function} onCopyLog - Copy game log to clipboard
  * @param {function} onLoadReplay - Load replay from JSON
  * @param {boolean} replayMode - Whether in replay mode
@@ -19,6 +20,7 @@ import { Button } from '@/components/ui/button';
 export default function DebugPanel({
   debugLog = [],
   gameLog = [],
+  gameState = {},
   onCopyLog,
   onLoadReplay,
   replayMode = false,
@@ -28,11 +30,64 @@ export default function DebugPanel({
 }) {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [showGameLog, setShowGameLog] = useState(false);
+  const [showBugModal, setShowBugModal] = useState(false);
+  const [bugDescription, setBugDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
+
+  const handleSubmitBug = async () => {
+    if (!bugDescription.trim()) {
+      setSubmitStatus({ success: false, message: 'Please enter a description' });
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitStatus(null);
+
+    try {
+      const response = await fetch('/api/bug-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: bugDescription,
+          debugLog,
+          gameLog,
+          gameState,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitStatus({ success: true, message: 'Bug report submitted successfully!' });
+        setBugDescription('');
+        setTimeout(() => {
+          setShowBugModal(false);
+          setSubmitStatus(null);
+        }, 2000);
+      } else {
+        setSubmitStatus({ success: false, message: result.error || 'Failed to submit bug report' });
+      }
+    } catch (error) {
+      setSubmitStatus({ success: false, message: 'Network error: ' + error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
       {/* Debug Log Toggle Buttons */}
       <div className="text-center mt-4 space-x-2">
+        <Button
+          onClick={() => setShowBugModal(true)}
+          className="bg-red-600 hover:bg-red-700 text-sm"
+        >
+          Report Bug
+        </Button>
+
         <Button
           onClick={() => setShowDebugLog(!showDebugLog)}
           className="bg-gray-600 hover:bg-gray-700 text-sm"
@@ -72,6 +127,55 @@ export default function DebugPanel({
           </Button>
         )}
       </div>
+
+      {/* Bug Report Modal */}
+      {showBugModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-4">Report a Bug</h2>
+
+            <p className="text-gray-300 text-sm mb-4">
+              Describe what happened and what you expected. The game state and debug logs will be automatically included.
+            </p>
+
+            <textarea
+              value={bugDescription}
+              onChange={(e) => setBugDescription(e.target.value)}
+              placeholder="Describe the bug... (e.g., 'I was the dealer but couldn't count my crib after counting my hand')"
+              className="w-full h-32 p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none resize-none"
+            />
+
+            {submitStatus && (
+              <div className={`mt-3 p-2 rounded text-sm ${
+                submitStatus.success ? 'bg-green-700 text-green-100' : 'bg-red-700 text-red-100'
+              }`}>
+                {submitStatus.message}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button
+                onClick={() => {
+                  setShowBugModal(false);
+                  setBugDescription('');
+                  setSubmitStatus(null);
+                }}
+                className="bg-gray-600 hover:bg-gray-700"
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitBug}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={submitting}
+              >
+                {submitting ? 'Submitting...' : 'Submit Report'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Debug Log Display */}
       {showDebugLog && debugLog.length > 0 && (

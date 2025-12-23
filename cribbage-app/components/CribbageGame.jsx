@@ -1182,6 +1182,18 @@ export default function CribbageGame() {
                   </div>
                 )}
 
+                {/* Counting phase indicator */}
+                {gameState === 'counting' && (
+                  <div className="text-center mb-4 text-sm text-yellow-300">
+                    Counting: {handsCountedThisRound === 0 ? 'Non-dealer hand' :
+                               handsCountedThisRound === 1 ? 'Dealer hand' :
+                               handsCountedThisRound === 2 ? 'Crib' : 'Complete'}
+                    {' • '}
+                    {counterIsComputer ? "Computer's turn" : 'Your turn'}
+                    {dealer === 'player' && handsCountedThisRound === 2 && ' (your crib)'}
+                  </div>
+                )}
+
                 {/* Play area with separate stacks */}
                 {gameState === 'play' && (
                   <div className="mb-6">
@@ -1362,6 +1374,19 @@ export default function CribbageGame() {
                 <DebugPanel
                   debugLog={debugLog}
                   gameLog={gameLog}
+                  gameState={{
+                    state: gameState,
+                    dealer,
+                    playerScore,
+                    computerScore,
+                    handsCountedThisRound,
+                    counterIsComputer,
+                    countingTurn,
+                    playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
+                    computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
+                    crib: crib?.map(c => `${c.rank}${c.suit}`),
+                    cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
+                  }}
                   onCopyLog={copyGameLog}
                   onLoadReplay={loadReplayLog}
                   replayMode={replayMode}
