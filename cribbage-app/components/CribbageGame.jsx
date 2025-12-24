@@ -514,6 +514,8 @@ export default function CribbageGame() {
           const playerOutOfCards = playerPlayHand.length === 0;
 
           if (score > 0) {
+            // Set currentPlayer to 'player' to prevent useEffect from firing again while waiting for Accept
+            setCurrentPlayer('player');
             if (isLastCard && playerOutOfCards) {
               setPendingScore({
                 player: 'computer',
@@ -527,6 +529,7 @@ export default function CribbageGame() {
               setMessage(`Computer plays ${card.rank}${card.suit} for ${score} - ${reason} - Click Accept`);
             }
           } else if (isLastCard && playerOutOfCards) {
+            setCurrentPlayer('player');
             setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
             setMessage('Computer gets 1 point for last card - Click Accept');
           } else {
@@ -537,6 +540,7 @@ export default function CribbageGame() {
             } else {
               const canContinue = newComputerPlayHand.some(c => newCount + c.value <= 31);
               if (!canContinue && newComputerPlayHand.length > 0) {
+                setCurrentPlayer('player');
                 setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
                 setMessage('Computer gets 1 point for last card - Click Accept');
               }
@@ -565,6 +569,8 @@ export default function CribbageGame() {
             setCurrentPlayer('player');
             setMessage('Computer says "Go" - You can still play');
           } else {
+            // Set currentPlayer to 'player' to prevent useEffect from firing again
+            setCurrentPlayer('player');
             if (lastPlayedBy === 'player') {
               setPendingScore({ player: 'player', points: 1, reason: 'One for last card' });
               setMessage('Computer says "Go" - You get 1 point for last card - Click Accept');
@@ -1223,7 +1229,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b20</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b21</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
