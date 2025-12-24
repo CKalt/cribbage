@@ -32,10 +32,10 @@ export default function PlayingCard({
     lg: 'p-3 text-3xl'
   };
 
-  // Face-down card (unknown) - use same sizing as regular cards
+  // Face-down card (unknown) - slightly narrower than original w-12 to fit 6 on mobile
   if (faceDown) {
     return (
-      <div className={`bg-blue-900 border-2 border-blue-700 text-blue-300 rounded ${sizeClasses[size]} font-bold`}>
+      <div className={`bg-blue-900 border-2 border-blue-700 text-blue-300 rounded p-2 w-10 h-14 flex items-center justify-center font-bold text-lg`}>
         ?
       </div>
     );

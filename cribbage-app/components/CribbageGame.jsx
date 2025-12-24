@@ -1231,7 +1231,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b17</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b18</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
