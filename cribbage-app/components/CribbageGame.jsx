@@ -1231,7 +1231,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b15</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b16</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1466,13 +1466,14 @@ export default function CribbageGame() {
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
                   <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
                     {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                       gameState === 'play' ? computerPlayHand :
                       computerHand).map((card, idx) => (
                       <PlayingCard
                         key={idx}
                         card={card}
+                        size={gameState !== 'counting' && gameState !== 'gameOver' ? 'sm' : 'md'}
                         faceDown={gameState !== 'counting' && gameState !== 'gameOver'}
                         revealed={gameState === 'counting' || gameState === 'gameOver'}
                         highlighted={

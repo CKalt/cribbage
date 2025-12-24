@@ -32,10 +32,17 @@ export default function PlayingCard({
     lg: 'p-3 text-3xl'
   };
 
+  // Face-down card size classes
+  const faceDownSizeClasses = {
+    sm: 'w-8 h-12 text-xs',
+    md: 'w-12 h-16 text-base',
+    lg: 'w-14 h-20 text-lg'
+  };
+
   // Face-down card (unknown)
   if (faceDown) {
     return (
-      <div className={`bg-blue-900 border-2 border-blue-700 text-blue-300 rounded ${sizeClasses[size]} w-12 h-16 flex items-center justify-center font-bold`}>
+      <div className={`bg-blue-900 border-2 border-blue-700 text-blue-300 rounded ${faceDownSizeClasses[size]} flex items-center justify-center font-bold`}>
         ?
       </div>
     );
