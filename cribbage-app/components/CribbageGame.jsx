@@ -1397,7 +1397,12 @@ export default function CribbageGame() {
                 </div>
 
                 {/* Player hand */}
-                <div className="mb-6">
+                <div className={`mb-6 p-2 rounded ${
+                  (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
+                  (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
+                   ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
+                    ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                }`}>
                   <div className="text-sm mb-2">Your Hand: ({gameState === 'play' || gameState === 'counting' ? 4 : playerHand.length} cards)</div>
                   <div className="flex flex-wrap gap-2">
                     {(gameState === 'cribSelect' ? playerHand :
@@ -1411,6 +1416,11 @@ export default function CribbageGame() {
                           (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
                           (gameState === 'cribSelect' && playerHand.length !== 6)
                         }
+                        highlighted={
+                          (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
+                          (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
+                           ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
+                        }
                         onClick={() => {
                           if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
                           else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card);
@@ -1423,9 +1433,11 @@ export default function CribbageGame() {
                 {/* Crib display during counting */}
                 {gameState === 'counting' && ((countingTurn === 'crib' && handsCountedThisRound === 2) ||
                  (actualScore && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
+                 (actualScore && !counterIsComputer && handsCountedThisRound === 2 && dealer === 'player') ||
                  (pendingCountContinue && handsCountedThisRound === 3)) && (
                   <div className={`mb-6 p-2 rounded ${
-                    counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer'
+                    (counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
+                    (!counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2 && dealer === 'player')
                       ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
@@ -1434,7 +1446,8 @@ export default function CribbageGame() {
                         <div key={idx} className={`bg-white rounded p-2 text-xl font-bold ${
                           card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
                         } ${
-                          counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer'
+                          (counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
+                          (!counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2 && dealer === 'player')
                             ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''
                         }`}>
                           {card.rank}{card.suit}
@@ -1506,7 +1519,7 @@ export default function CribbageGame() {
                       disabled={selectedCards.length !== 2 || playerHand.length !== 6}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
-                      Discard to Crib ({selectedCards.length}/2)
+                      Discard to {dealer === 'player' ? 'Your' : "Computer's"} Crib ({selectedCards.length}/2)
                     </Button>
                   </div>
                 )}
