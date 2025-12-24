@@ -52,6 +52,8 @@ export default function CribbageGame() {
   const [currentCount, setCurrentCount] = useState(0);
   const [lastPlayedBy, setLastPlayedBy] = useState(null);
   const [lastGoPlayer, setLastGoPlayer] = useState(null);
+  const [peggingHistory, setPeggingHistory] = useState([]); // Track all pegging plays for review
+  const [showPeggingSummary, setShowPeggingSummary] = useState(false);
 
   // Counting phase state
   const [countingTurn, setCountingTurn] = useState('');
@@ -333,6 +335,8 @@ export default function CribbageGame() {
     setPendingScore(null);
     setCutCard(null);
     setLastGoPlayer(null);
+    setPeggingHistory([]);
+    setShowPeggingSummary(false);
     setGameState('cribSelect');
     setMessage('Select 2 cards for the crib');
 
@@ -445,6 +449,16 @@ export default function CribbageGame() {
       newComputerScore: pendingScore.player === 'computer' ? computerScore + pendingScore.points : computerScore
     });
 
+    // Add to pegging history if this is a pegging phase score
+    if (gameState === 'play' || pendingScore.reason === 'One for last card') {
+      setPeggingHistory(prev => [...prev, {
+        type: 'points',
+        player: pendingScore.player,
+        points: pendingScore.points,
+        reason: pendingScore.reason
+      }]);
+    }
+
     const scoringPlayer = pendingScore.player;
     const wasGoPoint = pendingScore.reason === 'One for last card';
     const wasHisHeels = pendingScore.reason === 'His heels!';
@@ -524,6 +538,16 @@ export default function CribbageGame() {
             remainingCards: newComputerPlayHand.length
           });
 
+          // Add to pegging history
+          setPeggingHistory(prev => [...prev, {
+            type: 'play',
+            player: 'computer',
+            card: `${card.rank}${card.suit}`,
+            count: newCount,
+            points: score,
+            reason: reason || null
+          }]);
+
           const isLastCard = newComputerPlayHand.length === 0;
           const playerOutOfCards = playerPlayHand.length === 0;
 
@@ -565,6 +589,13 @@ export default function CribbageGame() {
             currentCount: currentCount,
             remainingCards: computerPlayHand.length
           });
+
+          // Add Go to pegging history
+          setPeggingHistory(prev => [...prev, {
+            type: 'go',
+            player: 'computer',
+            count: currentCount
+          }]);
 
           const playerCanStillPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
 
@@ -615,6 +646,16 @@ export default function CribbageGame() {
       remainingCards: newPlayerPlayHand.length
     });
 
+    // Add to pegging history
+    setPeggingHistory(prev => [...prev, {
+      type: 'play',
+      player: 'player',
+      card: `${card.rank}${card.suit}`,
+      count: newCount,
+      points: score,
+      reason: reason || null
+    }]);
+
     const isLastCard = newPlayerPlayHand.length === 0;
     const computerOutOfCards = computerPlayHand.length === 0;
 
@@ -652,6 +693,13 @@ export default function CribbageGame() {
       currentCount: currentCount,
       remainingCards: playerPlayHand.length
     });
+
+    // Add Go to pegging history
+    setPeggingHistory(prev => [...prev, {
+      type: 'go',
+      player: 'player',
+      count: currentCount
+    }]);
 
     const computerCanPlay = computerPlayHand.some(card => currentCount + card.value <= 31);
 
@@ -1195,13 +1243,58 @@ export default function CribbageGame() {
 
                 {/* Counting phase indicator */}
                 {gameState === 'counting' && (
-                  <div className="text-center mb-4 text-sm text-yellow-300">
-                    Counting: {handsCountedThisRound === 0 ? 'Non-dealer hand' :
-                               handsCountedThisRound === 1 ? 'Dealer hand' :
-                               handsCountedThisRound === 2 ? 'Crib' : 'Complete'}
-                    {' • '}
-                    {counterIsComputer ? "Computer's turn" : 'Your turn'}
-                    {dealer === 'player' && handsCountedThisRound === 2 && ' (your crib)'}
+                  <div className="text-center mb-4">
+                    <div className="text-sm text-yellow-300 mb-2">
+                      Counting: {handsCountedThisRound === 0 ? 'Non-dealer hand' :
+                                 handsCountedThisRound === 1 ? 'Dealer hand' :
+                                 handsCountedThisRound === 2 ? 'Crib' : 'Complete'}
+                      {' • '}
+                      {counterIsComputer ? "Computer's turn" : 'Your turn'}
+                      {dealer === 'player' && handsCountedThisRound === 2 && ' (your crib)'}
+                    </div>
+                    <Button
+                      onClick={() => setShowPeggingSummary(!showPeggingSummary)}
+                      className="bg-purple-600 hover:bg-purple-700 text-xs"
+                    >
+                      {showPeggingSummary ? 'Hide' : 'Show'} Pegging Summary
+                    </Button>
+                  </div>
+                )}
+
+                {/* Pegging Summary Panel */}
+                {gameState === 'counting' && showPeggingSummary && peggingHistory.length > 0 && (
+                  <div className="mb-4 p-3 bg-purple-900 rounded border border-purple-600">
+                    <div className="text-sm font-bold text-purple-300 mb-2">Pegging Summary</div>
+                    <div className="text-xs space-y-1 max-h-40 overflow-y-auto">
+                      {peggingHistory.map((entry, idx) => (
+                        <div key={idx} className={`${entry.player === 'player' ? 'text-blue-300' : 'text-red-300'}`}>
+                          {entry.type === 'play' && (
+                            <>
+                              <span className="font-bold">{entry.player === 'player' ? 'You' : 'CPU'}:</span>
+                              {' '}{entry.card} → {entry.count}
+                              {entry.points > 0 && <span className="text-yellow-300"> (+{entry.points} {entry.reason})</span>}
+                            </>
+                          )}
+                          {entry.type === 'go' && (
+                            <>
+                              <span className="font-bold">{entry.player === 'player' ? 'You' : 'CPU'}:</span>
+                              {' '}"Go" at {entry.count}
+                            </>
+                          )}
+                          {entry.type === 'points' && (
+                            <>
+                              <span className="font-bold">{entry.player === 'player' ? 'You' : 'CPU'}:</span>
+                              {' '}<span className="text-yellow-300">+{entry.points} ({entry.reason})</span>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-purple-600 text-xs">
+                      <span className="text-blue-300">You: {peggingHistory.filter(e => e.type === 'points' && e.player === 'player').reduce((sum, e) => sum + e.points, 0)} pts</span>
+                      {' • '}
+                      <span className="text-red-300">CPU: {peggingHistory.filter(e => e.type === 'points' && e.player === 'computer').reduce((sum, e) => sum + e.points, 0)} pts</span>
+                    </div>
                   </div>
                 )}
 
@@ -1408,6 +1501,7 @@ export default function CribbageGame() {
                     countingTurn,
                     computerClaimedScore,
                     pendingCountContinue,
+                    peggingHistory,
                     playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
                     computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
