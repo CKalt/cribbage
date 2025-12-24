@@ -1,14 +1,11 @@
 // Cribbage Board Component - Traditional 3-row layout with SVG
 
-import { Button } from '@/components/ui/button';
-
 /**
  * Visual cribbage board with score pegs
  * @param {number} playerScore - Player's current score (0-121)
  * @param {number} computerScore - Computer's current score (0-121)
- * @param {function} onPegClick - Handler for manual score adjustment (player, adjustment)
  */
-export default function CribbageBoard({ playerScore, computerScore, onPegClick }) {
+export default function CribbageBoard({ playerScore, computerScore }) {
   const boardWidth = 620;
   const boardHeight = 140;
   const holeSpacing = 18;
@@ -160,20 +157,6 @@ export default function CribbageBoard({ playerScore, computerScore, onPegClick }
           <text x="110" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">CPU: {computerScore}</text>
         </g>
       </svg>
-
-      {/* Manual score adjustment - more compact */}
-      <div className="flex justify-center gap-6 mt-2 text-xs">
-        <div className="flex items-center gap-1">
-          <span className="text-blue-300">You:</span>
-          <Button onClick={() => onPegClick && onPegClick('player', -1)} className="bg-blue-700 hover:bg-blue-800 px-2 py-0 h-6 text-xs" size="sm">-</Button>
-          <Button onClick={() => onPegClick && onPegClick('player', 1)} className="bg-blue-700 hover:bg-blue-800 px-2 py-0 h-6 text-xs" size="sm">+</Button>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-red-300">CPU:</span>
-          <Button onClick={() => onPegClick && onPegClick('computer', -1)} className="bg-red-700 hover:bg-red-800 px-2 py-0 h-6 text-xs" size="sm">-</Button>
-          <Button onClick={() => onPegClick && onPegClick('computer', 1)} className="bg-red-700 hover:bg-red-800 px-2 py-0 h-6 text-xs" size="sm">+</Button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -125,25 +125,6 @@ export default function CribbageGame() {
     addDebugLog(`GAME EVENT: ${eventType} - ${JSON.stringify(data)}`);
   };
 
-  // Manual peg adjustment handler
-  const handlePegClick = (player, adjustment) => {
-    if (player === 'player') {
-      setPlayerScore(prev => {
-        const newScore = adjustment ? Math.max(0, Math.min(121, prev + adjustment)) : prev;
-        addDebugLog(`Manual peg adjustment: Player ${prev} -> ${newScore}`);
-        logGameEvent('MANUAL_PEG', { player: 'player', oldScore: prev, newScore, adjustment });
-        return newScore;
-      });
-    } else {
-      setComputerScore(prev => {
-        const newScore = adjustment ? Math.max(0, Math.min(121, prev + adjustment)) : prev;
-        addDebugLog(`Manual peg adjustment: Computer ${prev} -> ${newScore}`);
-        logGameEvent('MANUAL_PEG', { player: 'computer', oldScore: prev, newScore, adjustment });
-        return newScore;
-      });
-    }
-  };
-
   // Move to counting phase
   const moveToCountingPhase = () => {
     addDebugLog('Moving to counting phase');
@@ -1242,7 +1223,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b19</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b20</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1293,7 +1274,6 @@ export default function CribbageGame() {
                 <CribbageBoard
                   playerScore={playerScore}
                   computerScore={computerScore}
-                  onPegClick={handlePegClick}
                 />
 
                 {/* Scores */}
