@@ -277,26 +277,21 @@ sudo tail -f /var/log/nginx/error.log
    git push
    ```
 
-2. SSH into EC2 and pull:
+2. Deploy via SSH with agent forwarding (one-liner):
    ```bash
-   ssh -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@3.132.10.219
-   cd ~/cribbage/cribbage-app
-   git pull
+   ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
+     "cd cribbage && git pull && cd cribbage-app && npm run build && pm2 restart cribbage"
    ```
 
-3. Reinstall dependencies (if package.json changed):
+   **Important:** The `-A` flag enables SSH agent forwarding, which allows the EC2 instance to use your Mac's SSH key for GitHub authentication. Without it, `git pull` will fail.
+
+3. If package.json changed, reinstall dependencies first:
    ```bash
-   source ~/.nvm/nvm.sh
-   npm ci --ignore-scripts
+   ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
+     "cd cribbage/cribbage-app && npm ci --ignore-scripts && npm run build && pm2 restart cribbage"
    ```
 
-4. Rebuild and restart:
-   ```bash
-   npm run build
-   pm2 restart cribbage
-   ```
-
-**Important:** Always use `npm ci --ignore-scripts` to prevent malware execution from compromised packages.
+**Security Note:** Always use `npm ci --ignore-scripts` to prevent malware execution from compromised packages.
 
 ---
 
