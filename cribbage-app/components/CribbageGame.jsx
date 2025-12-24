@@ -1158,6 +1158,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b12</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1359,8 +1360,16 @@ export default function CribbageGame() {
                   </div>
                 )}
 
-                {/* Message */}
-                <GameMessage message={message} />
+                {/* Message - dynamic during crib selection */}
+                {gameState === 'cribSelect' && selectedCards.length < 2 ? (
+                  <GameMessage message={
+                    selectedCards.length === 0
+                      ? `Select 2 cards for ${dealer === 'player' ? 'your' : "computer's"} crib`
+                      : `Select one more card for ${dealer === 'player' ? 'your' : "computer's"} crib`
+                  } />
+                ) : gameState !== 'cribSelect' ? (
+                  <GameMessage message={message} />
+                ) : null}
 
                 {/* Pending score accept button */}
                 {pendingScore && (
@@ -1513,15 +1522,14 @@ export default function CribbageGame() {
                   </div>
                 )}
 
-                {/* Actions */}
-                {gameState === 'cribSelect' && (
+                {/* Discard button - only show when 2 cards selected */}
+                {gameState === 'cribSelect' && selectedCards.length === 2 && playerHand.length === 6 && (
                   <div className="text-center">
                     <Button
                       onClick={discardToCrib}
-                      disabled={selectedCards.length !== 2 || playerHand.length !== 6}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
-                      Discard to {dealer === 'player' ? 'Your' : "Computer's"} Crib ({selectedCards.length}/2)
+                      Discard
                     </Button>
                   </div>
                 )}
