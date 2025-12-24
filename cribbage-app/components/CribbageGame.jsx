@@ -68,6 +68,9 @@ export default function CribbageGame() {
   const [handsCountedThisRound, setHandsCountedThisRound] = useState(0);
   const [isProcessingCount, setIsProcessingCount] = useState(false);
   const [pendingCountContinue, setPendingCountContinue] = useState(null); // Stores data for continuing after player acknowledges
+  const [playerMadeCountDecision, setPlayerMadeCountDecision] = useState(false); // True after player accepts/objects
+  const [showMugginsPreferenceDialog, setShowMugginsPreferenceDialog] = useState(false);
+  const [pendingWrongMugginsResult, setPendingWrongMugginsResult] = useState(null); // Stores result to apply after preference chosen
 
   // Cutting phase state
   const [playerCutCard, setPlayerCutCard] = useState(null);
@@ -79,6 +82,21 @@ export default function CribbageGame() {
   // Debug state
   const [debugLog, setDebugLog] = useState([]);
   const [gameLog, setGameLog] = useState([]);
+
+  // Get muggins penalty preference from localStorage
+  const getMugginsPreference = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mugginsPreference'); // 'no-penalty' or '2-points' or null
+    }
+    return null;
+  };
+
+  // Save muggins penalty preference to localStorage
+  const saveMugginsPreference = (preference) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mugginsPreference', preference);
+    }
+  };
 
   // Enhanced logging function
   const addDebugLog = (msg) => {
@@ -879,6 +897,7 @@ export default function CribbageGame() {
   const acceptComputerCount = () => {
     addDebugLog(`acceptComputerCount() - claimed: ${computerClaimedScore}, handsCountedThisRound: ${handsCountedThisRound}, dealer: ${dealer}`);
 
+    setPlayerMadeCountDecision(true);
     const { score, breakdown } = actualScore;
     if (computerClaimedScore <= score) {
       // Add to counting history
@@ -946,10 +965,75 @@ export default function CribbageGame() {
     }
   };
 
+  // Apply the result of a wrong muggins call based on preference
+  const applyWrongMugginsResult = (preference, resultData) => {
+    const { score, claimed, newHandsCountedThisRound } = resultData;
+
+    if (preference === '2-points') {
+      setMessage(`Wrong call! Computer's count was correct (${claimed}). Computer gets ${claimed} + 2 penalty points.`);
+      setComputerScore(prev => prev + claimed + 2);
+    } else {
+      setMessage(`Wrong call! Computer's count was correct. They get ${claimed} points.`);
+      setComputerScore(prev => prev + claimed);
+    }
+
+    setShowBreakdown(true);
+    setPlayerMadeCountDecision(true);
+
+    setTimeout(() => {
+      setShowBreakdown(false);
+      setActualScore(null);
+      setComputerClaimedScore(null);
+      setIsProcessingCount(false);
+      setPlayerMadeCountDecision(false);
+
+      if (newHandsCountedThisRound >= 3) {
+        addDebugLog('All counting complete after wrong muggins');
+        setCountingTurn('');
+        setCounterIsComputer(null);
+
+        setTimeout(() => {
+          if (playerScore >= 121 || computerScore >= 121) {
+            setGameState('gameOver');
+            setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+          } else {
+            setMessage('Hand complete - Dealing next hand...');
+            setTimeout(() => {
+              setDealer(dealer === 'player' ? 'computer' : 'player');
+              const newDeck = shuffleDeck(createDeck());
+              setDeck(newDeck);
+              dealHands(newDeck);
+            }, 1500);
+          }
+        }, 100);
+      } else if (newHandsCountedThisRound === 1) {
+        setCountingTurn(dealer);
+        setCounterIsComputer(dealer === 'computer');
+        setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
+      } else if (newHandsCountedThisRound === 2) {
+        setCountingTurn('crib');
+        setCounterIsComputer(dealer === 'computer');
+        setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+      }
+    }, 3000);
+  };
+
+  // Handle muggins preference selection
+  const handleMugginsPreferenceChoice = (preference) => {
+    saveMugginsPreference(preference);
+    setShowMugginsPreferenceDialog(false);
+    if (pendingWrongMugginsResult) {
+      applyWrongMugginsResult(preference, pendingWrongMugginsResult);
+      setPendingWrongMugginsResult(null);
+    }
+  };
+
   // Object to computer's count
   const objectToComputerCount = () => {
     const { score, breakdown } = actualScore;
     addDebugLog(`Object to computer count: claimed=${computerClaimedScore}, actual=${score}`);
+
+    setPlayerMadeCountDecision(true);
 
     // Add to counting history (for all objection cases)
     if (computerCountingHand) {
@@ -966,6 +1050,7 @@ export default function CribbageGame() {
     }
 
     if (computerClaimedScore > score) {
+      // Correct muggins call - computer overcounted
       const mugginsPoints = computerClaimedScore - score;
       setMessage(`MUGGINS! Computer overcounted: claimed ${computerClaimedScore} but actual is ${score}. Computer gets 0, you get ${mugginsPoints}!`);
       setShowBreakdown(true);
@@ -990,6 +1075,7 @@ export default function CribbageGame() {
         setActualScore(null);
         setComputerClaimedScore(null);
         setIsProcessingCount(false);
+        setPlayerMadeCountDecision(false);
 
         if (newHandsCountedThisRound >= 3) {
           addDebugLog('All counting complete after muggins');
@@ -1023,49 +1109,22 @@ export default function CribbageGame() {
         }
       }, 5000);
     } else if (computerClaimedScore === score) {
-      setMessage(`Computer's count was correct. They get ${computerClaimedScore} points.`);
-      setComputerScore(prev => prev + computerClaimedScore);
-
+      // Wrong muggins call - computer was correct
       const newHandsCountedThisRound = handsCountedThisRound + 1;
       setHandsCountedThisRound(newHandsCountedThisRound);
 
-      setTimeout(() => {
-        setActualScore(null);
-        setComputerClaimedScore(null);
-        setIsProcessingCount(false);
+      const preference = getMugginsPreference();
+      if (!preference) {
+        // First time - ask for preference
+        setPendingWrongMugginsResult({ score, claimed: computerClaimedScore, newHandsCountedThisRound });
+        setShowMugginsPreferenceDialog(true);
+        return;
+      }
 
-        if (newHandsCountedThisRound >= 3) {
-          addDebugLog('All counting complete after correct count');
-          setCountingTurn('');
-          setCounterIsComputer(null);
-
-          setTimeout(() => {
-            if (playerScore >= 121 || computerScore >= 121) {
-              setGameState('gameOver');
-              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
-            } else {
-              setMessage('Hand complete - Dealing next hand...');
-              setTimeout(() => {
-                setDealer(dealer === 'player' ? 'computer' : 'player');
-                const newDeck = shuffleDeck(createDeck());
-                setDeck(newDeck);
-                dealHands(newDeck);
-              }, 1500);
-            }
-          }, 100);
-        } else if (newHandsCountedThisRound === 1) {
-          addDebugLog(`First count done (accepted), dealer (${dealer}) counts hand next`);
-          setCountingTurn(dealer);
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
-        } else if (newHandsCountedThisRound === 2) {
-          addDebugLog(`Second count done (accepted), dealer (${dealer}) counts crib next`);
-          setCountingTurn('crib');
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
-        }
-      }, 2000);
+      applyWrongMugginsResult(preference, { score, claimed: computerClaimedScore, newHandsCountedThisRound });
     } else {
+      // Computer undercounted - player's objection reveals they could have had more
+      setPlayerMadeCountDecision(true);
       setMessage(`Computer undercounted! They claimed ${computerClaimedScore} but could have had ${score}. They get ${computerClaimedScore} points.`);
       setComputerScore(prev => prev + computerClaimedScore);
       setShowBreakdown(true);
@@ -1078,6 +1137,7 @@ export default function CribbageGame() {
         setActualScore(null);
         setComputerClaimedScore(null);
         setIsProcessingCount(false);
+        setPlayerMadeCountDecision(false);
 
         if (newHandsCountedThisRound >= 3) {
           addDebugLog('All counting complete after undercount');
@@ -1158,7 +1218,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b12</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b13</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1486,29 +1546,57 @@ export default function CribbageGame() {
                 )}
 
                 {/* Computer count verification */}
-                {gameState === 'counting' && counterIsComputer && actualScore && !pendingScore && computerClaimedScore !== null && (
+                {gameState === 'counting' && counterIsComputer && actualScore && !pendingScore && computerClaimedScore !== null && !playerMadeCountDecision && !showMugginsPreferenceDialog && (
                   <div className="text-center mb-4">
                     <div className="bg-yellow-900 border-2 border-yellow-500 rounded p-4 mb-4 inline-block">
                       <div className="text-yellow-300 font-bold mb-2">
                         Computer claims {computerClaimedScore} points
                       </div>
-                      <div className="text-sm text-gray-300 mb-3">
-                        (Actual score: {actualScore.score})
+                      <div className="text-sm text-gray-400 mb-3">
+                        Count the hand yourself to verify!
                       </div>
                       <div className="flex gap-2 justify-center">
                         <Button onClick={acceptComputerCount} className="bg-green-600 hover:bg-green-700">
-                          Accept ({computerClaimedScore} pts)
+                          Accept
                         </Button>
                         <Button onClick={objectToComputerCount} className="bg-red-600 hover:bg-red-700">
-                          Object (Muggins!)
+                          Muggins!
                         </Button>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Score breakdown */}
-                <ScoreBreakdown actualScore={actualScore} show={gameState === 'counting'} />
+                {/* Muggins penalty preference dialog */}
+                {showMugginsPreferenceDialog && (
+                  <div className="text-center mb-4">
+                    <div className="bg-purple-900 border-2 border-purple-500 rounded p-4 mb-4 inline-block">
+                      <div className="text-purple-300 font-bold mb-2">
+                        Wrong Muggins Call!
+                      </div>
+                      <div className="text-sm text-gray-300 mb-3">
+                        Computer's count was correct. What penalty for wrong Muggins calls?
+                      </div>
+                      <div className="flex gap-2 justify-center">
+                        <Button onClick={() => handleMugginsPreferenceChoice('no-penalty')} className="bg-green-600 hover:bg-green-700">
+                          No Penalty (traditional)
+                        </Button>
+                        <Button onClick={() => handleMugginsPreferenceChoice('2-points')} className="bg-red-600 hover:bg-red-700">
+                          2 Point Penalty
+                        </Button>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-2">
+                        This preference will be saved for future games
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Score breakdown - only show after player decides (when computer counting) or always (when player counting) */}
+                <ScoreBreakdown
+                  actualScore={actualScore}
+                  show={gameState === 'counting' && (!counterIsComputer || playerMadeCountDecision)}
+                />
 
                 {/* Continue button after player miscount */}
                 {pendingCountContinue && (

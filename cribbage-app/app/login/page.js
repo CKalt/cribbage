@@ -99,7 +99,7 @@ export default function Login() {
         {error && <p className="text-red-400 mt-4 text-sm bg-red-900/30 p-2 rounded">{error}</p>}
       </div>
       <div className="text-green-400 text-sm mt-5">
-        Cribbage Game <span className="text-green-600">v0.1.0-b12</span>
+        Cribbage Game <span className="text-green-600">v0.1.0-b13</span>
       </div>
     </div>
   );
