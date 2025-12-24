@@ -58,8 +58,8 @@ export default function PlayingCard({
       onClick={disabled ? undefined : onClick}
       className={`
         bg-white rounded ${sizeClasses[size]} font-bold cursor-pointer transition-all
-        ${selected ? 'ring-4 ring-yellow-400' : ''}
-        ${highlighted ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''}
+        ${selected ? 'ring-4 ring-cyan-400 shadow-lg shadow-cyan-400/50 -translate-y-2 scale-110' : ''}
+        ${highlighted && !selected ? 'ring-2 ring-yellow-400/50' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
         ${isRed ? 'text-red-600' : 'text-black'}
       `}
