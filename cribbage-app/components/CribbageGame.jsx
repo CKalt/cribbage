@@ -419,9 +419,37 @@ export default function CribbageGame() {
           setLastPlayedBy(null);
         }
       } else {
-        const nextPlayer = scoringPlayer === 'player' ? 'computer' : 'player';
-        setCurrentPlayer(nextPlayer);
-        setMessage(`${nextPlayer === 'player' ? 'Your' : "Computer's"} turn`);
+        // Determine next player, but check if they have cards to play
+        let nextPlayer = scoringPlayer === 'player' ? 'computer' : 'player';
+
+        // Check if the intended next player has any playable cards
+        const nextPlayerHand = nextPlayer === 'player' ? playerPlayHand : computerPlayHand;
+        const otherPlayerHand = nextPlayer === 'player' ? computerPlayHand : playerPlayHand;
+        const nextPlayerCanPlay = nextPlayerHand.some(card => currentCount + card.value <= 31);
+        const otherPlayerCanPlay = otherPlayerHand.some(card => currentCount + card.value <= 31);
+
+        if (nextPlayerHand.length === 0 || !nextPlayerCanPlay) {
+          // Next player has no cards or can't play any
+          if (otherPlayerHand.length > 0 && otherPlayerCanPlay) {
+            // Other player can still play
+            nextPlayer = nextPlayer === 'player' ? 'computer' : 'player';
+            setCurrentPlayer(nextPlayer);
+            setMessage(`${nextPlayer === 'player' ? 'Your' : "Computer's"} turn`);
+          } else if (otherPlayerHand.length === 0 && nextPlayerHand.length === 0) {
+            // Both out of cards
+            moveToCountingPhase();
+            return;
+          } else {
+            // Neither can play at current count - award last card point
+            if (lastPlayedBy) {
+              setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
+              setMessage(`${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
+            }
+          }
+        } else {
+          setCurrentPlayer(nextPlayer);
+          setMessage(`${nextPlayer === 'player' ? 'Your' : "Computer's"} turn`);
+        }
       }
     }
   };
