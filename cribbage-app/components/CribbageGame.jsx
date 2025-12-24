@@ -1287,7 +1287,8 @@ export default function CribbageGame() {
 
                 {/* Crib display during counting */}
                 {gameState === 'counting' && ((countingTurn === 'crib' && handsCountedThisRound === 2) ||
-                 (actualScore && computerClaimedScore > 0 && handsCountedThisRound === 2 && dealer === 'computer')) && (
+                 (actualScore && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
+                 (pendingCountContinue && handsCountedThisRound === 3)) && (
                   <div className="mb-6">
                     <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
                     <div className="flex flex-wrap gap-2">
