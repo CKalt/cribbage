@@ -467,8 +467,19 @@ export default function CribbageGame() {
             moveToCountingPhase();
             return;
           } else {
-            // Neither can play at current count - award last card point
-            if (lastPlayedBy) {
+            // Neither can play at current count
+            // Give the next player a chance to say "Go" before awarding last card
+            if (nextPlayerHand.length > 0) {
+              // Next player has cards but can't play - let them say Go
+              setCurrentPlayer(nextPlayer);
+              setMessage(`${nextPlayer === 'player' ? 'You' : 'Computer'} cannot play - ${nextPlayer === 'player' ? 'Say "Go"' : ''}`);
+            } else if (otherPlayerHand.length > 0) {
+              // Other player has cards but can't play - let them say Go
+              const otherPlayer = nextPlayer === 'player' ? 'computer' : 'player';
+              setCurrentPlayer(otherPlayer);
+              setMessage(`${otherPlayer === 'player' ? 'You' : 'Computer'} cannot play - ${otherPlayer === 'player' ? 'Say "Go"' : ''}`);
+            } else if (lastPlayedBy) {
+              // Truly nobody can play and both said Go - award last card
               setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
               setMessage(`${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
             }
@@ -1231,7 +1242,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b18</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b19</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1644,9 +1655,9 @@ export default function CribbageGame() {
                 {/* Action buttons for play phase */}
                 {gameState === 'play' && currentPlayer === 'player' && !pendingScore && (
                   <div className="text-center space-x-2">
-                    {playerPlayHand.length > 0 && currentCount >= 21 && (
+                    {playerPlayHand.length > 0 && !playerCanPlay && (
                       <Button onClick={playerGo} className="bg-red-600 hover:bg-red-700">
-                        Go
+                        Say "Go"
                       </Button>
                     )}
                     {lastGoPlayer === 'computer' && !playerCanPlay && lastPlayedBy === 'player' && !pendingScore && (
