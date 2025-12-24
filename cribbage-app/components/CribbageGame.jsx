@@ -1398,6 +1398,7 @@ export default function CribbageGame() {
 
                 {/* Player hand */}
                 <div className={`mb-6 p-2 rounded ${
+                  (gameState === 'cribSelect') ||
                   (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
                   (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
                    ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
@@ -1417,6 +1418,7 @@ export default function CribbageGame() {
                           (gameState === 'cribSelect' && playerHand.length !== 6)
                         }
                         highlighted={
+                          (gameState === 'cribSelect') ||
                           (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
                           (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
                            ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
