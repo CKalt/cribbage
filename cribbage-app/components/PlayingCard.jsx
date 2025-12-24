@@ -6,7 +6,8 @@
  * @param {boolean} selected - Whether card is selected (yellow ring)
  * @param {boolean} disabled - Whether card is disabled (grayed out)
  * @param {boolean} faceDown - Whether to show card back
- * @param {boolean} revealed - Show face-up but with gray background (for computer's cards during counting)
+ * @param {boolean} revealed - Show face-up (for computer's cards during counting)
+ * @param {boolean} highlighted - Whether card is highlighted (golden glow for counting)
  * @param {function} onClick - Click handler
  * @param {string} size - Card size ('sm' | 'md' | 'lg')
  */
@@ -16,6 +17,7 @@ export default function PlayingCard({
   disabled = false,
   faceDown = false,
   revealed = false,
+  highlighted = false,
   onClick,
   size = 'md'
 }) {
@@ -33,18 +35,18 @@ export default function PlayingCard({
   // Face-down card (unknown)
   if (faceDown) {
     return (
-      <div className={`bg-gray-600 text-white rounded ${sizeClasses[size]} w-12 h-16 flex items-center justify-center font-bold`}>
+      <div className={`bg-blue-900 border-2 border-blue-700 text-blue-300 rounded ${sizeClasses[size]} w-12 h-16 flex items-center justify-center font-bold`}>
         ?
       </div>
     );
   }
 
-  // Revealed card (computer's cards during counting - gray bg, face up)
+  // Revealed card (computer's cards during counting - white bg like player cards)
   if (revealed) {
     return (
-      <div className={`bg-gray-600 text-white rounded ${sizeClasses[size]} w-12 h-16 flex items-center justify-center font-bold ${
-        isRed ? 'text-red-400' : ''
-      }`}>
+      <div className={`bg-white rounded ${sizeClasses[size]} font-bold ${
+        isRed ? 'text-red-600' : 'text-black'
+      } ${highlighted ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''}`}>
         {card.rank}{card.suit}
       </div>
     );
@@ -57,6 +59,7 @@ export default function PlayingCard({
       className={`
         bg-white rounded ${sizeClasses[size]} font-bold cursor-pointer transition-all
         ${selected ? 'ring-4 ring-yellow-400' : ''}
+        ${highlighted ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
         ${isRed ? 'text-red-600' : 'text-black'}
       `}

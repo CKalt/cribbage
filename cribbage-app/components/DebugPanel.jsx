@@ -6,25 +6,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
- * Debug and replay controls panel with bug reporting
+ * Bug reporting panel
  * @param {Array} debugLog - Debug log entries
  * @param {Array} gameLog - Game event log
  * @param {Object} gameState - Current game state for bug reports
- * @param {function} onLoadReplay - Load replay from JSON
- * @param {boolean} replayMode - Whether in replay mode
- * @param {number} replayIndex - Current replay position
- * @param {number} replayLength - Total replay events
- * @param {function} onNextEvent - Advance replay
  */
 export default function DebugPanel({
   debugLog = [],
   gameLog = [],
   gameState = {},
-  onLoadReplay,
-  replayMode = false,
-  replayIndex = 0,
-  replayLength = 0,
-  onNextEvent,
 }) {
   const [showBugModal, setShowBugModal] = useState(false);
   const [bugDescription, setBugDescription] = useState('');
@@ -75,30 +65,14 @@ export default function DebugPanel({
 
   return (
     <>
-      {/* Bug Report and Replay Buttons */}
-      <div className="text-center mt-4 space-x-2">
+      {/* Bug Report Button */}
+      <div className="text-center mt-4">
         <Button
           onClick={() => setShowBugModal(true)}
           className="bg-red-600 hover:bg-red-700 text-sm"
         >
           Report Bug
         </Button>
-
-        <Button
-          onClick={onLoadReplay}
-          className="bg-green-600 hover:bg-green-700 text-sm"
-        >
-          Load Replay
-        </Button>
-
-        {replayMode && (
-          <Button
-            onClick={onNextEvent}
-            className="bg-yellow-600 hover:bg-yellow-700 text-sm"
-          >
-            Next Event ({replayIndex}/{replayLength})
-          </Button>
-        )}
       </div>
 
       {/* Bug Report Modal */}

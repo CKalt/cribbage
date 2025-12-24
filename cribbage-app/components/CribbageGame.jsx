@@ -79,9 +79,6 @@ export default function CribbageGame() {
   // Debug state
   const [debugLog, setDebugLog] = useState([]);
   const [gameLog, setGameLog] = useState([]);
-  const [replayMode, setReplayMode] = useState(false);
-  const [replayLog, setReplayLog] = useState(null);
-  const [replayIndex, setReplayIndex] = useState(0);
 
   // Enhanced logging function
   const addDebugLog = (msg) => {
@@ -126,82 +123,6 @@ export default function CribbageGame() {
         return newScore;
       });
     }
-  };
-
-
-  // Load replay log
-  const loadReplayLog = () => {
-    const input = prompt('Paste the game log JSON here:');
-    if (input) {
-      try {
-        const log = JSON.parse(input);
-        setReplayLog(log);
-        setReplayMode(true);
-        setReplayIndex(0);
-        alert(`Loaded replay with ${log.length} events. Click "Next Event" to replay.`);
-      } catch (err) {
-        alert('Invalid log format. Please paste a valid JSON log.');
-      }
-    }
-  };
-
-  // Process next replay event
-  const nextReplayEvent = () => {
-    if (!replayLog || replayIndex >= replayLog.length) {
-      alert('Replay complete!');
-      setReplayMode(false);
-      return;
-    }
-
-    const event = replayLog[replayIndex];
-    addDebugLog(`REPLAY: ${event.type} - ${JSON.stringify(event.data)}`);
-
-    switch (event.type) {
-      case 'GAME_START':
-        startNewGame();
-        break;
-      case 'CUT_FOR_DEALER':
-        setPlayerCutCard(event.data.playerCard);
-        setComputerCutCard(event.data.computerCard);
-        setDealer(event.data.dealer);
-        break;
-      case 'DEAL_HANDS':
-        setPlayerHand(event.data.playerHand);
-        setComputerHand(event.data.computerHand);
-        setGameState('cribSelect');
-        break;
-      case 'DISCARD_TO_CRIB':
-        setPlayerHand(event.data.playerHand);
-        setComputerHand(event.data.computerHand);
-        setCrib(event.data.crib);
-        setCutCard(event.data.cutCard);
-        setGameState('play');
-        break;
-      case 'PLAY_CARD':
-        if (event.data.player === 'player') {
-          playerPlay(event.data.card);
-        } else {
-          setComputerPlayHand(prev => prev.filter(c => !(c.rank === event.data.card.rank && c.suit === event.data.card.suit)));
-          setComputerPlayedCards(prev => [...prev, event.data.card]);
-          setAllPlayedCards(prev => [...prev, event.data.card]);
-          setCurrentCount(event.data.newCount);
-          setLastPlayedBy('computer');
-        }
-        break;
-      case 'PLAYER_GO':
-      case 'COMPUTER_GO':
-        setLastGoPlayer(event.data.player);
-        break;
-      case 'SCORE_POINTS':
-        if (event.data.player === 'player') {
-          setPlayerScore(prev => prev + event.data.points);
-        } else {
-          setComputerScore(prev => prev + event.data.points);
-        }
-        break;
-    }
-
-    setReplayIndex(prev => prev + 1);
   };
 
   // Move to counting phase
@@ -1423,7 +1344,11 @@ export default function CribbageGame() {
                 )}
 
                 {/* Computer hand */}
-                <div className="mb-6">
+                <div className={`mb-6 p-2 rounded ${
+                  gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
+                  ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
+                    ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                }`}>
                   <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
                   <div className="flex flex-wrap gap-2">
                     {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
@@ -1434,6 +1359,10 @@ export default function CribbageGame() {
                         card={card}
                         faceDown={gameState !== 'counting' && gameState !== 'gameOver'}
                         revealed={gameState === 'counting' || gameState === 'gameOver'}
+                        highlighted={
+                          gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
+                          ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
+                        }
                       />
                     ))}
                   </div>
@@ -1467,12 +1396,18 @@ export default function CribbageGame() {
                 {gameState === 'counting' && ((countingTurn === 'crib' && handsCountedThisRound === 2) ||
                  (actualScore && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
                  (pendingCountContinue && handsCountedThisRound === 3)) && (
-                  <div className="mb-6">
+                  <div className={`mb-6 p-2 rounded ${
+                    counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer'
+                      ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                  }`}>
                     <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
                     <div className="flex flex-wrap gap-2">
                       {crib.map((card, idx) => (
-                        <div key={idx} className={`bg-yellow-600 rounded p-2 text-xl font-bold ${
+                        <div key={idx} className={`bg-white rounded p-2 text-xl font-bold ${
                           card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
+                        } ${
+                          counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer'
+                            ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''
                         }`}>
                           {card.rank}{card.suit}
                         </div>
@@ -1592,11 +1527,6 @@ export default function CribbageGame() {
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
                     cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
                   }}
-                  onLoadReplay={loadReplayLog}
-                  replayMode={replayMode}
-                  replayIndex={replayIndex}
-                  replayLength={replayLog?.length || 0}
-                  onNextEvent={nextReplayEvent}
                 />
               </>
             )}
