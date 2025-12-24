@@ -75,6 +75,7 @@ export default function CribbageGame() {
   // Cutting phase state
   const [playerCutCard, setPlayerCutCard] = useState(null);
   const [computerCutCard, setComputerCutCard] = useState(null);
+  const [cutResultReady, setCutResultReady] = useState(false); // True when cut result shown, waiting for user to proceed
 
   // Scoring state
   const [pendingScore, setPendingScore] = useState(null);
@@ -208,7 +209,8 @@ export default function CribbageGame() {
 
         if (playerRank < computerRank) {
           setDealer('player');
-          setMessage('You cut lower - you deal first!');
+          setMessage('You cut lower - You deal first!');
+          setCutResultReady(true);
           logGameEvent('CUT_FOR_DEALER', {
             playerCard: card,
             computerCard: compCard,
@@ -218,7 +220,8 @@ export default function CribbageGame() {
           });
         } else if (computerRank < playerRank) {
           setDealer('computer');
-          setMessage('Computer cut lower - computer deals first');
+          setMessage('Computer cut lower - Computer deals first');
+          setCutResultReady(true);
           logGameEvent('CUT_FOR_DEALER', {
             playerCard: card,
             computerCard: compCard,
@@ -237,15 +240,18 @@ export default function CribbageGame() {
           });
           return;
         }
-
-        setTimeout(() => {
-          setGameState('dealing');
-          setPlayerCutCard(null);
-          setComputerCutCard(null);
-          dealHands(deck);
-        }, 2000);
+        // No auto-deal - wait for user to click button
       }, 1500);
     }, 1000);
+  };
+
+  // Proceed to dealing after cut
+  const proceedToDeal = () => {
+    setCutResultReady(false);
+    setGameState('dealing');
+    setPlayerCutCard(null);
+    setComputerCutCard(null);
+    dealHands(deck);
   };
 
   // Deal hands
@@ -1225,7 +1231,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b14</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b15</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1258,6 +1264,12 @@ export default function CribbageGame() {
                   {!playerCutCard && (
                     <Button onClick={playerCutDeck} className="bg-blue-600 hover:bg-blue-700">
                       Cut Deck
+                    </Button>
+                  )}
+
+                  {cutResultReady && (
+                    <Button onClick={proceedToDeal} className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3">
+                      {dealer === 'player' ? 'Deal the Cards' : 'Let Computer Deal'}
                     </Button>
                   )}
                 </div>
