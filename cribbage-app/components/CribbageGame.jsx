@@ -154,6 +154,9 @@ export default function CribbageGame() {
     setShowBreakdown(false);
     setIsProcessingCount(false);
     setPendingCountContinue(null);
+    setPlayerMadeCountDecision(false);
+    setShowMugginsPreferenceDialog(false);
+    setPendingWrongMugginsResult(null);
 
     const firstCounter = dealer === 'player' ? 'computer' : 'player';
     const isComputerFirst = firstCounter === 'computer';
@@ -847,6 +850,10 @@ export default function CribbageGame() {
       return;
     }
 
+    // Reset decision state for new count
+    setPlayerMadeCountDecision(false);
+    setShowMugginsPreferenceDialog(false);
+
     setIsProcessingCount(true);
     addDebugLog('Set isProcessingCount = true');
 
@@ -1218,7 +1225,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b13</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b14</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
