@@ -54,6 +54,9 @@ export default function CribbageGame() {
   const [lastGoPlayer, setLastGoPlayer] = useState(null);
   const [peggingHistory, setPeggingHistory] = useState([]); // Track all pegging plays for review
   const [showPeggingSummary, setShowPeggingSummary] = useState(false);
+  const [countingHistory, setCountingHistory] = useState([]); // Track hand/crib counts for review
+  const [showCountingHistory, setShowCountingHistory] = useState(false); // Toggle counting history panel
+  const [computerCountingHand, setComputerCountingHand] = useState(null); // Track what computer is currently counting
 
   // Counting phase state
   const [countingTurn, setCountingTurn] = useState('');
@@ -125,16 +128,6 @@ export default function CribbageGame() {
     }
   };
 
-  // Copy game log to clipboard
-  const copyGameLog = () => {
-    const logText = JSON.stringify(gameLog, null, 2);
-    navigator.clipboard.writeText(logText).then(() => {
-      alert('Game log copied to clipboard!');
-    }).catch(err => {
-      console.error('Failed to copy log:', err);
-      alert('Failed to copy log. Check console for details.');
-    });
-  };
 
   // Load replay log
   const loadReplayLog = () => {
@@ -337,6 +330,7 @@ export default function CribbageGame() {
     setLastGoPlayer(null);
     setPeggingHistory([]);
     setShowPeggingSummary(false);
+    setCountingHistory([]);
     setGameState('cribSelect');
     setMessage('Select 2 cards for the crib');
 
@@ -778,6 +772,17 @@ export default function CribbageGame() {
       handsCountedThisRound: handsCountedThisRound
     });
 
+    // Add to counting history
+    setCountingHistory(prev => [...prev, {
+      player: 'player',
+      handType,
+      cards: hand.map(c => `${c.rank}${c.suit}`),
+      cutCard: `${cutCard.rank}${cutCard.suit}`,
+      claimed,
+      actual: score,
+      breakdown
+    }]);
+
     const newHandsCountedThisRound = handsCountedThisRound + 1;
     setHandsCountedThisRound(newHandsCountedThisRound);
     setPlayerCountInput('');
@@ -900,6 +905,12 @@ export default function CribbageGame() {
 
     addDebugLog(`Computer counting their ${handType}`);
 
+    // Store the hand being counted for history
+    setComputerCountingHand({
+      handType,
+      cards: hand.map(c => `${c.rank}${c.suit}`)
+    });
+
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
     setActualScore({ score, breakdown });
 
@@ -919,8 +930,21 @@ export default function CribbageGame() {
   const acceptComputerCount = () => {
     addDebugLog(`acceptComputerCount() - claimed: ${computerClaimedScore}, handsCountedThisRound: ${handsCountedThisRound}, dealer: ${dealer}`);
 
-    const { score } = actualScore;
+    const { score, breakdown } = actualScore;
     if (computerClaimedScore <= score) {
+      // Add to counting history
+      if (computerCountingHand) {
+        setCountingHistory(prev => [...prev, {
+          player: 'computer',
+          handType: computerCountingHand.handType,
+          cards: computerCountingHand.cards,
+          cutCard: `${cutCard.rank}${cutCard.suit}`,
+          claimed: computerClaimedScore,
+          actual: score,
+          breakdown
+        }]);
+      }
+
       setComputerScore(prev => {
         addDebugLog(`Computer score: ${prev} -> ${prev + computerClaimedScore}`);
         return prev + computerClaimedScore;
@@ -977,6 +1001,20 @@ export default function CribbageGame() {
   const objectToComputerCount = () => {
     const { score, breakdown } = actualScore;
     addDebugLog(`Object to computer count: claimed=${computerClaimedScore}, actual=${score}`);
+
+    // Add to counting history (for all objection cases)
+    if (computerCountingHand) {
+      setCountingHistory(prev => [...prev, {
+        player: 'computer',
+        handType: computerCountingHand.handType,
+        cards: computerCountingHand.cards,
+        cutCard: `${cutCard.rank}${cutCard.suit}`,
+        claimed: computerClaimedScore,
+        actual: score,
+        breakdown,
+        objected: true
+      }]);
+    }
 
     if (computerClaimedScore > score) {
       const mugginsPoints = computerClaimedScore - score;
@@ -1252,12 +1290,22 @@ export default function CribbageGame() {
                       {counterIsComputer ? "Computer's turn" : 'Your turn'}
                       {dealer === 'player' && handsCountedThisRound === 2 && ' (your crib)'}
                     </div>
-                    <Button
-                      onClick={() => setShowPeggingSummary(!showPeggingSummary)}
-                      className="bg-purple-600 hover:bg-purple-700 text-xs"
-                    >
-                      {showPeggingSummary ? 'Hide' : 'Show'} Pegging Summary
-                    </Button>
+                    <div className="space-x-2">
+                      <Button
+                        onClick={() => setShowPeggingSummary(!showPeggingSummary)}
+                        className="bg-purple-600 hover:bg-purple-700 text-xs"
+                      >
+                        {showPeggingSummary ? 'Hide' : 'Show'} Pegging Summary
+                      </Button>
+                      {countingHistory.length > 0 && (
+                        <Button
+                          onClick={() => setShowCountingHistory(!showCountingHistory)}
+                          className="bg-blue-600 hover:bg-blue-700 text-xs"
+                        >
+                          {showCountingHistory ? 'Hide' : 'Show'} Counting History
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1294,6 +1342,43 @@ export default function CribbageGame() {
                       <span className="text-blue-300">You: {peggingHistory.filter(e => e.type === 'points' && e.player === 'player').reduce((sum, e) => sum + e.points, 0)} pts</span>
                       {' • '}
                       <span className="text-red-300">CPU: {peggingHistory.filter(e => e.type === 'points' && e.player === 'computer').reduce((sum, e) => sum + e.points, 0)} pts</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Counting History Panel */}
+                {gameState === 'counting' && showCountingHistory && countingHistory.length > 0 && (
+                  <div className="mb-4 p-3 bg-blue-900 rounded border border-blue-600">
+                    <div className="text-sm font-bold text-blue-300 mb-2">Counting History</div>
+                    <div className="text-xs space-y-2 max-h-60 overflow-y-auto">
+                      {countingHistory.map((entry, idx) => (
+                        <div key={idx} className={`p-2 rounded ${entry.player === 'player' ? 'bg-blue-800' : 'bg-red-900'}`}>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`font-bold ${entry.player === 'player' ? 'text-blue-300' : 'text-red-300'}`}>
+                              {entry.player === 'player' ? 'You' : 'CPU'} - {entry.handType === 'crib' ? 'Crib' : 'Hand'}
+                            </span>
+                            <span className="text-yellow-300">
+                              {entry.claimed === entry.actual ? (
+                                `+${entry.claimed} pts`
+                              ) : entry.claimed < entry.actual ? (
+                                `+${entry.claimed} (could be ${entry.actual})`
+                              ) : (
+                                <span className="text-red-400">Overcounted! 0 pts</span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="text-gray-300">
+                            Cards: {entry.cards.join(', ')} + {entry.cutCard}
+                          </div>
+                          {entry.breakdown && entry.breakdown.length > 0 && (
+                            <div className="text-gray-400 mt-1">
+                              {entry.breakdown.map((b, i) => (
+                                <span key={i}>{i > 0 ? ', ' : ''}{b.points}pts ({b.description})</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1507,7 +1592,6 @@ export default function CribbageGame() {
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
                     cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
                   }}
-                  onCopyLog={copyGameLog}
                   onLoadReplay={loadReplayLog}
                   replayMode={replayMode}
                   replayIndex={replayIndex}
