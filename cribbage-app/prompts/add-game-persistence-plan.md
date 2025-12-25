@@ -13,10 +13,10 @@
   - [x] [Step 2.2: Create POST /api/game-state route 🤖](#step-22-create-post-apigame-state-route-🤖)
   - [x] [Step 2.3: Create POST /api/game-stats route 🤖](#step-23-create-post-apigame-stats-route-🤖)
   - [x] [Step 2.4: Create data directory and .gitignore 🤖](#step-24-create-data-directory-and-gitignore-🤖)
-- [ ] [Phase 3: Game State Serialization](#phase-3-game-state-serialization)
-  - [ ] [Step 3.1: Create game state serialization utilities 🤖](#step-31-create-game-state-serialization-utilities-🤖)
-  - [ ] [Step 3.2: Add auto-save on state changes 🤖](#step-32-add-auto-save-on-state-changes-🤖)
-  - [ ] [Step 3.3: Add game state loading on mount 🤖](#step-33-add-game-state-loading-on-mount-🤖)
+- [x] [Phase 3: Game State Serialization](#phase-3-game-state-serialization)
+  - [x] [Step 3.1: Create game state serialization utilities 🤖](#step-31-create-game-state-serialization-utilities-🤖)
+  - [x] [Step 3.2: Add auto-save on state changes 🤖](#step-32-add-auto-save-on-state-changes-🤖)
+  - [x] [Step 3.3: Add game state loading on mount 🤖](#step-33-add-game-state-loading-on-mount-🤖)
 - [ ] [Phase 4: Forfeit Feature](#phase-4-forfeit-feature)
   - [ ] [Step 4.1: Add forfeit button to game UI 🤖](#step-41-add-forfeit-button-to-game-ui-🤖)
   - [ ] [Step 4.2: Implement forfeit logic with stats recording 🤖](#step-42-implement-forfeit-logic-with-stats-recording-🤖)
@@ -242,6 +242,11 @@ export const PERSISTED_STATE_KEYS = [
 ];
 ```
 
+**Implementation Notes (2025-12-25):**
+- Created `lib/gameStateSerializer.js` with all functions
+- Added `hasSignificantChange()` to prevent excessive saves
+- Added `shouldSaveGame()` to skip saving in menu/gameOver states
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -260,6 +265,12 @@ export const PERSISTED_STATE_KEYS = [
 - Use 500ms debounce to avoid excessive API calls
 - Immediate save on phase transitions (deal → play → count)
 
+**Implementation Notes (2025-12-25):**
+- Added `useRef` for `lastSavedStateRef` and `saveTimeoutRef`
+- Added `useCallback` for `createCurrentSnapshot()` and `saveGameState()`
+- Auto-save triggers on significant state changes with 500ms debounce
+- Uses `hasSignificantChange()` to avoid redundant saves
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -273,6 +284,14 @@ export const PERSISTED_STATE_KEYS = [
 2. If saved game exists, show "Resume Game" option in menu
 3. "Resume Game" button restores all state from saved data
 4. "New Game" button clears saved state and starts fresh
+
+**Implementation Notes (2025-12-25):**
+- Added `isLoadingGame` state to show loading indicator
+- Added `savedGameExists` and `savedGameData` state
+- Added `userStats` state for displaying win/loss/forfeit record
+- Menu shows: stats (if any), Resume Game (if saved), New Game button
+- `resumeGame()` restores all 26 persisted state variables
+- `deleteSavedGame()` clears saved game when starting new
 
 [Back to TOC](#table-of-contents)
 

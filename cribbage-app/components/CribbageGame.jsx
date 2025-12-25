@@ -2,7 +2,7 @@
 
 // Main Cribbage Game Component
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +11,13 @@ import { createDeck, shuffleDeck } from '@/lib/deck';
 import { calculateHandScore, calculatePeggingScore } from '@/lib/scoring';
 import { computerSelectCrib, computerSelectPlay } from '@/lib/ai';
 import { rankOrder } from '@/lib/constants';
+import {
+  PERSISTED_STATE_KEYS,
+  createGameStateSnapshot,
+  deserializeGameState,
+  shouldSaveGame,
+  hasSignificantChange,
+} from '@/lib/gameStateSerializer';
 
 // Import UI components
 import CribbageBoard from './CribbageBoard';
@@ -84,6 +91,15 @@ export default function CribbageGame() {
   const [debugLog, setDebugLog] = useState([]);
   const [gameLog, setGameLog] = useState([]);
 
+  // Persistence state
+  const [savedGameExists, setSavedGameExists] = useState(false);
+  const [savedGameData, setSavedGameData] = useState(null);
+  const [userStats, setUserStats] = useState({ wins: 0, losses: 0, forfeits: 0 });
+  const [isLoadingGame, setIsLoadingGame] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const lastSavedStateRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
+
   // Get muggins penalty preference from localStorage
   const getMugginsPreference = () => {
     if (typeof window !== 'undefined') {
@@ -98,6 +114,194 @@ export default function CribbageGame() {
       localStorage.setItem('mugginsPreference', preference);
     }
   };
+
+  // Create current state snapshot for saving
+  const createCurrentSnapshot = useCallback(() => {
+    return createGameStateSnapshot({
+      gameState, dealer, currentPlayer, message,
+      deck, playerHand, computerHand, crib, cutCard,
+      playerScore, computerScore, selectedCards,
+      playerPlayHand, computerPlayHand,
+      playerPlayedCards, computerPlayedCards,
+      allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
+      peggingHistory, countingHistory, computerCountingHand,
+      countingTurn, handsCountedThisRound,
+      playerCutCard, computerCutCard, cutResultReady,
+      pendingScore,
+    });
+  }, [
+    gameState, dealer, currentPlayer, message,
+    deck, playerHand, computerHand, crib, cutCard,
+    playerScore, computerScore, selectedCards,
+    playerPlayHand, computerPlayHand,
+    playerPlayedCards, computerPlayedCards,
+    allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
+    peggingHistory, countingHistory, computerCountingHand,
+    countingTurn, handsCountedThisRound,
+    playerCutCard, computerCutCard, cutResultReady,
+    pendingScore,
+  ]);
+
+  // Save game state to server
+  const saveGameState = useCallback(async (snapshot) => {
+    if (isSaving) return;
+
+    try {
+      setIsSaving(true);
+      const response = await fetch('/api/game-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameState: snapshot,
+          version: 'v0.1.0-b24',
+        }),
+      });
+
+      if (response.ok) {
+        lastSavedStateRef.current = snapshot;
+      }
+    } catch (error) {
+      console.error('Failed to save game state:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving]);
+
+  // Delete saved game state
+  const deleteSavedGame = useCallback(async () => {
+    try {
+      await fetch('/api/game-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete' }),
+      });
+      setSavedGameExists(false);
+      setSavedGameData(null);
+      lastSavedStateRef.current = null;
+    } catch (error) {
+      console.error('Failed to delete saved game:', error);
+    }
+  }, []);
+
+  // Record game result (win/loss/forfeit)
+  const recordGameResult = useCallback(async (result) => {
+    try {
+      const response = await fetch('/api/game-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.stats) {
+          setUserStats(data.stats);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to record game result:', error);
+    }
+  }, []);
+
+  // Load saved game state on mount
+  useEffect(() => {
+    const loadSavedGame = async () => {
+      try {
+        const response = await fetch('/api/game-state');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.gameState) {
+            setSavedGameExists(true);
+            setSavedGameData(data.gameState);
+          }
+          if (data.stats) {
+            setUserStats(data.stats);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load saved game:', error);
+      } finally {
+        setIsLoadingGame(false);
+      }
+    };
+
+    loadSavedGame();
+  }, []);
+
+  // Auto-save game state with debounce
+  useEffect(() => {
+    // Don't save during initial load or if not in a saveable state
+    if (isLoadingGame || !shouldSaveGame(gameState)) {
+      return;
+    }
+
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Debounce save by 500ms
+    saveTimeoutRef.current = setTimeout(() => {
+      const snapshot = createCurrentSnapshot();
+
+      // Only save if there's a significant change
+      if (hasSignificantChange(lastSavedStateRef.current, snapshot)) {
+        saveGameState(snapshot);
+      }
+    }, 500);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    gameState, playerScore, computerScore, playerHand, computerHand,
+    crib, cutCard, allPlayedCards, handsCountedThisRound, dealer,
+    isLoadingGame, createCurrentSnapshot, saveGameState,
+  ]);
+
+  // Resume a saved game
+  const resumeGame = useCallback(() => {
+    if (!savedGameData) return;
+
+    const restored = deserializeGameState(savedGameData);
+    if (!restored) return;
+
+    // Restore all persisted state
+    if (restored.gameState) setGameState(restored.gameState);
+    if (restored.dealer !== undefined) setDealer(restored.dealer);
+    if (restored.currentPlayer !== undefined) setCurrentPlayer(restored.currentPlayer);
+    if (restored.message !== undefined) setMessage(restored.message);
+    if (restored.deck) setDeck(restored.deck);
+    if (restored.playerHand) setPlayerHand(restored.playerHand);
+    if (restored.computerHand) setComputerHand(restored.computerHand);
+    if (restored.crib) setCrib(restored.crib);
+    if (restored.cutCard !== undefined) setCutCard(restored.cutCard);
+    if (restored.playerScore !== undefined) setPlayerScore(restored.playerScore);
+    if (restored.computerScore !== undefined) setComputerScore(restored.computerScore);
+    if (restored.selectedCards) setSelectedCards(restored.selectedCards);
+    if (restored.playerPlayHand) setPlayerPlayHand(restored.playerPlayHand);
+    if (restored.computerPlayHand) setComputerPlayHand(restored.computerPlayHand);
+    if (restored.playerPlayedCards) setPlayerPlayedCards(restored.playerPlayedCards);
+    if (restored.computerPlayedCards) setComputerPlayedCards(restored.computerPlayedCards);
+    if (restored.allPlayedCards) setAllPlayedCards(restored.allPlayedCards);
+    if (restored.currentCount !== undefined) setCurrentCount(restored.currentCount);
+    if (restored.lastPlayedBy !== undefined) setLastPlayedBy(restored.lastPlayedBy);
+    if (restored.lastGoPlayer !== undefined) setLastGoPlayer(restored.lastGoPlayer);
+    if (restored.peggingHistory) setPeggingHistory(restored.peggingHistory);
+    if (restored.countingHistory) setCountingHistory(restored.countingHistory);
+    if (restored.computerCountingHand !== undefined) setComputerCountingHand(restored.computerCountingHand);
+    if (restored.countingTurn !== undefined) setCountingTurn(restored.countingTurn);
+    if (restored.handsCountedThisRound !== undefined) setHandsCountedThisRound(restored.handsCountedThisRound);
+    if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
+    if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
+    if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
+    if (restored.pendingScore !== undefined) setPendingScore(restored.pendingScore);
+
+    // Store as last saved state
+    lastSavedStateRef.current = savedGameData;
+  }, [savedGameData]);
 
   // Enhanced logging function
   const addDebugLog = (msg) => {
@@ -1238,9 +1442,53 @@ export default function CribbageGame() {
           <CardContent>
             {gameState === 'menu' && (
               <div className="text-center">
-                <Button onClick={startNewGame} className="text-lg px-8 py-4">
-                  Start New Game
-                </Button>
+                {isLoadingGame ? (
+                  <div className="text-gray-400">Loading...</div>
+                ) : (
+                  <>
+                    {/* Stats display */}
+                    {(userStats.wins > 0 || userStats.losses > 0 || userStats.forfeits > 0) && (
+                      <div className="mb-6 text-sm">
+                        <div className="text-gray-400 mb-1">Your Record:</div>
+                        <div className="flex justify-center gap-4">
+                          <span className="text-green-400">Wins: {userStats.wins}</span>
+                          <span className="text-red-400">Losses: {userStats.losses}</span>
+                          {userStats.forfeits > 0 && (
+                            <span className="text-yellow-400">Forfeits: {userStats.forfeits}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Resume game button */}
+                    {savedGameExists && (
+                      <div className="mb-4">
+                        <Button
+                          onClick={resumeGame}
+                          className="text-lg px-8 py-4 bg-green-600 hover:bg-green-700"
+                        >
+                          Resume Game
+                        </Button>
+                        <div className="text-xs text-gray-400 mt-2">
+                          Game in progress saved
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New game button */}
+                    <Button
+                      onClick={() => {
+                        if (savedGameExists) {
+                          deleteSavedGame();
+                        }
+                        startNewGame();
+                      }}
+                      className={`text-lg px-8 py-4 ${savedGameExists ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
+                    >
+                      {savedGameExists ? 'New Game' : 'Start New Game'}
+                    </Button>
+                  </>
+                )}
               </div>
             )}
 
