@@ -449,18 +449,19 @@ export default function CribbageGame() {
             return;
           } else {
             // Neither can play at current count
-            // Give the next player a chance to say "Go" before awarding last card
-            if (nextPlayerHand.length > 0) {
-              // Next player has cards but can't play - let them say Go
-              setCurrentPlayer(nextPlayer);
-              setMessage(`${nextPlayer === 'player' ? 'You' : 'Computer'} cannot play - ${nextPlayer === 'player' ? 'Say "Go"' : ''}`);
-            } else if (otherPlayerHand.length > 0) {
-              // Other player has cards but can't play - let them say Go
-              const otherPlayer = nextPlayer === 'player' ? 'computer' : 'player';
-              setCurrentPlayer(otherPlayer);
-              setMessage(`${otherPlayer === 'player' ? 'You' : 'Computer'} cannot play - ${otherPlayer === 'player' ? 'Say "Go"' : ''}`);
+            // Give the player a chance to say "Go" before awarding last card
+            // But if one player is out of cards, just award last card directly
+            if (nextPlayerHand.length > 0 && nextPlayer === 'player') {
+              // Player has cards but can't play - let them say Go
+              setCurrentPlayer('player');
+              setMessage('You cannot play - Say "Go"');
+            } else if (otherPlayerHand.length > 0 && nextPlayer === 'computer') {
+              // Player (other) has cards but can't play - let them say Go
+              setCurrentPlayer('player');
+              setMessage('You cannot play - Say "Go"');
             } else if (lastPlayedBy) {
-              // Truly nobody can play and both said Go - award last card
+              // One or both players out of cards and neither can play - award last card directly
+              setCurrentPlayer('player');
               setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
               setMessage(`${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
             }
@@ -1229,7 +1230,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b22</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b23</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
