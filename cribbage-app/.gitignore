@@ -45,3 +45,6 @@ next-env.d.ts
 
 # bug reports (contain user data)
 /bug-reports
+
+# user game data (dml-ast files)
+/data/*.json

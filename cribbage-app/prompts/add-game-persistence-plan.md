@@ -8,11 +8,11 @@
   - [x] [Step 1.1: Define game_sessions table DDL 🤖](#step-11-define-game_sessions-table-ddl-🤖)
   - [x] [Step 1.2: Define game_stats table DDL 🤖](#step-12-define-game_stats-table-ddl-🤖)
   - [x] [Step 1.3: Create combined dml-ast schema file 🤖](#step-13-create-combined-dml-ast-schema-file-🤖)
-- [ ] [Phase 2: Server-Side API Routes](#phase-2-server-side-api-routes)
-  - [ ] [Step 2.1: Create GET /api/game-state route 🤖](#step-21-create-get-apigame-state-route-🤖)
-  - [ ] [Step 2.2: Create POST /api/game-state route 🤖](#step-22-create-post-apigame-state-route-🤖)
-  - [ ] [Step 2.3: Create POST /api/game-stats route 🤖](#step-23-create-post-apigame-stats-route-🤖)
-  - [ ] [Step 2.4: Create data directory and .gitignore 🤖](#step-24-create-data-directory-and-gitignore-🤖)
+- [x] [Phase 2: Server-Side API Routes](#phase-2-server-side-api-routes)
+  - [x] [Step 2.1: Create GET /api/game-state route 🤖](#step-21-create-get-apigame-state-route-🤖)
+  - [x] [Step 2.2: Create POST /api/game-state route 🤖](#step-22-create-post-apigame-state-route-🤖)
+  - [x] [Step 2.3: Create POST /api/game-stats route 🤖](#step-23-create-post-apigame-stats-route-🤖)
+  - [x] [Step 2.4: Create data directory and .gitignore 🤖](#step-24-create-data-directory-and-gitignore-🤖)
 - [ ] [Phase 3: Game State Serialization](#phase-3-game-state-serialization)
   - [ ] [Step 3.1: Create game state serialization utilities 🤖](#step-31-create-game-state-serialization-utilities-🤖)
   - [ ] [Step 3.2: Add auto-save on state changes 🤖](#step-32-add-auto-save-on-state-changes-🤖)
@@ -147,6 +147,11 @@ Create Next.js API routes to read/write game data from JSON files.
 3. Return `game_sessions` data if exists, null otherwise
 4. Create empty dml-ast file if user has no data yet
 
+**Implementation Notes (2025-12-25):**
+- Created `app/api/game-state/route.js` with GET handler
+- JWT token decoded from 'token' cookie to extract user ID (sub claim)
+- Also returns user's stats in response for convenience
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -161,6 +166,10 @@ Create Next.js API routes to read/write game data from JSON files.
 3. Update/insert row in `game_sessions` table
 4. Write to `data/<user-id>-dml-ast.json`
 5. Include `action: 'delete'` option to remove saved game
+
+**Implementation Notes (2025-12-25):**
+- POST handler added to same file as GET
+- Supports `{ gameState, version }` for saving and `{ action: 'delete' }` for clearing
 
 [Back to TOC](#table-of-contents)
 
@@ -177,6 +186,11 @@ Create Next.js API routes to read/write game data from JSON files.
 4. Update `last_played` timestamp
 5. Write to `data/<user-id>-dml-ast.json`
 
+**Implementation Notes (2025-12-25):**
+- Created `app/api/game-stats/route.js` with GET and POST handlers
+- GET returns current stats, POST increments win/loss/forfeit counter
+- Returns updated stats in POST response
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -187,6 +201,10 @@ Create Next.js API routes to read/write game data from JSON files.
 1. Create `data/` directory in project root
 2. Add `data/*.json` to `.gitignore` (user data should not be committed)
 3. Add `data/.gitkeep` to ensure directory exists in repo
+
+**Implementation Notes (2025-12-25):**
+- Created `data/` directory with `.gitkeep` placeholder
+- Added `/data/*.json` to `.gitignore` to exclude user data files
 
 [Back to TOC](#table-of-contents)
 
