@@ -17,9 +17,9 @@
   - [x] [Step 3.1: Create game state serialization utilities 🤖](#step-31-create-game-state-serialization-utilities-🤖)
   - [x] [Step 3.2: Add auto-save on state changes 🤖](#step-32-add-auto-save-on-state-changes-🤖)
   - [x] [Step 3.3: Add game state loading on mount 🤖](#step-33-add-game-state-loading-on-mount-🤖)
-- [ ] [Phase 4: Forfeit Feature](#phase-4-forfeit-feature)
-  - [ ] [Step 4.1: Add forfeit button to game UI 🤖](#step-41-add-forfeit-button-to-game-ui-🤖)
-  - [ ] [Step 4.2: Implement forfeit logic with stats recording 🤖](#step-42-implement-forfeit-logic-with-stats-recording-🤖)
+- [x] [Phase 4: Forfeit Feature](#phase-4-forfeit-feature)
+  - [x] [Step 4.1: Add forfeit button to game UI 🤖](#step-41-add-forfeit-button-to-game-ui-🤖)
+  - [x] [Step 4.2: Implement forfeit logic with stats recording 🤖](#step-42-implement-forfeit-logic-with-stats-recording-🤖)
 - [ ] [Phase 5: Game Completion Stats](#phase-5-game-completion-stats)
   - [ ] [Step 5.1: Record win/loss on game completion 🤖](#step-51-record-winloss-on-game-completion-🤖)
   - [ ] [Step 5.2: Display win/loss/forfeit stats in menu 🤖](#step-52-display-winlossforfeit-stats-in-menu-🤖)
@@ -310,6 +310,11 @@ Add ability for users to voluntarily end a game as a loss.
 2. Show only when game is in progress (`gameState !== 'menu'` and `gameState !== 'gameOver'`)
 3. Button shows confirmation dialog before forfeiting
 
+**Implementation Notes (2025-12-25):**
+- Added `showForfeitConfirm` state for confirmation modal
+- Forfeit button: fixed position top-right, red styling, only shows during active game
+- Excluded from cutting phase (game hasn't really started yet)
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -325,6 +330,11 @@ Add ability for users to voluntarily end a game as a loss.
    - Call `POST /api/game-state` with `action: 'delete'`
    - Set `gameState = 'gameOver'`
    - Show message "You forfeited. Computer wins!"
+
+**Implementation Notes (2025-12-25):**
+- Added `handleForfeit()` function using existing `recordGameResult()` and `deleteSavedGame()`
+- Confirmation modal with Cancel/Yes buttons
+- Uses same modal styling as bug report dialog
 
 [Back to TOC](#table-of-contents)
 

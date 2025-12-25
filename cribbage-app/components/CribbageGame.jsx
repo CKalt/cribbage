@@ -100,6 +100,9 @@ export default function CribbageGame() {
   const lastSavedStateRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
+  // Forfeit state
+  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
+
   // Get muggins penalty preference from localStorage
   const getMugginsPreference = () => {
     if (typeof window !== 'undefined') {
@@ -302,6 +305,21 @@ export default function CribbageGame() {
     // Store as last saved state
     lastSavedStateRef.current = savedGameData;
   }, [savedGameData]);
+
+  // Forfeit the current game
+  const handleForfeit = useCallback(async () => {
+    setShowForfeitConfirm(false);
+
+    // Record forfeit in stats
+    await recordGameResult('forfeit');
+
+    // Delete saved game
+    await deleteSavedGame();
+
+    // Update game state
+    setGameState('gameOver');
+    setMessage('You forfeited. Computer wins!');
+  }, [recordGameResult, deleteSavedGame]);
 
   // Enhanced logging function
   const addDebugLog = (msg) => {
@@ -1911,6 +1929,44 @@ export default function CribbageGame() {
                     <Button onClick={startNewGame} className="bg-green-600 hover:bg-green-700">
                       New Game
                     </Button>
+                  </div>
+                )}
+
+                {/* Forfeit Button - only show during active game */}
+                {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
+                  <div className="fixed top-4 right-4 z-50">
+                    <button
+                      onClick={() => setShowForfeitConfirm(true)}
+                      className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg border border-red-600 transition-colors"
+                    >
+                      Forfeit
+                    </button>
+                  </div>
+                )}
+
+                {/* Forfeit Confirmation Modal */}
+                {showForfeitConfirm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+                      <h2 className="text-xl font-bold text-white mb-4">Forfeit Game?</h2>
+                      <p className="text-gray-300 text-sm mb-6">
+                        Are you sure you want to forfeit? This will count as a loss and end the current game.
+                      </p>
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          onClick={() => setShowForfeitConfirm(false)}
+                          className="bg-gray-600 hover:bg-gray-700"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleForfeit}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Yes, Forfeit
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
