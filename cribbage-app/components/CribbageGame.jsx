@@ -1501,18 +1501,15 @@ export default function CribbageGame() {
                       </div>
                     )}
 
-                    {/* New game button */}
-                    <Button
-                      onClick={() => {
-                        if (savedGameExists) {
-                          deleteSavedGame();
-                        }
-                        startNewGame();
-                      }}
-                      className={`text-lg px-8 py-4 ${savedGameExists ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
-                    >
-                      {savedGameExists ? 'New Game' : 'Start New Game'}
-                    </Button>
+                    {/* New game button - only shown when no saved game exists */}
+                    {!savedGameExists && (
+                      <Button
+                        onClick={startNewGame}
+                        className="text-lg px-8 py-4"
+                      >
+                        Start New Game
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
