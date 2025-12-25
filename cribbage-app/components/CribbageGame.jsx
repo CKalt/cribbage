@@ -1940,9 +1940,9 @@ export default function CribbageGame() {
                   </div>
                 )}
 
-                {/* Forfeit Button - only show during active game */}
+                {/* Forfeit Button - only show during active game, positioned above Report Bug */}
                 {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
-                  <div className="fixed top-4 right-4 z-50">
+                  <div className="fixed top-16 left-4 z-50">
                     <button
                       onClick={() => setShowForfeitConfirm(true)}
                       className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg border border-red-600 transition-colors"
