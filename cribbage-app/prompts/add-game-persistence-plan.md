@@ -20,9 +20,9 @@
 - [x] [Phase 4: Forfeit Feature](#phase-4-forfeit-feature)
   - [x] [Step 4.1: Add forfeit button to game UI 🤖](#step-41-add-forfeit-button-to-game-ui-🤖)
   - [x] [Step 4.2: Implement forfeit logic with stats recording 🤖](#step-42-implement-forfeit-logic-with-stats-recording-🤖)
-- [ ] [Phase 5: Game Completion Stats](#phase-5-game-completion-stats)
-  - [ ] [Step 5.1: Record win/loss on game completion 🤖](#step-51-record-winloss-on-game-completion-🤖)
-  - [ ] [Step 5.2: Display win/loss/forfeit stats in menu 🤖](#step-52-display-winlossforfeit-stats-in-menu-🤖)
+- [x] [Phase 5: Game Completion Stats](#phase-5-game-completion-stats)
+  - [x] [Step 5.1: Record win/loss on game completion 🤖](#step-51-record-winloss-on-game-completion-🤖)
+  - [x] [Step 5.2: Display win/loss/forfeit stats in menu 🤖](#step-52-display-winlossforfeit-stats-in-menu-🤖)
 - [ ] [Phase 6: Testing](#phase-6-testing)
   - [ ] [Step 6.1: Test game persistence across refresh 👤](#step-61-test-game-persistence-across-refresh-👤)
   - [ ] [Step 6.2: Test forfeit functionality 👤](#step-62-test-forfeit-functionality-👤)
@@ -354,6 +354,11 @@ Record wins/losses when games end naturally and display stats.
 3. Call `POST /api/game-stats` with appropriate result
 4. Call `POST /api/game-state` with `action: 'delete'` to clear saved game
 
+**Implementation Notes (2025-12-25):**
+- Created `handleGameOver(playerWon)` function to centralize game completion logic
+- Replaced 5 occurrences of inline game over logic with `handleGameOver()` call
+- Uses existing `recordGameResult()` and `deleteSavedGame()` functions
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -370,6 +375,10 @@ Record wins/losses when games end naturally and display stats.
    Wins: X | Losses: Y | Forfeits: Z
    ```
 3. Style to match existing green theme
+
+**Implementation Notes (2025-12-25):**
+- Already implemented in Phase 3 (Step 3.3)
+- Stats display shown in menu with green/red/yellow colors
 
 [Back to TOC](#table-of-contents)
 

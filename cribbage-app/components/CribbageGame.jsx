@@ -321,6 +321,19 @@ export default function CribbageGame() {
     setMessage('You forfeited. Computer wins!');
   }, [recordGameResult, deleteSavedGame]);
 
+  // Handle natural game completion (win/loss by reaching 121)
+  const handleGameOver = useCallback(async (playerWon) => {
+    // Record result
+    await recordGameResult(playerWon ? 'win' : 'loss');
+
+    // Delete saved game
+    await deleteSavedGame();
+
+    // Update game state
+    setGameState('gameOver');
+    setMessage(playerWon ? 'You win!' : 'Computer wins!');
+  }, [recordGameResult, deleteSavedGame]);
+
   // Enhanced logging function
   const addDebugLog = (msg) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -1036,8 +1049,7 @@ export default function CribbageGame() {
 
       setTimeout(() => {
         if (playerScore >= 121 || computerScore >= 121) {
-          setGameState('gameOver');
-          setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+          handleGameOver(playerScore >= 121);
         } else {
           setMessage('Hand complete - Dealing next hand...');
           setTimeout(() => {
@@ -1175,8 +1187,7 @@ export default function CribbageGame() {
 
           setTimeout(() => {
             if (playerScore >= 121 || computerScore >= 121) {
-              setGameState('gameOver');
-              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+              handleGameOver(playerScore >= 121);
             } else {
               setMessage('Hand complete - Dealing next hand...');
               setTimeout(() => {
@@ -1231,8 +1242,7 @@ export default function CribbageGame() {
 
         setTimeout(() => {
           if (playerScore >= 121 || computerScore >= 121) {
-            setGameState('gameOver');
-            setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+            handleGameOver(playerScore >= 121);
           } else {
             setMessage('Hand complete - Dealing next hand...');
             setTimeout(() => {
@@ -1321,8 +1331,7 @@ export default function CribbageGame() {
 
           setTimeout(() => {
             if (playerScore >= 121 || computerScore >= 121) {
-              setGameState('gameOver');
-              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+              handleGameOver(playerScore >= 121);
             } else {
               setMessage('Hand complete - Dealing next hand...');
               setTimeout(() => {
@@ -1383,8 +1392,7 @@ export default function CribbageGame() {
 
           setTimeout(() => {
             if (playerScore >= 121 || computerScore >= 121) {
-              setGameState('gameOver');
-              setMessage(playerScore >= 121 ? 'You win!' : 'Computer wins!');
+              handleGameOver(playerScore >= 121);
             } else {
               setMessage('Hand complete - Dealing next hand...');
               setTimeout(() => {
