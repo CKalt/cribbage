@@ -27,6 +27,7 @@ import ScoreBreakdown from './ScoreBreakdown';
 import DebugPanel from './DebugPanel';
 import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
+import DeckCut from './DeckCut';
 
 /**
  * Main game component with all state management and game logic
@@ -44,6 +45,7 @@ export default function CribbageGame() {
   const [computerHand, setComputerHand] = useState([]);
   const [crib, setCrib] = useState([]);
   const [cutCard, setCutCard] = useState(null);
+  const [pendingCutCard, setPendingCutCard] = useState(null); // For starter cut animation
 
   // Score state
   const [playerScore, setPlayerScore] = useState(0);
@@ -162,7 +164,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b27',
+          version: 'v0.1.0-b28',
         }),
       });
 
@@ -411,15 +413,17 @@ export default function CribbageGame() {
     });
   };
 
-  // Player cuts the deck
-  const playerCutDeck = () => {
+  // Player cuts the deck (position is 0-1 from DeckCut component)
+  const playerCutDeck = (cutPosition = 0.5) => {
     if (playerCutCard) return;
 
-    const cutIndex = Math.floor(Math.random() * 30) + 10;
+    // Convert cut position to deck index (position affects where in deck we cut)
+    const cutIndex = Math.floor(cutPosition * 30) + 10;
     const card = deck[cutIndex];
     setPlayerCutCard(card);
 
     setTimeout(() => {
+      // Computer cuts at a random position
       let compCutIndex;
       do {
         compCutIndex = Math.floor(Math.random() * 30) + 10;
@@ -467,7 +471,7 @@ export default function CribbageGame() {
         }
         // No auto-deal - wait for user to click button
       }, 1500);
-    }, 1000);
+    }, 1200);
   };
 
   // Proceed to dealing after cut
@@ -553,15 +557,10 @@ export default function CribbageGame() {
       return;
     }
 
-    const cut = deck[0];
-    const newDeck = deck.slice(1);
-
     setPlayerHand(newPlayerHand);
     setComputerHand(newComputerHand);
     setCrib(newCrib);
     setSelectedCards([]);
-    setCutCard(cut);
-    setDeck(newDeck);
 
     setPlayerPlayHand([...newPlayerHand]);
     setComputerPlayHand([...newComputerHand]);
@@ -576,27 +575,65 @@ export default function CribbageGame() {
       playerDiscards: selectedCards,
       computerDiscards: computerDiscards,
       crib: newCrib,
-      cutCard: cut,
       playerHand: newPlayerHand,
       computerHand: newComputerHand
     });
 
-    if (cut.rank === 'J') {
-      setGameState('play');
-      if (dealer === 'player') {
-        setPendingScore({ player: 'player', points: 2, reason: 'His heels!' });
-        setMessage('His heels! 2 points for dealer - Click Accept');
-      } else {
-        setPendingScore({ player: 'computer', points: 2, reason: 'His heels!' });
-        setMessage('His heels! 2 points for dealer - Click Accept');
-      }
-      setCurrentPlayer(dealer === 'player' ? 'computer' : 'player');
-    } else {
-      setGameState('play');
-      setCurrentPlayer(dealer === 'player' ? 'computer' : 'player');
-      setMessage(dealer === 'player' ? "Computer's turn (non-dealer starts)" : "Your turn (non-dealer starts)");
-    }
+    // Transition to cut for starter phase
+    setGameState('cutForStarter');
+    const nonDealer = dealer === 'player' ? 'Computer' : 'You';
+    setMessage(`${nonDealer === 'You' ? 'Cut' : 'Computer cuts'} for the starter card`);
   };
+
+  // Handle cut for starter card
+  const handleStarterCut = (cutPosition) => {
+    // Use cut position to determine card (adds feeling that position matters)
+    const cutIndex = Math.floor(cutPosition * (deck.length - 1));
+    const cut = deck[cutIndex];
+    const newDeck = [...deck.slice(0, cutIndex), ...deck.slice(cutIndex + 1)];
+
+    setPendingCutCard(cut);
+    setDeck(newDeck);
+
+    // Reveal after animation
+    setTimeout(() => {
+      setCutCard(cut);
+      setPendingCutCard(null);
+
+      logGameEvent('CUT_FOR_STARTER', {
+        cutCard: cut,
+        cutPosition: cutPosition
+      });
+
+      if (cut.rank === 'J') {
+        setGameState('play');
+        if (dealer === 'player') {
+          setPendingScore({ player: 'player', points: 2, reason: 'His heels!' });
+          setMessage('His heels! 2 points for dealer - Click Accept');
+        } else {
+          setPendingScore({ player: 'computer', points: 2, reason: 'His heels!' });
+          setMessage('His heels! 2 points for dealer - Click Accept');
+        }
+        setCurrentPlayer(dealer === 'player' ? 'computer' : 'player');
+      } else {
+        setGameState('play');
+        setCurrentPlayer(dealer === 'player' ? 'computer' : 'player');
+        setMessage(dealer === 'player' ? "Computer's turn (non-dealer starts)" : "Your turn (non-dealer starts)");
+      }
+    }, 1500);
+  };
+
+  // Auto-trigger computer cut when they are non-dealer
+  useEffect(() => {
+    if (gameState === 'cutForStarter' && dealer === 'player' && !pendingCutCard) {
+      // Computer is non-dealer, they cut automatically after a short delay
+      const timer = setTimeout(() => {
+        const randomPosition = Math.random() * 0.6 + 0.2; // 20-80% of deck
+        handleStarterCut(randomPosition);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, dealer, pendingCutCard]);
 
   // Accept score and continue
   const acceptScoreAndContinue = () => {
@@ -1486,7 +1523,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b27</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b28</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1544,24 +1581,41 @@ export default function CribbageGame() {
                 <div className="mb-6">
                   <div className="text-lg mb-4">{message}</div>
 
-                  {/* Show cut cards */}
-                  <div className="flex justify-center gap-8 mb-6">
-                    <div>
-                      <div className="text-sm mb-2">Your cut:</div>
-                      <LargeCard card={playerCutCard} placeholder={!playerCutCard} />
+                  {/* Visual deck cut */}
+                  <div className="flex justify-center gap-12 mb-6">
+                    {/* Player's cut */}
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400 mb-2">Your cut</div>
+                      <DeckCut
+                        onCut={playerCutDeck}
+                        disabled={!!playerCutCard}
+                        label=""
+                        revealedCard={playerCutCard}
+                        showCutAnimation={!!playerCutCard}
+                      />
                     </div>
 
-                    <div>
-                      <div className="text-sm mb-2">Computer's cut:</div>
-                      <LargeCard card={computerCutCard} placeholder={!computerCutCard} />
+                    {/* Computer's cut */}
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400 mb-2">Computer's cut</div>
+                      {computerCutCard ? (
+                        <DeckCut
+                          disabled={true}
+                          label=""
+                          revealedCard={computerCutCard}
+                          showCutAnimation={true}
+                        />
+                      ) : playerCutCard ? (
+                        <div className="h-64 flex items-center justify-center">
+                          <div className="text-gray-500 animate-pulse">Cutting...</div>
+                        </div>
+                      ) : (
+                        <div className="h-64 flex items-center justify-center">
+                          <div className="text-gray-600 text-sm">Waiting for your cut</div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {!playerCutCard && (
-                    <Button onClick={playerCutDeck} className="bg-blue-600 hover:bg-blue-700">
-                      Cut Deck
-                    </Button>
-                  )}
 
                   {cutResultReady && (
                     <Button onClick={proceedToDeal} className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3">
@@ -1572,7 +1626,61 @@ export default function CribbageGame() {
               </div>
             )}
 
-            {gameState !== 'menu' && gameState !== 'cutting' && (
+            {/* Cut for starter card */}
+            {gameState === 'cutForStarter' && (
+              <div className="text-center">
+                <div className="mb-6">
+                  <div className="text-lg mb-4">{message}</div>
+
+                  {/* Show hands for reference */}
+                  <div className="mb-6">
+                    <div className="text-sm text-gray-400 mb-2">Your hand:</div>
+                    <div className="flex justify-center gap-2">
+                      {playerHand.map((card, idx) => (
+                        <div key={idx} className={`bg-white rounded p-2 text-lg font-bold ${
+                          card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
+                        }`}>
+                          {card.rank}{card.suit}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Deck cut for starter */}
+                  <div className="flex justify-center">
+                    {dealer === 'player' ? (
+                      // Computer is non-dealer, they cut - auto-cut after delay
+                      <div className="text-center">
+                        <DeckCut
+                          disabled={true}
+                          label="Computer is cutting..."
+                          revealedCard={pendingCutCard}
+                          showCutAnimation={!!pendingCutCard}
+                        />
+                        {!pendingCutCard && (
+                          <div className="mt-4">
+                            <div className="text-gray-400 animate-pulse">Computer is cutting the deck...</div>
+                            {/* Auto-trigger computer cut */}
+                            <script dangerouslySetInnerHTML={{ __html: '' }} />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      // Player is non-dealer, they cut
+                      <DeckCut
+                        onCut={handleStarterCut}
+                        disabled={!!pendingCutCard}
+                        label="Cut for the starter card"
+                        revealedCard={pendingCutCard}
+                        showCutAnimation={!!pendingCutCard}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {gameState !== 'menu' && gameState !== 'cutting' && gameState !== 'cutForStarter' && (
               <>
                 {/* Visual Cribbage Board */}
                 <CribbageBoard
