@@ -136,7 +136,7 @@ export default function CribbageGame() {
       playerPlayedCards, computerPlayedCards,
       allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
       peggingHistory, countingHistory, computerCountingHand,
-      countingTurn, handsCountedThisRound,
+      countingTurn, handsCountedThisRound, counterIsComputer,
       playerCutCard, computerCutCard, cutResultReady,
       pendingScore,
     });
@@ -148,7 +148,7 @@ export default function CribbageGame() {
     playerPlayedCards, computerPlayedCards,
     allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
     peggingHistory, countingHistory, computerCountingHand,
-    countingTurn, handsCountedThisRound,
+    countingTurn, handsCountedThisRound, counterIsComputer,
     playerCutCard, computerCutCard, cutResultReady,
     pendingScore,
   ]);
@@ -164,7 +164,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b28',
+          version: 'v0.1.0-b29',
         }),
       });
 
@@ -305,6 +305,7 @@ export default function CribbageGame() {
     if (restored.computerCountingHand !== undefined) setComputerCountingHand(restored.computerCountingHand);
     if (restored.countingTurn !== undefined) setCountingTurn(restored.countingTurn);
     if (restored.handsCountedThisRound !== undefined) setHandsCountedThisRound(restored.handsCountedThisRound);
+    if (restored.counterIsComputer !== undefined) setCounterIsComputer(restored.counterIsComputer);
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
     if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
     if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
@@ -1523,7 +1524,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b28</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b29</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
