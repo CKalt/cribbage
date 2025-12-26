@@ -164,7 +164,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b29',
+          version: 'v0.1.0-b30',
         }),
       });
 
@@ -305,7 +305,15 @@ export default function CribbageGame() {
     if (restored.computerCountingHand !== undefined) setComputerCountingHand(restored.computerCountingHand);
     if (restored.countingTurn !== undefined) setCountingTurn(restored.countingTurn);
     if (restored.handsCountedThisRound !== undefined) setHandsCountedThisRound(restored.handsCountedThisRound);
-    if (restored.counterIsComputer !== undefined) setCounterIsComputer(restored.counterIsComputer);
+    if (restored.counterIsComputer !== undefined) {
+      setCounterIsComputer(restored.counterIsComputer);
+    } else if (restored.gameState === 'counting' && restored.countingTurn) {
+      // Fallback for old saves without counterIsComputer:
+      // Derive from countingTurn - if it's 'player' or player's crib turn, player counts
+      const isPlayerCounting = restored.countingTurn === 'player' ||
+        (restored.countingTurn === 'crib' && restored.dealer === 'player');
+      setCounterIsComputer(!isPlayerCounting);
+    }
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
     if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
     if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
@@ -1524,7 +1532,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b29</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b30</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
