@@ -25,6 +25,8 @@ import PlayingCard, { PlayedCard, LargeCard, CutCard } from './PlayingCard';
 import GameMessage from './GameMessage';
 import ScoreBreakdown from './ScoreBreakdown';
 import DebugPanel from './DebugPanel';
+import ScoreSelector from './ScoreSelector';
+import CorrectScoreCelebration from './CorrectScoreCelebration';
 
 /**
  * Main game component with all state management and game logic
@@ -86,6 +88,10 @@ export default function CribbageGame() {
 
   // Scoring state
   const [pendingScore, setPendingScore] = useState(null);
+
+  // Celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationScore, setCelebrationScore] = useState(null);
 
   // Debug state
   const [debugLog, setDebugLog] = useState([]);
@@ -156,7 +162,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b26',
+          version: 'v0.1.0-b27',
         }),
       });
 
@@ -938,8 +944,8 @@ export default function CribbageGame() {
   };
 
   // Submit player's count
-  const submitPlayerCount = () => {
-    const claimed = parseInt(playerCountInput);
+  const submitPlayerCount = (directScore = null) => {
+    const claimed = directScore !== null ? directScore : parseInt(playerCountInput);
     if (isNaN(claimed)) {
       setMessage('Please enter a valid number');
       return;
@@ -1002,14 +1008,15 @@ export default function CribbageGame() {
     setShowBreakdown(true);
 
     if (claimed === score) {
-      setMessage(`Correct! ${score} points`);
+      // Show celebration for correct count
+      setCelebrationScore(score);
+      setShowCelebration(true);
       setPlayerScore(prev => prev + score);
       addDebugLog(`Player count correct. Hands counted now: ${newHandsCountedThisRound}`);
 
-      // Auto-advance after short delay for correct counts
-      setTimeout(() => {
-        proceedAfterPlayerCount(newHandsCountedThisRound);
-      }, 2500);
+      // Message will be set after celebration completes
+      // Store the hands counted for use in celebration callback
+      setPendingCountContinue({ newHandsCountedThisRound, type: 'correct', score });
     } else if (claimed < score) {
       setMessage(`You undercounted! You claimed ${claimed} but it's ${score} - You only get ${claimed}. Review the breakdown and click Continue.`);
       setPlayerScore(prev => prev + claimed);
@@ -1035,6 +1042,22 @@ export default function CribbageGame() {
     addDebugLog(`Player acknowledged count result. Continuing...`);
     setPendingCountContinue(null);
     proceedAfterPlayerCount(newHandsCountedThisRound);
+  };
+
+  // Handle celebration complete
+  const handleCelebrationComplete = () => {
+    setShowCelebration(false);
+    setCelebrationScore(null);
+
+    if (pendingCountContinue && pendingCountContinue.type === 'correct') {
+      const { newHandsCountedThisRound, score } = pendingCountContinue;
+      setMessage(`${score} points scored!`);
+      setPendingCountContinue(null);
+      // Short delay then proceed
+      setTimeout(() => {
+        proceedAfterPlayerCount(newHandsCountedThisRound);
+      }, 500);
+    }
   };
 
   // Common logic for proceeding after player count
@@ -1463,7 +1486,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b26</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b27</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -1819,20 +1842,11 @@ export default function CribbageGame() {
                   </div>
                 )}
 
-                {/* Counting input */}
+                {/* Counting input - Score selector grid */}
                 {gameState === 'counting' && !actualScore && !pendingScore && !computerClaimedScore &&
                  counterIsComputer === false && (
-                  <div className="text-center mb-4">
-                    <input
-                      type="number"
-                      value={playerCountInput}
-                      onChange={(e) => setPlayerCountInput(e.target.value)}
-                      className="bg-white text-black p-2 rounded mr-2"
-                      placeholder="Your count"
-                    />
-                    <Button onClick={submitPlayerCount} className="bg-blue-600 hover:bg-blue-700">
-                      Submit Count
-                    </Button>
+                  <div className="mb-4">
+                    <ScoreSelector onSelect={(score) => submitPlayerCount(score)} />
                   </div>
                 )}
 
@@ -1973,6 +1987,14 @@ export default function CribbageGame() {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* Celebration overlay for correct counts */}
+                {showCelebration && celebrationScore !== null && (
+                  <CorrectScoreCelebration
+                    score={celebrationScore}
+                    onComplete={handleCelebrationComplete}
+                  />
                 )}
 
                 {/* Debug Panel */}
