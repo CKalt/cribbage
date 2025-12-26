@@ -2,14 +2,14 @@
 
 ## Table of Contents
 
-- [ ] [Overview](#overview)
-- [ ] [Problem Statement](#problem-statement)
-- [ ] [Phase 1: Score Selector Component](#phase-1-score-selector-component)
-  - [ ] [Step 1.1: Create ScoreSelector component 🤖](#step-11-create-scoreselector-component-)
-  - [ ] [Step 1.2: Integrate into CribbageGame.jsx 🤖](#step-12-integrate-into-cribbagegamejsx-)
-- [ ] [Phase 2: Celebration Feedback](#phase-2-celebration-feedback)
-  - [ ] [Step 2.1: Create CorrectScoreCelebration component 🤖](#step-21-create-correctscorecelebration-component-)
-  - [ ] [Step 2.2: Integrate celebration into counting flow 🤖](#step-22-integrate-celebration-into-counting-flow-)
+- [x] [Overview](#overview)
+- [x] [Problem Statement](#problem-statement)
+- [x] [Phase 1: Score Selector Component](#phase-1-score-selector-component)
+  - [x] [Step 1.1: Create ScoreSelector component 🤖](#step-11-create-scoreselector-component-)
+  - [x] [Step 1.2: Integrate into CribbageGame.jsx 🤖](#step-12-integrate-into-cribbagegamejsx-)
+- [x] [Phase 2: Celebration Feedback](#phase-2-celebration-feedback)
+  - [x] [Step 2.1: Create CorrectScoreCelebration component 🤖](#step-21-create-correctscorecelebration-component-)
+  - [x] [Step 2.2: Integrate celebration into counting flow 🤖](#step-22-integrate-celebration-into-counting-flow-)
 - [ ] [Phase 3: Testing and Polish](#phase-3-testing-and-polish)
   - [ ] [Step 3.1: Local testing 👤](#step-31-local-testing-)
   - [ ] [Step 3.2: Deploy 🤖](#step-32-deploy-)
