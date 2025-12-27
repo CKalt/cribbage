@@ -778,10 +778,17 @@ export default function CribbageGame() {
             return;
           } else {
             // Neither can play at current count
-            // Give the player a chance to say "Go" before awarding last card
-            // But if one player is out of cards, just award last card directly
-            if (nextPlayerHand.length > 0 && nextPlayer === 'player') {
-              // Player has cards but can't play - let them say Go
+            // If one player is out of cards and the other can't play, auto-handle the Go
+            if (nextPlayerHand.length > 0 && nextPlayer === 'player' && otherPlayerHand.length === 0) {
+              // Player has cards but can't play, and computer is out of cards
+              // Auto-handle Go and award last card to computer (who played last)
+              setCurrentPlayer('player');
+              logGameEvent('PLAYER_GO', { player: 'player', currentCount: currentCount, remainingCards: nextPlayerHand.length, auto: true });
+              setPeggingHistory(prev => [...prev, { type: 'go', player: 'player', count: currentCount }]);
+              setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
+              setMessage('You cannot play - Computer gets 1 point for last card - Click Accept');
+            } else if (nextPlayerHand.length > 0 && nextPlayer === 'player') {
+              // Player has cards but can't play, computer also has cards
               setCurrentPlayer('player');
               setMessage('You cannot play - Say "Go"');
             } else if (otherPlayerHand.length > 0 && nextPlayer === 'computer') {
