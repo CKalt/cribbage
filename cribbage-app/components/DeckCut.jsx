@@ -19,8 +19,8 @@ export default function DeckCut({
   revealedCard = null,
   showCutAnimation = false
 }) {
-  const [cutPosition, setCutPosition] = useState(null); // 0-1 representing where user tapped
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [cutPosition, setCutPosition] = useState(showCutAnimation ? 0.5 : null); // 0-1 representing where user tapped
+  const [isAnimating, setIsAnimating] = useState(showCutAnimation);
   const deckRef = useRef(null);
 
   const handleDeckClick = (e) => {
@@ -87,7 +87,7 @@ export default function DeckCut({
         )}
 
         {/* Revealed card */}
-        {revealedCard && isAnimating && (
+        {revealedCard && (isAnimating || showCutAnimation) && (
           <div
             className="absolute z-10 transition-all duration-700 ease-out"
             style={{

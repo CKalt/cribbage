@@ -2219,7 +2219,8 @@ export default function CribbageGame({ onLogout }) {
                 {/* Action buttons for play phase */}
                 {gameState === 'play' && currentPlayer === 'player' && !pendingScore && (
                   <div className="text-center space-x-2">
-                    {playerPlayHand.length > 0 && (
+                    {/* Go button only shows when count >= 22 (at count <= 21, any card can be played) */}
+                    {playerPlayHand.length > 0 && currentCount >= 22 && (
                       <Button onClick={playerGo} className="bg-red-600 hover:bg-red-700">
                         Say "Go"
                       </Button>
