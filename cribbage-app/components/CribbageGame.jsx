@@ -318,6 +318,40 @@ export default function CribbageGame() {
     }
     if (restored.computerClaimedScore !== undefined) setComputerClaimedScore(restored.computerClaimedScore);
     if (restored.actualScore !== undefined) setActualScore(restored.actualScore);
+
+    // Validate and fix counting state consistency
+    // The source of truth is handsCountedThisRound and dealer - derive counterIsComputer from them
+    if (restored.gameState === 'counting' && restored.handsCountedThisRound !== undefined && restored.dealer) {
+      const hands = restored.handsCountedThisRound;
+      const dlr = restored.dealer;
+      let correctCounterIsComputer;
+      let correctCountingTurn;
+
+      if (hands === 0) {
+        // Non-dealer counts first
+        correctCounterIsComputer = (dlr === 'player');
+        correctCountingTurn = (dlr === 'player') ? 'computer' : 'player';
+      } else if (hands === 1) {
+        // Dealer counts their hand second
+        correctCounterIsComputer = (dlr === 'computer');
+        correctCountingTurn = dlr;
+      } else if (hands === 2) {
+        // Dealer counts crib third
+        correctCounterIsComputer = (dlr === 'computer');
+        correctCountingTurn = 'crib';
+      }
+
+      // Override with correct values if they don't match
+      if (correctCounterIsComputer !== undefined && correctCounterIsComputer !== restored.counterIsComputer) {
+        console.log(`[Resume] Fixing counterIsComputer: ${restored.counterIsComputer} → ${correctCounterIsComputer}`);
+        setCounterIsComputer(correctCounterIsComputer);
+      }
+      if (correctCountingTurn !== undefined && correctCountingTurn !== restored.countingTurn) {
+        console.log(`[Resume] Fixing countingTurn: ${restored.countingTurn} → ${correctCountingTurn}`);
+        setCountingTurn(correctCountingTurn);
+      }
+    }
+
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
     if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
     if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
