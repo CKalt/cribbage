@@ -241,16 +241,16 @@ const CribbageBoard = forwardRef(function CribbageBoard({
     : getHolePosition(pegPositions.computer.frontPeg, computerTrackOffset);
   const computerBackPos = getHolePosition(pegPositions.computer.backPeg, computerTrackOffset);
 
-  return (
-    <div className="mb-6 bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-xl relative overflow-hidden">
-      <svg
-        viewBox={viewBox}
-        className="mx-auto w-full max-w-[620px]"
-        preserveAspectRatio="xMidYMid meet"
-        style={{
-          transition: `viewBox ${zoomTransitionDuration}ms ease-out`
-        }}
-      >
+  // The board SVG content (reused in both normal and overlay modes)
+  const boardSvg = (
+    <svg
+      viewBox={viewBox}
+      className="mx-auto w-full max-w-[620px]"
+      preserveAspectRatio="xMidYMid meet"
+      style={{
+        transition: `viewBox ${zoomTransitionDuration}ms ease-out`
+      }}
+    >
         <defs>
           {/* Glow filter for animating pegs */}
           <filter id="pegGlow" x="-50%" y="-50%" width="200%" height="200%">
@@ -415,14 +415,31 @@ const CribbageBoard = forwardRef(function CribbageBoard({
           <text x="110" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">CPU: {computerScore}</text>
         </g>
       </svg>
+  );
 
-      {/* Pegging indicator */}
+  return (
+    <>
+      {/* Normal board display (when not animating) */}
+      <div className={`mb-6 bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-xl relative overflow-hidden ${isAnimating ? 'opacity-30' : ''}`}>
+        {boardSvg}
+      </div>
+
+      {/* Fixed overlay for animation (always visible on screen) */}
       {isAnimating && (
-        <div className="absolute top-2 right-2 text-xs text-yellow-400 bg-black/50 px-2 py-1 rounded animate-pulse">
-          Pegging...
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-2xl w-full max-w-2xl">
+            {/* Pegging indicator */}
+            <div className="text-center text-yellow-400 text-sm font-bold mb-2 animate-pulse">
+              Pegging {scorePopup.points > 0 ? `+${scorePopup.points} points` : '...'}
+            </div>
+            {boardSvg}
+            <div className="text-center text-gray-400 text-xs mt-2">
+              Tap anywhere to continue
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 });
 
