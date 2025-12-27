@@ -8,6 +8,7 @@ import { userPool } from '@/lib/cognito';
 import { useAuth } from '@/contexts/AuthContext';
 import { setCookie } from 'nookies';
 import PasswordInput from '@/components/PasswordInput';
+import { APP_VERSION } from '@/lib/version';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -99,7 +100,7 @@ export default function Login() {
         {error && <p className="text-red-400 mt-4 text-sm bg-red-900/30 p-2 rounded">{error}</p>}
       </div>
       <div className="text-green-400 text-sm mt-5">
-        Cribbage Game <span className="text-green-600">v0.1.0-b32</span>
+        Cribbage Game <span className="text-green-600">{APP_VERSION}</span>
       </div>
     </div>
   );

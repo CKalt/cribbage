@@ -28,6 +28,7 @@ import DebugPanel from './DebugPanel';
 import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
+import { APP_VERSION } from '@/lib/version';
 
 /**
  * Main game component with all state management and game logic
@@ -166,7 +167,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b32',
+          version: APP_VERSION,
         }),
       });
 
@@ -1570,7 +1571,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b32</div>
+            <div className="text-center text-green-600 text-xs">{APP_VERSION}</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
