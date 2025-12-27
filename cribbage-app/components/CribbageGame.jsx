@@ -1996,6 +1996,31 @@ export default function CribbageGame({ onLogout }) {
                   </div>
                 )}
 
+                {/* Computer hand - positioned above play area */}
+                <div className={`mb-6 p-2 rounded ${
+                  gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
+                  ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
+                    ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                }`}>
+                  <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
+                      gameState === 'play' ? computerPlayHand :
+                      computerHand).map((card, idx) => (
+                      <PlayingCard
+                        key={idx}
+                        card={card}
+                        faceDown={gameState !== 'counting' && gameState !== 'gameOver'}
+                        revealed={gameState === 'counting' || gameState === 'gameOver'}
+                        highlighted={
+                          gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
+                          ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+
                 {/* Play area with separate stacks */}
                 {gameState === 'play' && (
                   <div className="mb-6">
@@ -2042,31 +2067,6 @@ export default function CribbageGame({ onLogout }) {
                     </Button>
                   </div>
                 )}
-
-                {/* Computer hand */}
-                <div className={`mb-6 p-2 rounded ${
-                  gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
-                  ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
-                    ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
-                }`}>
-                  <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
-                      gameState === 'play' ? computerPlayHand :
-                      computerHand).map((card, idx) => (
-                      <PlayingCard
-                        key={idx}
-                        card={card}
-                        faceDown={gameState !== 'counting' && gameState !== 'gameOver'}
-                        revealed={gameState === 'counting' || gameState === 'gameOver'}
-                        highlighted={
-                          gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
-                          ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
 
                 {/* Player hand */}
                 <div className={`mb-6 p-2 rounded ${
