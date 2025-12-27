@@ -394,6 +394,54 @@ export default function CribbageGame({ onLogout }) {
     setMessage(customMessage || (playerWon ? 'You win!' : 'Computer wins!'));
   }, [recordGameResult, deleteSavedGame]);
 
+  // Refs to track current scores for use in addPoints
+  const playerScoreRef = useRef(playerScore);
+  const computerScoreRef = useRef(computerScore);
+  useEffect(() => { playerScoreRef.current = playerScore; }, [playerScore]);
+  useEffect(() => { computerScoreRef.current = computerScore; }, [computerScore]);
+
+  /**
+   * Central function to add points to a player's score.
+   * This is the ONLY place where scores should be modified (except for initialization/restore).
+   * Handles win detection automatically.
+   *
+   * @param {string} player - 'player' or 'computer'
+   * @param {number} points - Points to add
+   * @param {string} reason - Reason for the points (for logging)
+   * @returns {Object} { newScore: number, gameEnded: boolean }
+   */
+  const addPoints = useCallback((player, points, reason) => {
+    if (points <= 0) return { newScore: player === 'player' ? playerScoreRef.current : computerScoreRef.current, gameEnded: false };
+
+    const currentScore = player === 'player' ? playerScoreRef.current : computerScoreRef.current;
+    const newScore = currentScore + points;
+
+    // Update the score
+    if (player === 'player') {
+      setPlayerScore(newScore);
+      playerScoreRef.current = newScore;
+    } else {
+      setComputerScore(newScore);
+      computerScoreRef.current = newScore;
+    }
+
+    // Log the scoring event
+    addDebugLog(`${player === 'player' ? 'Player' : 'Computer'} scores ${points} points (${reason}): ${currentScore} -> ${newScore}`);
+
+    // Check for win
+    if (newScore >= 121) {
+      const playerWon = player === 'player';
+      const winMessage = playerWon
+        ? `You win with ${newScore} points!`
+        : `Computer wins with ${newScore} points!`;
+      addDebugLog(winMessage);
+      handleGameOver(playerWon, winMessage);
+      return { newScore, gameEnded: true };
+    }
+
+    return { newScore, gameEnded: false };
+  }, [handleGameOver]);
+
   // Enhanced logging function
   const addDebugLog = (msg) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -691,22 +739,15 @@ export default function CribbageGame({ onLogout }) {
   const acceptScoreAndContinue = () => {
     if (!pendingScore) return;
 
-    // Calculate new scores
-    const newPlayerScore = pendingScore.player === 'player' ? playerScore + pendingScore.points : playerScore;
-    const newComputerScore = pendingScore.player === 'computer' ? computerScore + pendingScore.points : computerScore;
-
-    if (pendingScore.player === 'player') {
-      setPlayerScore(newPlayerScore);
-    } else {
-      setComputerScore(newComputerScore);
-    }
+    // Use centralized scoring function
+    const { newScore, gameEnded } = addPoints(pendingScore.player, pendingScore.points, pendingScore.reason);
 
     logGameEvent('SCORE_POINTS', {
       player: pendingScore.player,
       points: pendingScore.points,
       reason: pendingScore.reason,
-      newPlayerScore,
-      newComputerScore
+      newPlayerScore: pendingScore.player === 'player' ? newScore : playerScore,
+      newComputerScore: pendingScore.player === 'computer' ? newScore : computerScore
     });
 
     // Add to pegging history if this is a pegging phase score or His heels
@@ -727,17 +768,8 @@ export default function CribbageGame({ onLogout }) {
 
     setLastGoPlayer(null);
 
-    // Check for immediate win after scoring
-    if (newPlayerScore >= 121) {
-      addDebugLog(`Player wins with ${newPlayerScore} points!`);
-      handleGameOver(true, `You win with ${newPlayerScore} points!`);
-      return;
-    }
-    if (newComputerScore >= 121) {
-      addDebugLog(`Computer wins with ${newComputerScore} points!`);
-      handleGameOver(false, `Computer wins with ${newComputerScore} points!`);
-      return;
-    }
+    // If game ended due to win, stop processing
+    if (gameEnded) return;
 
     if (needsLastCard) {
       setPendingScore({ player: scoringPlayer, points: 1, reason: 'One for last card' });
@@ -1137,36 +1169,22 @@ export default function CribbageGame({ onLogout }) {
       // Show celebration for correct count
       setCelebrationScore(score);
       setShowCelebration(true);
-      const newPlayerScore = playerScore + score;
-      setPlayerScore(newPlayerScore);
+      const { gameEnded } = addPoints('player', score, `correct count (${handType})`);
       addDebugLog(`Player count correct. Hands counted now: ${newHandsCountedThisRound}`);
 
-      // Check for immediate win after player scores
-      if (newPlayerScore >= 121) {
-        addDebugLog(`Player wins with ${newPlayerScore} points during counting!`);
-        setTimeout(() => {
-          handleGameOver(true, `You win with ${newPlayerScore} points!`);
-        }, 1000);
-        return;
-      }
+      // If game ended due to win, stop processing
+      if (gameEnded) return;
 
       // Message will be set after celebration completes
       // Store the hands counted for use in celebration callback
       setPendingCountContinue({ newHandsCountedThisRound, type: 'correct', score });
     } else if (claimed < score) {
-      const newPlayerScore = playerScore + claimed;
-      setPlayerScore(newPlayerScore);
+      const { gameEnded } = addPoints('player', claimed, `undercount (${handType})`);
       setMessage(`You undercounted! You claimed ${claimed} but it's ${score} - You only get ${claimed}. Review the breakdown and click Continue.`);
       addDebugLog(`Player undercounted. Waiting for acknowledgment. Hands counted now: ${newHandsCountedThisRound}`);
 
-      // Check for immediate win after player scores
-      if (newPlayerScore >= 121) {
-        addDebugLog(`Player wins with ${newPlayerScore} points during counting!`);
-        setTimeout(() => {
-          handleGameOver(true, `You win with ${newPlayerScore} points!`);
-        }, 1000);
-        return;
-      }
+      // If game ended due to win, stop processing
+      if (gameEnded) return;
 
       // Wait for player to acknowledge
       setPendingCountContinue({ newHandsCountedThisRound, type: 'undercount' });
@@ -1207,27 +1225,24 @@ export default function CribbageGame({ onLogout }) {
   };
 
   // Common logic for proceeding after player count
+  // Note: Win detection is now handled by addPoints, so we just proceed with next steps
   const proceedAfterPlayerCount = (newHandsCountedThisRound) => {
     setShowBreakdown(false);
     setActualScore(null);
 
     if (newHandsCountedThisRound >= 3) {
-      addDebugLog('All counting complete - checking for game end');
+      addDebugLog('All counting complete - dealing next hand');
       setCountingTurn('');
       setCounterIsComputer(null);
 
       setTimeout(() => {
-        if (playerScore >= 121 || computerScore >= 121) {
-          handleGameOver(playerScore >= 121);
-        } else {
-          setMessage('Hand complete - Dealing next hand...');
-          setTimeout(() => {
-            setDealer(dealer === 'player' ? 'computer' : 'player');
-            const newDeck = shuffleDeck(createDeck());
-            setDeck(newDeck);
-            dealHands(newDeck);
-          }, 1500);
-        }
+        setMessage('Hand complete - Dealing next hand...');
+        setTimeout(() => {
+          setDealer(dealer === 'player' ? 'computer' : 'player');
+          const newDeck = shuffleDeck(createDeck());
+          setDeck(newDeck);
+          dealHands(newDeck);
+        }, 1500);
       }, 100);
     } else if (newHandsCountedThisRound === 1) {
       addDebugLog(`First count done by player, dealer (${dealer}) counts hand next`);
@@ -1331,9 +1346,8 @@ export default function CribbageGame({ onLogout }) {
         }]);
       }
 
-      const newComputerScore = computerScore + computerClaimedScore;
-      setComputerScore(newComputerScore);
-      addDebugLog(`Computer score: ${computerScore} -> ${newComputerScore}`);
+      const handType = computerCountingHand?.handType || 'hand';
+      const { gameEnded } = addPoints('computer', computerClaimedScore, `accepted count (${handType})`);
 
       const newHandsCountedThisRound = handsCountedThisRound + 1;
       setHandsCountedThisRound(newHandsCountedThisRound);
@@ -1345,35 +1359,25 @@ export default function CribbageGame({ onLogout }) {
       setComputerClaimedScore(null);
       setIsProcessingCount(false);
 
-      // Check for immediate win after computer scores
-      if (newComputerScore >= 121) {
-        addDebugLog(`Computer wins with ${newComputerScore} points during counting!`);
-        setTimeout(() => {
-          handleGameOver(false, `Computer wins with ${newComputerScore} points!`);
-        }, 1000);
-        return;
-      }
+      // If game ended due to win, stop processing
+      if (gameEnded) return;
 
       setTimeout(() => {
         addDebugLog(`After accepting computer count, newHandsCountedThisRound: ${newHandsCountedThisRound}`);
 
         if (newHandsCountedThisRound >= 3) {
-          addDebugLog('All counting complete - checking for game end');
+          addDebugLog('All counting complete - dealing next hand');
           setCountingTurn('');
           setCounterIsComputer(null);
 
           setTimeout(() => {
-            if (playerScore >= 121 || newComputerScore >= 121) {
-              handleGameOver(playerScore >= 121);
-            } else {
-              setMessage('Hand complete - Dealing next hand...');
-              setTimeout(() => {
-                setDealer(dealer === 'player' ? 'computer' : 'player');
-                const newDeck = shuffleDeck(createDeck());
-                setDeck(newDeck);
-                dealHands(newDeck);
-              }, 1500);
-            }
+            setMessage('Hand complete - Dealing next hand...');
+            setTimeout(() => {
+              setDealer(dealer === 'player' ? 'computer' : 'player');
+              const newDeck = shuffleDeck(createDeck());
+              setDeck(newDeck);
+              dealHands(newDeck);
+            }, 1500);
           }, 100);
         } else if (newHandsCountedThisRound === 1) {
           addDebugLog(`First count done, dealer (${dealer}) counts hand next`);
@@ -1394,25 +1398,17 @@ export default function CribbageGame({ onLogout }) {
   const applyWrongMugginsResult = (preference, resultData) => {
     const { score, claimed, newHandsCountedThisRound } = resultData;
 
-    let newComputerScore;
+    let gameEnded;
     if (preference === '2-points') {
       setMessage(`Wrong call! Computer's count was correct (${claimed}). Computer gets ${claimed} + 2 penalty points.`);
-      newComputerScore = computerScore + claimed + 2;
-      setComputerScore(newComputerScore);
+      ({ gameEnded } = addPoints('computer', claimed + 2, 'wrong muggins + penalty'));
     } else {
       setMessage(`Wrong call! Computer's count was correct. They get ${claimed} points.`);
-      newComputerScore = computerScore + claimed;
-      setComputerScore(newComputerScore);
+      ({ gameEnded } = addPoints('computer', claimed, 'wrong muggins'));
     }
 
-    // Check for immediate win
-    if (newComputerScore >= 121) {
-      addDebugLog(`Computer wins with ${newComputerScore} points after wrong muggins call!`);
-      setTimeout(() => {
-        handleGameOver(false, `Computer wins with ${newComputerScore} points!`);
-      }, 1000);
-      return;
-    }
+    // If game ended due to win, stop processing
+    if (gameEnded) return;
 
     setShowBreakdown(true);
     setPlayerMadeCountDecision(true);
@@ -1430,17 +1426,13 @@ export default function CribbageGame({ onLogout }) {
         setCounterIsComputer(null);
 
         setTimeout(() => {
-          if (playerScore >= 121 || newComputerScore >= 121) {
-            handleGameOver(playerScore >= 121);
-          } else {
-            setMessage('Hand complete - Dealing next hand...');
-            setTimeout(() => {
-              setDealer(dealer === 'player' ? 'computer' : 'player');
-              const newDeck = shuffleDeck(createDeck());
-              setDeck(newDeck);
-              dealHands(newDeck);
-            }, 1500);
-          }
+          setMessage('Hand complete - Dealing next hand...');
+          setTimeout(() => {
+            setDealer(dealer === 'player' ? 'computer' : 'player');
+            const newDeck = shuffleDeck(createDeck());
+            setDeck(newDeck);
+            dealHands(newDeck);
+          }, 1500);
         }, 100);
       } else if (newHandsCountedThisRound === 1) {
         setCountingTurn(dealer);
@@ -1491,9 +1483,7 @@ export default function CribbageGame({ onLogout }) {
       setMessage(`MUGGINS! Computer overcounted: claimed ${computerClaimedScore} but actual is ${score}. Computer gets 0, you get ${mugginsPoints}!`);
       setShowBreakdown(true);
 
-      const newPlayerScore = playerScore + mugginsPoints;
-      setPlayerScore(newPlayerScore);
-      addDebugLog(`Muggins! Player gets ${mugginsPoints} points`);
+      const { gameEnded } = addPoints('player', mugginsPoints, 'muggins');
 
       logGameEvent('MUGGINS', {
         caughtPlayer: 'computer',
@@ -1503,14 +1493,8 @@ export default function CribbageGame({ onLogout }) {
         breakdown: breakdown
       });
 
-      // Check for immediate win
-      if (newPlayerScore >= 121) {
-        addDebugLog(`Player wins with ${newPlayerScore} points via muggins!`);
-        setTimeout(() => {
-          handleGameOver(true, `You win with ${newPlayerScore} points!`);
-        }, 1000);
-        return;
-      }
+      // If game ended due to win, stop processing
+      if (gameEnded) return;
 
       const newHandsCountedThisRound = handsCountedThisRound + 1;
       setHandsCountedThisRound(newHandsCountedThisRound);
@@ -1529,17 +1513,13 @@ export default function CribbageGame({ onLogout }) {
           setCounterIsComputer(null);
 
           setTimeout(() => {
-            if (newPlayerScore >= 121 || computerScore >= 121) {
-              handleGameOver(newPlayerScore >= 121);
-            } else {
-              setMessage('Hand complete - Dealing next hand...');
-              setTimeout(() => {
-                setDealer(dealer === 'player' ? 'computer' : 'player');
-                const newDeck = shuffleDeck(createDeck());
-                setDeck(newDeck);
-                dealHands(newDeck);
-              }, 1500);
-            }
+            setMessage('Hand complete - Dealing next hand...');
+            setTimeout(() => {
+              setDealer(dealer === 'player' ? 'computer' : 'player');
+              const newDeck = shuffleDeck(createDeck());
+              setDeck(newDeck);
+              dealHands(newDeck);
+            }, 1500);
           }, 100);
         } else if (newHandsCountedThisRound === 1) {
           addDebugLog(`First count done (muggins), dealer (${dealer}) counts hand next`);
@@ -1571,18 +1551,11 @@ export default function CribbageGame({ onLogout }) {
       // Computer undercounted - player's objection reveals they could have had more
       setPlayerMadeCountDecision(true);
       setMessage(`Computer undercounted! They claimed ${computerClaimedScore} but could have had ${score}. They get ${computerClaimedScore} points.`);
-      const newComputerScore = computerScore + computerClaimedScore;
-      setComputerScore(newComputerScore);
+      const { gameEnded } = addPoints('computer', computerClaimedScore, 'undercount');
       setShowBreakdown(true);
 
-      // Check for immediate win
-      if (newComputerScore >= 121) {
-        addDebugLog(`Computer wins with ${newComputerScore} points after undercount!`);
-        setTimeout(() => {
-          handleGameOver(false, `Computer wins with ${newComputerScore} points!`);
-        }, 1000);
-        return;
-      }
+      // If game ended due to win, stop processing
+      if (gameEnded) return;
 
       const newHandsCountedThisRound = handsCountedThisRound + 1;
       setHandsCountedThisRound(newHandsCountedThisRound);
@@ -1600,17 +1573,13 @@ export default function CribbageGame({ onLogout }) {
           setCounterIsComputer(null);
 
           setTimeout(() => {
-            if (playerScore >= 121 || newComputerScore >= 121) {
-              handleGameOver(playerScore >= 121);
-            } else {
-              setMessage('Hand complete - Dealing next hand...');
-              setTimeout(() => {
-                setDealer(dealer === 'player' ? 'computer' : 'player');
-                const newDeck = shuffleDeck(createDeck());
-                setDeck(newDeck);
-                dealHands(newDeck);
-              }, 1500);
-            }
+            setMessage('Hand complete - Dealing next hand...');
+            setTimeout(() => {
+              setDealer(dealer === 'player' ? 'computer' : 'player');
+              const newDeck = shuffleDeck(createDeck());
+              setDeck(newDeck);
+              dealHands(newDeck);
+            }, 1500);
           }, 100);
         } else if (newHandsCountedThisRound === 1) {
           addDebugLog(`First count done (undercount), dealer (${dealer}) counts hand next`);
