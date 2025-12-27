@@ -137,6 +137,7 @@ export default function CribbageGame() {
       allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
       peggingHistory, countingHistory, computerCountingHand,
       countingTurn, handsCountedThisRound, counterIsComputer,
+      computerClaimedScore, actualScore,
       playerCutCard, computerCutCard, cutResultReady,
       pendingScore,
     });
@@ -149,6 +150,7 @@ export default function CribbageGame() {
     allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
     peggingHistory, countingHistory, computerCountingHand,
     countingTurn, handsCountedThisRound, counterIsComputer,
+    computerClaimedScore, actualScore,
     playerCutCard, computerCutCard, cutResultReady,
     pendingScore,
   ]);
@@ -164,7 +166,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b30',
+          version: 'v0.1.0-b31',
         }),
       });
 
@@ -314,6 +316,8 @@ export default function CribbageGame() {
         (restored.countingTurn === 'crib' && restored.dealer === 'player');
       setCounterIsComputer(!isPlayerCounting);
     }
+    if (restored.computerClaimedScore !== undefined) setComputerClaimedScore(restored.computerClaimedScore);
+    if (restored.actualScore !== undefined) setActualScore(restored.actualScore);
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
     if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
     if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
@@ -1532,7 +1536,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b30</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b31</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (

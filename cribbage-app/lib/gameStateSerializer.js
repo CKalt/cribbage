@@ -46,6 +46,8 @@ export const PERSISTED_STATE_KEYS = [
   'countingTurn',
   'handsCountedThisRound',
   'counterIsComputer',
+  'computerClaimedScore',
+  'actualScore',
 
   // Cutting phase
   'playerCutCard',
@@ -72,9 +74,7 @@ export const UI_ONLY_STATE_KEYS = [
   'debugLog',
   'gameLog',
   'playerCountInput',
-  'computerClaimedScore',
-  'actualScore',
-  // Note: counterIsComputer is now in PERSISTED_STATE_KEYS for proper resume in counting phase
+  // Note: counterIsComputer, computerClaimedScore, actualScore moved to PERSISTED_STATE_KEYS
 ];
 
 /**
