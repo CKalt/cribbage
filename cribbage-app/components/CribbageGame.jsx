@@ -33,7 +33,11 @@ import { APP_VERSION } from '@/lib/version';
 /**
  * Main game component with all state management and game logic
  */
-export default function CribbageGame() {
+export default function CribbageGame({ onLogout }) {
+  // Menu state
+  const [showMenu, setShowMenu] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
+
   // Game flow state
   const [gameState, setGameState] = useState('menu');
   const [dealer, setDealer] = useState('player');
@@ -1574,6 +1578,69 @@ export default function CribbageGame() {
 
   return (
     <div className="min-h-screen bg-green-900 p-4">
+      {/* Three-dot menu in top right */}
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="bg-green-700 hover:bg-green-600 text-white w-10 h-10 rounded-lg text-xl font-bold shadow-lg border border-green-600 transition-colors flex items-center justify-center"
+        >
+          ⋮
+        </button>
+
+        {/* Dropdown menu */}
+        {showMenu && (
+          <>
+            {/* Backdrop to close menu */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowMenu(false)}
+            />
+            <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden">
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowBugReport(true);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Report Bug
+              </button>
+
+              {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowForfeitConfirm(true);
+                  }}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Forfeit
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  if (onLogout) onLogout();
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="max-w-6xl mx-auto">
         <Card className="bg-green-800 text-white">
           <CardHeader>
@@ -2114,17 +2181,6 @@ export default function CribbageGame() {
                   </div>
                 )}
 
-                {/* Forfeit Button - only show during active game, positioned above Report Bug */}
-                {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
-                  <div className="fixed top-16 left-4 z-50">
-                    <button
-                      onClick={() => setShowForfeitConfirm(true)}
-                      className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg border border-red-600 transition-colors"
-                    >
-                      Forfeit
-                    </button>
-                  </div>
-                )}
 
                 {/* Forfeit Confirmation Modal */}
                 {showForfeitConfirm && (
@@ -2180,6 +2236,8 @@ export default function CribbageGame() {
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
                     cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
                   }}
+                  showBugModalExternal={showBugReport}
+                  onBugModalClose={() => setShowBugReport(false)}
                 />
               </>
             )}
