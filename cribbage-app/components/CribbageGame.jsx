@@ -1950,7 +1950,7 @@ export default function CribbageGame() {
                    ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
-                  <div className="text-sm mb-2">Your Hand: ({gameState === 'play' || gameState === 'counting' ? 4 : playerHand.length} cards)</div>
+                  <div className="text-sm mb-2">Your Hand: ({gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)</div>
                   <div className="flex flex-wrap gap-2">
                     {(gameState === 'cribSelect' ? playerHand :
                       gameState === 'play' ? playerPlayHand :
