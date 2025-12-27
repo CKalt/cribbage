@@ -772,10 +772,24 @@ export default function CribbageGame({ onLogout }) {
         if (nextPlayerHand.length === 0 || !nextPlayerCanPlay) {
           // Next player has no cards or can't play any
           if (otherPlayerHand.length > 0 && otherPlayerCanPlay) {
-            // Other player can still play
-            nextPlayer = nextPlayer === 'player' ? 'computer' : 'player';
-            setCurrentPlayer(nextPlayer);
-            setMessage(`${nextPlayer === 'player' ? 'Your' : "Computer's"} turn`);
+            // Other player can still play, but current player must say "Go" first
+            if (nextPlayer === 'player' && nextPlayerHand.length > 0) {
+              // Player has cards but can't play - require Go
+              setCurrentPlayer('player');
+              setMessage('You cannot play - Say "Go"');
+            } else if (nextPlayer === 'computer') {
+              // Computer has cards but can't play - auto Go
+              setMessage('Computer says "Go"');
+              setLastGoPlayer('computer');
+              logGameEvent('COMPUTER_GO', { player: 'computer', currentCount: currentCount, remainingCards: nextPlayerHand.length });
+              setPeggingHistory(prev => [...prev, { type: 'go', player: 'computer', count: currentCount }]);
+              setCurrentPlayer('player');
+            } else {
+              // Player is out of cards, switch to computer
+              nextPlayer = 'computer';
+              setCurrentPlayer(nextPlayer);
+              setMessage("Computer's turn");
+            }
           } else if (otherPlayerHand.length === 0 && nextPlayerHand.length === 0) {
             // Both out of cards
             moveToCountingPhase();
