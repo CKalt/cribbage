@@ -19,9 +19,10 @@ const BOARD_CONFIG = {
   holeRadius: 3,
   pegRadius: 5,
   // Animation settings
-  pointAnimationDuration: 100, // ms per point
+  pointAnimationDuration: 150, // ms per point (slowed down)
   zoomLevel: 2.0,
   zoomTransitionDuration: 300, // ms
+  postAnimationDelay: 1500, // ms to display after animation completes
 };
 
 /**
@@ -165,8 +166,8 @@ const CribbageBoard = forwardRef(function CribbageBoard({
         await animateSinglePoint(player, currentScore - 1, currentScore);
       }
 
-      // Hide popup after a moment
-      await new Promise(r => setTimeout(r, 300));
+      // Keep popup visible and pause for user to appreciate the move
+      await new Promise(r => setTimeout(r, BOARD_CONFIG.postAnimationDelay));
       setScorePopup(prev => ({ ...prev, visible: false }));
 
       // Zoom out
@@ -426,15 +427,29 @@ const CribbageBoard = forwardRef(function CribbageBoard({
 
       {/* Fixed overlay for animation (always visible on screen) */}
       {isAnimating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-2xl w-full max-w-2xl">
-            {/* Pegging indicator */}
-            <div className="text-center text-yellow-400 text-sm font-bold mb-2 animate-pulse">
-              Pegging {scorePopup.points > 0 ? `+${scorePopup.points} points` : '...'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="flex flex-col items-center justify-center h-full w-full p-4">
+            {/* Pegging indicator - at top */}
+            <div className="text-yellow-400 text-lg font-bold mb-4 animate-pulse">
+              {scorePopup.points > 0 ? `+${scorePopup.points} points` : 'Pegging...'}
             </div>
-            {boardSvg}
-            <div className="text-center text-gray-400 text-xs mt-2">
-              Tap anywhere to continue
+
+            {/* Rotated board container for portrait orientation */}
+            <div
+              className="bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-3 shadow-2xl"
+              style={{
+                transform: 'rotate(90deg)',
+                transformOrigin: 'center center',
+                width: '85vh', // Use viewport height for width since rotated
+                maxWidth: '600px',
+              }}
+            >
+              {boardSvg}
+            </div>
+
+            {/* Instructions - at bottom */}
+            <div className="text-gray-400 text-sm mt-4">
+              Watch the pegs move...
             </div>
           </div>
         </div>
