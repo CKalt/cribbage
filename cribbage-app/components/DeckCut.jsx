@@ -19,9 +19,13 @@ export default function DeckCut({
   revealedCard = null,
   showCutAnimation = false
 }) {
-  const [cutPosition, setCutPosition] = useState(showCutAnimation ? 0.5 : null); // 0-1 representing where user tapped
-  const [isAnimating, setIsAnimating] = useState(showCutAnimation);
+  const [cutPosition, setCutPosition] = useState(null); // 0-1 representing where user tapped
+  const [isAnimating, setIsAnimating] = useState(false);
   const deckRef = useRef(null);
+
+  // For externally-triggered animations (e.g., computer's cut), sync state with prop
+  const showAnimation = isAnimating || showCutAnimation;
+  const effectiveCutPosition = cutPosition !== null ? cutPosition : (showCutAnimation ? 0.5 : null);
 
   const handleDeckClick = (e) => {
     if (disabled || isAnimating || cutPosition !== null) return;
@@ -45,8 +49,8 @@ export default function DeckCut({
   };
 
   // Calculate how many cards in top/bottom portions based on cut
-  const topCards = cutPosition ? Math.round(cutPosition * 40) : 0;
-  const bottomCards = cutPosition ? 40 - topCards : 40;
+  const topCards = effectiveCutPosition ? Math.round(effectiveCutPosition * 40) : 0;
+  const bottomCards = effectiveCutPosition ? 40 - topCards : 40;
 
   return (
     <div className="flex flex-col items-center">
@@ -56,15 +60,15 @@ export default function DeckCut({
       <div className="relative h-64 flex flex-col items-center justify-center">
 
         {/* Top portion (after cut) */}
-        {cutPosition !== null && (
+        {effectiveCutPosition !== null && (
           <div
             className={`
               absolute transition-all duration-500 ease-out
-              ${isAnimating ? 'opacity-100' : 'opacity-0'}
+              ${showAnimation ? 'opacity-100' : 'opacity-0'}
             `}
             style={{
               top: '0px',
-              transform: isAnimating ? 'translateY(-20px) rotate(-3deg)' : 'translateY(0)',
+              transform: showAnimation ? 'translateY(-20px) rotate(-3deg)' : 'translateY(0)',
             }}
           >
             <div className="relative">
@@ -87,7 +91,7 @@ export default function DeckCut({
         )}
 
         {/* Revealed card */}
-        {revealedCard && (isAnimating || showCutAnimation) && (
+        {revealedCard && showAnimation && (
           <div
             className="absolute z-10 transition-all duration-700 ease-out"
             style={{
@@ -120,28 +124,28 @@ export default function DeckCut({
           className={`
             relative cursor-pointer transition-all duration-300
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
-            ${cutPosition !== null ? 'translate-y-8' : ''}
+            ${effectiveCutPosition !== null ? 'translate-y-8' : ''}
           `}
           style={{
             width: '100px',
-            height: cutPosition !== null ? '80px' : '160px',
+            height: effectiveCutPosition !== null ? '80px' : '160px',
           }}
         >
           {/* Card stack visual */}
-          {Array.from({ length: cutPosition !== null ? Math.min(bottomCards, 20) : 40 }).map((_, i) => (
+          {Array.from({ length: effectiveCutPosition !== null ? Math.min(bottomCards, 20) : 40 }).map((_, i) => (
             <div
               key={`card-${i}`}
               className={`
                 absolute bg-gradient-to-br from-blue-700 to-blue-900
                 border border-blue-500 rounded-sm
-                ${!disabled && cutPosition === null ? 'hover:from-blue-600 hover:to-blue-800' : ''}
+                ${!disabled && effectiveCutPosition === null ? 'hover:from-blue-600 hover:to-blue-800' : ''}
               `}
               style={{
                 width: '80px',
                 height: '4px',
                 top: `${i * 3}px`,
                 left: `${i * 0.5}px`,
-                boxShadow: i === (cutPosition !== null ? Math.min(bottomCards, 20) : 40) - 1
+                boxShadow: i === (effectiveCutPosition !== null ? Math.min(bottomCards, 20) : 40) - 1
                   ? '0 4px 8px rgba(0,0,0,0.4)'
                   : '0 1px 2px rgba(0,0,0,0.2)',
               }}
@@ -149,7 +153,7 @@ export default function DeckCut({
           ))}
 
           {/* Deck back design overlay */}
-          {cutPosition === null && (
+          {effectiveCutPosition === null && !disabled && (
             <div
               className="absolute inset-0 pointer-events-none flex items-center justify-center"
               style={{ top: '40px' }}
@@ -162,7 +166,7 @@ export default function DeckCut({
         </div>
 
         {/* Cut indicator line on hover */}
-        {!disabled && cutPosition === null && (
+        {!disabled && effectiveCutPosition === null && (
           <div className="absolute inset-0 pointer-events-none">
             <div
               className="absolute left-0 right-0 h-0.5 bg-yellow-400 opacity-0 hover:opacity-100 transition-opacity"
@@ -173,7 +177,7 @@ export default function DeckCut({
       </div>
 
       {/* Instructions */}
-      {cutPosition === null && !disabled && (
+      {effectiveCutPosition === null && !disabled && (
         <div className="text-xs text-gray-500 mt-4">
           Tap anywhere on the deck to cut
         </div>
