@@ -166,7 +166,7 @@ export default function CribbageGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameState: snapshot,
-          version: 'v0.1.0-b31',
+          version: 'v0.1.0-b32',
         }),
       });
 
@@ -1570,7 +1570,7 @@ export default function CribbageGame() {
         <Card className="bg-green-800 text-white">
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
-            <div className="text-center text-green-600 text-xs">v0.1.0-b31</div>
+            <div className="text-center text-green-600 text-xs">v0.1.0-b32</div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
