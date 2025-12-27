@@ -774,9 +774,9 @@ export default function CribbageGame({ onLogout }) {
           if (otherPlayerHand.length > 0 && otherPlayerCanPlay) {
             // Other player can still play, but current player must say "Go" first
             if (nextPlayer === 'player' && nextPlayerHand.length > 0) {
-              // Player has cards but can't play - require Go
+              // Player has cards - let them play or say Go
               setCurrentPlayer('player');
-              setMessage('You cannot play - Say "Go"');
+              setMessage('Your turn');
             } else if (nextPlayer === 'computer') {
               // Computer has cards but can't play - auto Go
               setMessage('Computer says "Go"');
@@ -798,21 +798,21 @@ export default function CribbageGame({ onLogout }) {
             // Neither can play at current count
             // If one player is out of cards and the other can't play, auto-handle the Go
             if (nextPlayerHand.length > 0 && nextPlayer === 'player' && otherPlayerHand.length === 0) {
-              // Player has cards but can't play, and computer is out of cards
+              // Player has cards, computer is out of cards, neither can play at this count
               // Auto-handle Go and award last card to computer (who played last)
               setCurrentPlayer('player');
               logGameEvent('PLAYER_GO', { player: 'player', currentCount: currentCount, remainingCards: nextPlayerHand.length, auto: true });
               setPeggingHistory(prev => [...prev, { type: 'go', player: 'player', count: currentCount }]);
               setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
-              setMessage('You cannot play - Computer gets 1 point for last card - Click Accept');
+              setMessage('Computer gets 1 point for last card - Click Accept');
             } else if (nextPlayerHand.length > 0 && nextPlayer === 'player') {
-              // Player has cards but can't play, computer also has cards
+              // Player has cards - let them play or say Go
               setCurrentPlayer('player');
-              setMessage('You cannot play - Say "Go"');
+              setMessage('Your turn');
             } else if (otherPlayerHand.length > 0 && nextPlayer === 'computer') {
-              // Player (other) has cards but can't play - let them say Go
+              // Player has cards - let them play or say Go
               setCurrentPlayer('player');
-              setMessage('You cannot play - Say "Go"');
+              setMessage('Your turn');
             } else if (lastPlayedBy) {
               // One or both players out of cards and neither can play - award last card directly
               setCurrentPlayer('player');
@@ -2174,12 +2174,12 @@ export default function CribbageGame({ onLogout }) {
                 {/* Action buttons for play phase */}
                 {gameState === 'play' && currentPlayer === 'player' && !pendingScore && (
                   <div className="text-center space-x-2">
-                    {playerPlayHand.length > 0 && !playerCanPlay && (
+                    {playerPlayHand.length > 0 && (
                       <Button onClick={playerGo} className="bg-red-600 hover:bg-red-700">
                         Say "Go"
                       </Button>
                     )}
-                    {lastGoPlayer === 'computer' && !playerCanPlay && lastPlayedBy === 'player' && !pendingScore && (
+                    {lastGoPlayer === 'computer' && lastPlayedBy === 'player' && !pendingScore && (
                       <Button onClick={claimLastCard} className="bg-green-600 hover:bg-green-700">
                         Claim Last Card (1 point)
                       </Button>
