@@ -1,31 +1,65 @@
-// Cribbage Board Component - Traditional 3-row layout with SVG
+'use client';
+
+// Cribbage Board Component - Animated visual board with dual-peg system
+
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 
 /**
- * Visual cribbage board with score pegs
- * @param {number} playerScore - Player's current score (0-121)
- * @param {number} computerScore - Computer's current score (0-121)
+ * Board configuration constants
  */
-export default function CribbageBoard({ playerScore, computerScore }) {
-  const boardWidth = 620;
-  const boardHeight = 140;
-  const holeSpacing = 18;
-  const rowSpacing = 32;
-  const startX = 45;
-  const startY = 35;
-  const playerTrackOffset = -5;  // Player track (blue) above center
-  const computerTrackOffset = 5; // Computer track (red) below center
+const BOARD_CONFIG = {
+  width: 620,
+  height: 140,
+  holeSpacing: 18,
+  rowSpacing: 32,
+  startX: 45,
+  startY: 35,
+  playerTrackOffset: -5,
+  computerTrackOffset: 5,
+  holeRadius: 3,
+  pegRadius: 5,
+  // Animation settings
+  pointAnimationDuration: 100, // ms per point
+  zoomLevel: 2.0,
+  zoomTransitionDuration: 300, // ms
+};
 
-  // Convert score (0-121) to row and position within row
-  const getHolePosition = (score, trackOffset) => {
-    if (score <= 0) return null;
-    if (score > 120) score = 120;
+/**
+ * Animated Cribbage Board with dual-peg system and zoom effects
+ */
+const CribbageBoard = forwardRef(function CribbageBoard({
+  playerScore = 0,
+  computerScore = 0,
+  onAnimationComplete,
+}, ref) {
+  const { width: boardWidth, height: boardHeight, holeSpacing, rowSpacing, startX, startY,
+          playerTrackOffset, computerTrackOffset, zoomLevel, zoomTransitionDuration,
+          pointAnimationDuration } = BOARD_CONFIG;
 
-    // Determine which row (0, 1, 2) and position in row
-    // Row 0: holes 1-30 (going right)
-    // Row 1: holes 31-60 (going left)
-    // Row 2: holes 61-90 (going right)
-    // Row 3: holes 91-120 (going left)
-    // But we only have 3 visual rows, so we use 4 segments across 3 rows
+  // Peg positions - dual pegs for each player (front and back)
+  const [pegPositions, setPegPositions] = useState({
+    player: { frontPeg: playerScore, backPeg: Math.max(0, playerScore - 1) },
+    computer: { frontPeg: computerScore, backPeg: Math.max(0, computerScore - 1) }
+  });
+
+  // Animation state
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animatingPlayer, setAnimatingPlayer] = useState(null);
+  const [animatingPegPos, setAnimatingPegPos] = useState(null);
+  const [scorePopup, setScorePopup] = useState({ visible: false, points: 0, x: 0, y: 0 });
+
+  // Zoom state
+  const [zoom, setZoom] = useState(1);
+  const [viewBox, setViewBox] = useState(`0 0 ${boardWidth} ${boardHeight}`);
+
+  // Animation queue
+  const animationQueue = useRef([]);
+  const isProcessingQueue = useRef(false);
+
+  // Convert score (0-121) to x,y position
+  const getHolePosition = useCallback((score, trackOffset) => {
+    if (score <= 0) return { x: startX - 15, y: startY + 2 * rowSpacing + trackOffset };
+    if (score > 121) score = 121;
 
     let row, posInRow, goingRight;
     if (score <= 30) {
@@ -34,8 +68,11 @@ export default function CribbageBoard({ playerScore, computerScore }) {
       row = 1; posInRow = 60 - score; goingRight = false;
     } else if (score <= 90) {
       row = 1; posInRow = score - 61; goingRight = true;
-    } else {
+    } else if (score <= 120) {
       row = 0; posInRow = 120 - score; goingRight = false;
+    } else {
+      // Score 121 - winning position
+      row = 0; posInRow = 0; goingRight = false;
     }
 
     const x = goingRight
@@ -44,13 +81,11 @@ export default function CribbageBoard({ playerScore, computerScore }) {
     const y = startY + row * rowSpacing + trackOffset;
 
     return { x, y };
-  };
+  }, [startX, startY, holeSpacing, rowSpacing]);
 
   // Generate hole positions for display
-  const generateHoles = () => {
+  const generateHoles = useCallback(() => {
     const holes = [];
-
-    // Generate 30 holes per row, 3 rows
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 30; col++) {
         const x = startX + col * holeSpacing;
@@ -58,23 +93,180 @@ export default function CribbageBoard({ playerScore, computerScore }) {
         holes.push({ x, y, row, col });
       }
     }
-
     return holes;
-  };
+  }, [startX, startY, holeSpacing, rowSpacing]);
 
   const holes = generateHoles();
-  const playerPos = getHolePosition(playerScore, playerTrackOffset);
-  const playerPrevPos = getHolePosition(playerScore - 1, playerTrackOffset);
-  const computerPos = getHolePosition(computerScore, computerTrackOffset);
-  const computerPrevPos = getHolePosition(computerScore - 1, computerTrackOffset);
+
+  // Calculate viewBox for zooming to a specific position
+  const getZoomedViewBox = useCallback((centerX, centerY, zoomFactor) => {
+    const newWidth = boardWidth / zoomFactor;
+    const newHeight = boardHeight / zoomFactor;
+    const x = Math.max(0, Math.min(centerX - newWidth / 2, boardWidth - newWidth));
+    const y = Math.max(0, Math.min(centerY - newHeight / 2, boardHeight - newHeight));
+    return `${x} ${y} ${newWidth} ${newHeight}`;
+  }, [boardWidth, boardHeight]);
+
+  // Animate a single point movement
+  const animateSinglePoint = useCallback((player, fromScore, toScore) => {
+    return new Promise((resolve) => {
+      const trackOffset = player === 'player' ? playerTrackOffset : computerTrackOffset;
+      const toPos = getHolePosition(toScore, trackOffset);
+
+      setAnimatingPegPos(toPos);
+
+      setTimeout(() => {
+        // Update peg positions - leapfrog: back peg jumps to new front
+        setPegPositions(prev => ({
+          ...prev,
+          [player]: {
+            frontPeg: toScore,
+            backPeg: prev[player].frontPeg // Old front becomes new back
+          }
+        }));
+        resolve();
+      }, pointAnimationDuration);
+    });
+  }, [getHolePosition, playerTrackOffset, computerTrackOffset, pointAnimationDuration]);
+
+  // Process the animation queue
+  const processQueue = useCallback(async () => {
+    if (isProcessingQueue.current || animationQueue.current.length === 0) return;
+
+    isProcessingQueue.current = true;
+
+    while (animationQueue.current.length > 0) {
+      const { player, points, startScore, onComplete } = animationQueue.current.shift();
+
+      if (points <= 0) {
+        if (onComplete) onComplete();
+        continue;
+      }
+
+      setIsAnimating(true);
+      setAnimatingPlayer(player);
+
+      const trackOffset = player === 'player' ? playerTrackOffset : computerTrackOffset;
+      const targetScore = Math.min(startScore + points, 121);
+      const targetPos = getHolePosition(targetScore, trackOffset);
+
+      // Zoom in to target area
+      setViewBox(getZoomedViewBox(targetPos.x, targetPos.y, zoomLevel));
+
+      // Wait for zoom
+      await new Promise(r => setTimeout(r, zoomTransitionDuration));
+
+      // Show score popup
+      setScorePopup({ visible: true, points, x: targetPos.x, y: targetPos.y - 15 });
+
+      // Animate each point with leapfrog
+      for (let p = 1; p <= points && startScore + p <= 121; p++) {
+        const currentScore = startScore + p;
+        await animateSinglePoint(player, currentScore - 1, currentScore);
+      }
+
+      // Hide popup after a moment
+      await new Promise(r => setTimeout(r, 300));
+      setScorePopup(prev => ({ ...prev, visible: false }));
+
+      // Zoom out
+      setViewBox(`0 0 ${boardWidth} ${boardHeight}`);
+      await new Promise(r => setTimeout(r, zoomTransitionDuration));
+
+      setIsAnimating(false);
+      setAnimatingPlayer(null);
+      setAnimatingPegPos(null);
+
+      if (onComplete) onComplete();
+    }
+
+    isProcessingQueue.current = false;
+
+    if (onAnimationComplete) onAnimationComplete();
+  }, [getHolePosition, getZoomedViewBox, animateSinglePoint, playerTrackOffset,
+      computerTrackOffset, zoomLevel, zoomTransitionDuration, boardWidth, boardHeight,
+      onAnimationComplete]);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    // Animate scoring with zoom and point-by-point pegging
+    animateScore: (player, points, startScore) => {
+      return new Promise((resolve) => {
+        animationQueue.current.push({ player, points, startScore, onComplete: resolve });
+        processQueue();
+      });
+    },
+
+    // Set peg positions without animation (for loading saved games)
+    setPegPositionsImmediate: (player, score) => {
+      setPegPositions(prev => ({
+        ...prev,
+        [player]: {
+          frontPeg: score,
+          backPeg: Math.max(0, score - 1)
+        }
+      }));
+    },
+
+    // Check if currently animating
+    isAnimating: () => isAnimating,
+
+    // Skip current animation
+    skipAnimation: () => {
+      animationQueue.current = [];
+      setIsAnimating(false);
+      setAnimatingPlayer(null);
+      setAnimatingPegPos(null);
+      setViewBox(`0 0 ${boardWidth} ${boardHeight}`);
+    }
+  }), [processQueue, isAnimating, boardWidth, boardHeight]);
+
+  // Sync peg positions with scores when not animating
+  useEffect(() => {
+    if (!isAnimating) {
+      setPegPositions({
+        player: { frontPeg: playerScore, backPeg: Math.max(0, playerScore - 1) },
+        computer: { frontPeg: computerScore, backPeg: Math.max(0, computerScore - 1) }
+      });
+    }
+  }, [playerScore, computerScore, isAnimating]);
+
+  // Get current peg positions for rendering
+  const playerFrontPos = animatingPlayer === 'player' && animatingPegPos
+    ? animatingPegPos
+    : getHolePosition(pegPositions.player.frontPeg, playerTrackOffset);
+  const playerBackPos = getHolePosition(pegPositions.player.backPeg, playerTrackOffset);
+  const computerFrontPos = animatingPlayer === 'computer' && animatingPegPos
+    ? animatingPegPos
+    : getHolePosition(pegPositions.computer.frontPeg, computerTrackOffset);
+  const computerBackPos = getHolePosition(pegPositions.computer.backPeg, computerTrackOffset);
 
   return (
-    <div className="mb-6 bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-xl">
+    <div className="mb-6 bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-xl relative overflow-hidden">
       <svg
-        viewBox={`0 0 ${boardWidth} ${boardHeight}`}
+        viewBox={viewBox}
         className="mx-auto w-full max-w-[620px]"
         preserveAspectRatio="xMidYMid meet"
+        style={{
+          transition: `viewBox ${zoomTransitionDuration}ms ease-out`
+        }}
       >
+        <defs>
+          {/* Glow filter for animating pegs */}
+          <filter id="pegGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* Hole depth gradient */}
+          <radialGradient id="holeGradient" cx="30%" cy="30%">
+            <stop offset="0%" stopColor="#3a2a1a" />
+            <stop offset="100%" stopColor="#1a0a00" />
+          </radialGradient>
+        </defs>
+
         {/* Board background */}
         <rect x="5" y="5" width={boardWidth - 10} height={boardHeight - 10} fill="#654321" rx="8" />
         <rect x="10" y="10" width={boardWidth - 20} height={boardHeight - 20} fill="#8B4513" rx="6" />
@@ -101,7 +293,7 @@ export default function CribbageBoard({ playerScore, computerScore }) {
             cx={hole.x}
             cy={hole.y + playerTrackOffset}
             r="3"
-            fill="#2c1810"
+            fill="url(#holeGradient)"
             stroke="#4444aa"
             strokeWidth="0.5"
           />
@@ -114,7 +306,7 @@ export default function CribbageBoard({ playerScore, computerScore }) {
             cx={hole.x}
             cy={hole.y + computerTrackOffset}
             r="3"
-            fill="#2c1810"
+            fill="url(#holeGradient)"
             stroke="#aa4444"
             strokeWidth="0.5"
           />
@@ -133,20 +325,86 @@ export default function CribbageBoard({ playerScore, computerScore }) {
           />
         ))}
 
-        {/* Player pegs (blue) */}
-        {playerPrevPos && (
-          <circle cx={playerPrevPos.x} cy={playerPrevPos.y} r="5" fill="#4466cc" stroke="#000" strokeWidth="1" opacity="0.5" />
-        )}
-        {playerPos && (
-          <circle cx={playerPos.x} cy={playerPos.y} r="5" fill="#2266ff" stroke="#fff" strokeWidth="1.5" />
+        {/* Player back peg (blue, dimmer) */}
+        {pegPositions.player.backPeg > 0 && (
+          <circle
+            cx={playerBackPos.x}
+            cy={playerBackPos.y}
+            r="5"
+            fill="#4466cc"
+            stroke="#000"
+            strokeWidth="1"
+            opacity="0.6"
+          />
         )}
 
-        {/* Computer pegs (red) */}
-        {computerPrevPos && (
-          <circle cx={computerPrevPos.x} cy={computerPrevPos.y} r="5" fill="#cc4444" stroke="#000" strokeWidth="1" opacity="0.5" />
+        {/* Player front peg (blue, bright) */}
+        {pegPositions.player.frontPeg > 0 && (
+          <circle
+            cx={playerFrontPos.x}
+            cy={playerFrontPos.y}
+            r="5"
+            fill="#2266ff"
+            stroke="#fff"
+            strokeWidth="1.5"
+            filter={animatingPlayer === 'player' ? 'url(#pegGlow)' : 'none'}
+            style={{
+              transition: `cx ${pointAnimationDuration}ms ease-out, cy ${pointAnimationDuration}ms ease-out`
+            }}
+          />
         )}
-        {computerPos && (
-          <circle cx={computerPos.x} cy={computerPos.y} r="5" fill="#ff2222" stroke="#fff" strokeWidth="1.5" />
+
+        {/* Computer back peg (red, dimmer) */}
+        {pegPositions.computer.backPeg > 0 && (
+          <circle
+            cx={computerBackPos.x}
+            cy={computerBackPos.y}
+            r="5"
+            fill="#cc4444"
+            stroke="#000"
+            strokeWidth="1"
+            opacity="0.6"
+          />
+        )}
+
+        {/* Computer front peg (red, bright) */}
+        {pegPositions.computer.frontPeg > 0 && (
+          <circle
+            cx={computerFrontPos.x}
+            cy={computerFrontPos.y}
+            r="5"
+            fill="#ff2222"
+            stroke="#fff"
+            strokeWidth="1.5"
+            filter={animatingPlayer === 'computer' ? 'url(#pegGlow)' : 'none'}
+            style={{
+              transition: `cx ${pointAnimationDuration}ms ease-out, cy ${pointAnimationDuration}ms ease-out`
+            }}
+          />
+        )}
+
+        {/* Score popup during animation */}
+        {scorePopup.visible && (
+          <g>
+            <rect
+              x={scorePopup.x - 18}
+              y={scorePopup.y - 12}
+              width="36"
+              height="18"
+              rx="4"
+              fill="rgba(0,0,0,0.8)"
+            />
+            <text
+              x={scorePopup.x}
+              y={scorePopup.y}
+              textAnchor="middle"
+              fontSize="12"
+              fontWeight="bold"
+              fill="#ffd700"
+            >
+              +{scorePopup.points}
+            </text>
+          </g>
         )}
 
         {/* Score legend */}
@@ -157,6 +415,15 @@ export default function CribbageBoard({ playerScore, computerScore }) {
           <text x="110" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">CPU: {computerScore}</text>
         </g>
       </svg>
+
+      {/* Pegging indicator */}
+      {isAnimating && (
+        <div className="absolute top-2 right-2 text-xs text-yellow-400 bg-black/50 px-2 py-1 rounded animate-pulse">
+          Pegging...
+        </div>
+      )}
     </div>
   );
-}
+});
+
+export default CribbageBoard;

@@ -112,6 +112,7 @@ export default function CribbageGame({ onLogout }) {
   const [isSaving, setIsSaving] = useState(false);
   const lastSavedStateRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const cribbageBoardRef = useRef(null);
 
   // Forfeit state
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
@@ -415,6 +416,11 @@ export default function CribbageGame({ onLogout }) {
 
     const currentScore = player === 'player' ? playerScoreRef.current : computerScoreRef.current;
     const newScore = currentScore + points;
+
+    // Trigger board animation (non-blocking)
+    if (cribbageBoardRef.current) {
+      cribbageBoardRef.current.animateScore(player, points, currentScore);
+    }
 
     // Update the score
     if (player === 'player') {
@@ -1865,6 +1871,7 @@ export default function CribbageGame({ onLogout }) {
               <>
                 {/* Visual Cribbage Board */}
                 <CribbageBoard
+                  ref={cribbageBoardRef}
                   playerScore={playerScore}
                   computerScore={computerScore}
                 />
