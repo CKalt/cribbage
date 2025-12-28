@@ -58,7 +58,13 @@ export default function CribbageBoard({ playerScore, computerScore }) {
 
   // Convert score (0-121) to row and position within row
   const getHolePosition = (score, trackOffset) => {
-    if (score <= 0) return null;
+    // Score 0 = start position (before hole 1)
+    if (score <= 0) {
+      return {
+        x: startX - holeSpacing,  // One space before hole 1
+        y: startY + 2 * rowSpacing + trackOffset  // Bottom row (where game starts)
+      };
+    }
     if (score > 120) score = 120;
 
     // Determine which row (0, 1, 2) and position in row
