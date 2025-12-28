@@ -146,7 +146,7 @@ export default function CribbageGame({ onLogout }) {
       allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
       peggingHistory, countingHistory, computerCountingHand,
       countingTurn, handsCountedThisRound, counterIsComputer,
-      computerClaimedScore, actualScore,
+      computerClaimedScore, actualScore, pendingCountContinue,
       playerCutCard, computerCutCard, cutResultReady,
       pendingScore,
     });
@@ -159,7 +159,7 @@ export default function CribbageGame({ onLogout }) {
     allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
     peggingHistory, countingHistory, computerCountingHand,
     countingTurn, handsCountedThisRound, counterIsComputer,
-    computerClaimedScore, actualScore,
+    computerClaimedScore, actualScore, pendingCountContinue,
     playerCutCard, computerCutCard, cutResultReady,
     pendingScore,
   ]);
@@ -327,6 +327,7 @@ export default function CribbageGame({ onLogout }) {
     }
     if (restored.computerClaimedScore !== undefined) setComputerClaimedScore(restored.computerClaimedScore);
     if (restored.actualScore !== undefined) setActualScore(restored.actualScore);
+    if (restored.pendingCountContinue !== undefined) setPendingCountContinue(restored.pendingCountContinue);
 
     // Validate and fix counting state consistency
     // The source of truth is handsCountedThisRound and dealer - derive counterIsComputer from them
@@ -1204,12 +1205,27 @@ export default function CribbageGame({ onLogout }) {
 
   // Continue after player acknowledges their count result
   const handleCountContinue = () => {
-    if (!pendingCountContinue) return;
+    // If pendingCountContinue is set, use it
+    if (pendingCountContinue) {
+      const { newHandsCountedThisRound } = pendingCountContinue;
+      addDebugLog(`Player acknowledged count result. Continuing...`);
+      setPendingCountContinue(null);
+      proceedAfterPlayerCount(newHandsCountedThisRound);
+      return;
+    }
 
-    const { newHandsCountedThisRound } = pendingCountContinue;
-    addDebugLog(`Player acknowledged count result. Continuing...`);
-    setPendingCountContinue(null);
-    proceedAfterPlayerCount(newHandsCountedThisRound);
+    // Fallback: derive next step from current state (handles restored games)
+    // If actualScore is set, player already submitted - proceed to next count
+    if (actualScore && gameState === 'counting') {
+      const nextHandsCount = handsCountedThisRound + 1;
+      addDebugLog(`Fallback continue: actualScore set, proceeding with handsCountedThisRound=${nextHandsCount}`);
+      setActualScore(null);
+      setShowBreakdown(false);
+      proceedAfterPlayerCount(nextHandsCount);
+      return;
+    }
+
+    addDebugLog('handleCountContinue called but no action to take');
   };
 
   // Handle celebration complete
