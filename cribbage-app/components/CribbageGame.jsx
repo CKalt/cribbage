@@ -30,6 +30,8 @@ import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
 import { APP_VERSION } from '@/lib/version';
+import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
+import { useRequiredAction, useStuckDetection, useActionDebug } from '@/hooks/useRequiredAction';
 
 /**
  * Main game component with all state management and game logic
@@ -1633,6 +1635,144 @@ export default function CribbageGame({ onLogout }) {
     }
   }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn]);
 
+  // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
+  // Single source of truth for what action the user should take
+  const gameStateForAction = {
+    gameState,
+    currentPlayer,
+    selectedCards,
+    playerHand,
+    pendingScore,
+    pendingCountContinue,
+    counterIsComputer,
+    actualScore,
+    computerClaimedScore,
+    playerMadeCountDecision,
+    showMugginsPreferenceDialog,
+    playerPlayHand,
+    currentCount,
+    cutResultReady,
+    dealer,
+  };
+
+  const actionHandlers = {
+    discardToCrib,
+    acceptScoreAndContinue,
+    handleCountContinue,
+    playerGo,
+    startNewGame,
+    acceptComputerCount,
+    objectToComputerCount,
+    handleMugginsPreferenceChoice,
+  };
+
+  const requiredAction = useRequiredAction(gameStateForAction, actionHandlers);
+
+  // Stuck detection - shows fallback button after 8 seconds
+  const handleStuckDetected = useCallback((action) => {
+    addDebugLog(`STUCK STATE DETECTED: ${action.type} in ${gameState}`);
+    console.error('[CribbageGame] User may be stuck:', { action, gameState });
+  }, [gameState]);
+
+  const { isStuck, clearStuck } = useStuckDetection(
+    requiredAction,
+    gameStateForAction,
+    handleStuckDetected,
+    8000
+  );
+
+  // Development debug logging
+  useActionDebug(requiredAction, gameStateForAction);
+
+  // Handle fallback continue when user is stuck - auto-submits bug report
+  const handleFallbackContinue = useCallback(async () => {
+    addDebugLog('Fallback continue triggered - auto-submitting bug report');
+
+    // Capture full state for bug report
+    const stuckStateReport = {
+      timestamp: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      requiredAction: {
+        type: requiredAction.type,
+        label: requiredAction.label,
+        requiresButton: requiredAction.requiresButton,
+      },
+      gameState: {
+        state: gameState,
+        dealer,
+        currentPlayer,
+        playerScore,
+        computerScore,
+        handsCountedThisRound,
+        counterIsComputer,
+        countingTurn,
+        pendingCountContinue: pendingCountContinue ? {
+          type: pendingCountContinue.type,
+          newHandsCountedThisRound: pendingCountContinue.newHandsCountedThisRound,
+        } : null,
+        pendingScore: pendingScore ? {
+          points: pendingScore.points,
+          reason: pendingScore.reason,
+        } : null,
+        computerClaimedScore,
+        playerMadeCountDecision,
+        showMugginsPreferenceDialog,
+        actualScore,
+        isProcessingCount,
+      },
+      cards: {
+        playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
+        computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
+        crib: crib?.map(c => `${c.rank}${c.suit}`),
+        cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
+        playerPlayHand: playerPlayHand?.map(c => `${c.rank}${c.suit}`),
+        computerPlayHand: computerPlayHand?.map(c => `${c.rank}${c.suit}`),
+      },
+      recentGameLog: gameLog.slice(-20),
+      recentDebugLog: debugLog.slice(-50),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+    };
+
+    // Auto-submit bug report
+    try {
+      await fetch('/api/bug-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'AUTO_STUCK_STATE',
+          description: `User clicked "Stuck" button. Required action was: ${requiredAction.type} (${requiredAction.label || 'no label'})`,
+          gameState: stuckStateReport,
+        }),
+      });
+      addDebugLog('Auto bug report submitted successfully');
+    } catch (err) {
+      addDebugLog(`Failed to submit auto bug report: ${err.message}`);
+    }
+
+    // Clear stuck state
+    clearStuck();
+
+    // Try to recover based on current state
+    if (pendingCountContinue) {
+      handleCountContinue();
+    } else if (pendingScore) {
+      acceptScoreAndContinue();
+    } else if (gameState === 'counting' && counterIsComputer && computerClaimedScore !== null) {
+      acceptComputerCount();
+    } else if (gameState === 'gameOver') {
+      startNewGame();
+    } else {
+      addDebugLog('Unknown stuck state, no automatic recovery available');
+      setMessage('Bug report sent. If still stuck, use menu to forfeit.');
+    }
+  }, [
+    requiredAction, gameState, dealer, currentPlayer, playerScore, computerScore,
+    handsCountedThisRound, counterIsComputer, countingTurn, pendingCountContinue,
+    pendingScore, computerClaimedScore, playerMadeCountDecision, showMugginsPreferenceDialog,
+    actualScore, isProcessingCount, playerHand, computerHand, crib, cutCard,
+    playerPlayHand, computerPlayHand, gameLog, debugLog, clearStuck
+  ]);
+
   // Check if player can play any card
   const playerCanPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
 
@@ -2302,6 +2442,18 @@ export default function CribbageGame({ onLogout }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fallback "Stuck?" button - appears after 8 seconds if user might be stuck */}
+      {isStuck && requiredAction.requiresButton && (
+        <div className="fixed bottom-4 left-0 right-0 text-center z-50 animate-pulse">
+          <Button
+            onClick={handleFallbackContinue}
+            className="bg-orange-600 hover:bg-orange-700 px-6 py-3 text-lg shadow-lg"
+          >
+            Stuck? Click to Continue
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
