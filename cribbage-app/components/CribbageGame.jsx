@@ -613,6 +613,7 @@ export default function CribbageGame({ onLogout }) {
     setPeggingHistory([]);
     setShowPeggingSummary(false);
     setCountingHistory([]);
+    setHandsCountedThisRound(0);  // Reset for new hand
     setGameState('cribSelect');
     setMessage('Select 2 cards for the crib');
 
@@ -1766,12 +1767,28 @@ export default function CribbageGame({ onLogout }) {
 
     // Try to recover based on current state
     if (pendingCountContinue) {
+      addDebugLog('Stuck recovery: pendingCountContinue set, calling handleCountContinue');
       handleCountContinue();
     } else if (pendingScore) {
+      addDebugLog('Stuck recovery: pendingScore set, calling acceptScoreAndContinue');
       acceptScoreAndContinue();
     } else if (gameState === 'counting' && counterIsComputer && computerClaimedScore !== null) {
+      addDebugLog('Stuck recovery: computer claimed score, calling acceptComputerCount');
       acceptComputerCount();
+    } else if (gameState === 'counting' && actualScore && computerClaimedScore === null) {
+      // Restored game with player's actualScore blocking computer count
+      addDebugLog('Stuck recovery: actualScore blocking computer count, clearing and proceeding');
+      setActualScore(null);
+      setShowBreakdown(false);
+      // Trigger computer to count by ensuring state is correct
+      if (counterIsComputer) {
+        setMessage('Resuming - Computer will count...');
+      } else {
+        // Player's turn to count - let them use ScoreSelector
+        setMessage('Enter your score to continue');
+      }
     } else if (gameState === 'gameOver') {
+      addDebugLog('Stuck recovery: game over, starting new game');
       startNewGame();
     } else {
       addDebugLog('Unknown stuck state, no automatic recovery available');

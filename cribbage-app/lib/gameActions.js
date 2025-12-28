@@ -117,6 +117,14 @@ export function getRequiredAction(state) {
             computerClaimedScore,
           };
         }
+        // If actualScore is still set from player's previous count (restored game scenario),
+        // show Continue button to clear it so computer can proceed
+        if (actualScore) {
+          return {
+            ...GAME_ACTIONS.counting_player_continue,
+            restoredGameRecovery: true,
+          };
+        }
         // Computer is processing
         return { ...GAME_ACTIONS.counting_waiting };
       }
