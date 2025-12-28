@@ -76,15 +76,22 @@ export default function ActionButtons({
     );
   }
 
-  // Accept pending score
+  // Accept pending score - show reason prominently
   if (type === 'accept_score' && pendingScore) {
+    // Extract the scoring reason from the full reason string
+    const reasonText = pendingScore.reason?.replace(/^(You played |Computer plays )[^-]+ - /, '') || '';
     return (
-      <Button
-        onClick={handlers.acceptScoreAndContinue}
-        className="bg-yellow-600 hover:bg-yellow-700 px-6 py-3"
-      >
-        Accept {pendingScore.points} Points
-      </Button>
+      <div className="flex flex-col items-center gap-2">
+        <div className="text-yellow-300 text-lg font-bold animate-pulse">
+          {pendingScore.player === 'player' ? 'You scored!' : 'Computer scored!'} {reasonText}
+        </div>
+        <Button
+          onClick={handlers.acceptScoreAndContinue}
+          className="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 text-lg font-bold"
+        >
+          Accept {pendingScore.points} Points
+        </Button>
+      </div>
     );
   }
 

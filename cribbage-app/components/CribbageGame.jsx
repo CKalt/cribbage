@@ -868,9 +868,20 @@ export default function CribbageGame({ onLogout }) {
               setMessage('Your turn');
             } else if (lastPlayedBy) {
               // One or both players out of cards and neither can play - award last card directly
+              // But first log the Go from whoever couldn't play
+              if (nextPlayerHand.length > 0) {
+                // nextPlayer has cards but can't play - they say Go
+                const goPlayer = nextPlayer;
+                setLastGoPlayer(goPlayer);
+                logGameEvent(goPlayer === 'computer' ? 'COMPUTER_GO' : 'PLAYER_GO', {
+                  player: goPlayer, currentCount: currentCount, remainingCards: nextPlayerHand.length
+                });
+                setPeggingHistory(prev => [...prev, { type: 'go', player: goPlayer, count: currentCount }]);
+              }
               setCurrentPlayer('player');
               setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
-              setMessage(`${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
+              const goPrefix = nextPlayerHand.length > 0 ? `${nextPlayer === 'computer' ? 'Computer' : 'You'} say "Go" - ` : '';
+              setMessage(`${goPrefix}${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
             }
           }
         } else {
