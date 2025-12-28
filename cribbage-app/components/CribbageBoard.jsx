@@ -1,6 +1,7 @@
 'use client';
 
 // Cribbage Board Component - Traditional 3-row layout with SVG
+// Emulates real cribbage board with two pegs per player (leapfrog style)
 
 import { useState, useEffect, useRef } from 'react';
 
@@ -10,6 +11,11 @@ import { useState, useEffect, useRef } from 'react';
  * @param {number} computerScore - Computer's current score (0-121)
  */
 export default function CribbageBoard({ playerScore, computerScore }) {
+  // Track back peg positions (the previous score before last move)
+  // This emulates real cribbage where you leapfrog two pegs
+  const [playerBackPeg, setPlayerBackPeg] = useState(0);
+  const [computerBackPeg, setComputerBackPeg] = useState(0);
+
   // Track previous scores to detect changes
   const prevPlayerScore = useRef(playerScore);
   const prevComputerScore = useRef(computerScore);
@@ -18,9 +24,11 @@ export default function CribbageBoard({ playerScore, computerScore }) {
   const [playerGlow, setPlayerGlow] = useState(false);
   const [computerGlow, setComputerGlow] = useState(false);
 
-  // Detect score changes and trigger glow
+  // Detect score changes - update back peg to previous front peg position
   useEffect(() => {
     if (playerScore !== prevPlayerScore.current) {
+      // Move back peg to where front peg was
+      setPlayerBackPeg(prevPlayerScore.current);
       setPlayerGlow(true);
       const timer = setTimeout(() => setPlayerGlow(false), 1500);
       prevPlayerScore.current = playerScore;
@@ -30,6 +38,8 @@ export default function CribbageBoard({ playerScore, computerScore }) {
 
   useEffect(() => {
     if (computerScore !== prevComputerScore.current) {
+      // Move back peg to where front peg was
+      setComputerBackPeg(prevComputerScore.current);
       setComputerGlow(true);
       const timer = setTimeout(() => setComputerGlow(false), 1500);
       prevComputerScore.current = computerScore;
@@ -95,9 +105,9 @@ export default function CribbageBoard({ playerScore, computerScore }) {
 
   const holes = generateHoles();
   const playerPos = getHolePosition(playerScore, playerTrackOffset);
-  const playerPrevPos = getHolePosition(playerScore - 1, playerTrackOffset);
+  const playerPrevPos = getHolePosition(playerBackPeg, playerTrackOffset);
   const computerPos = getHolePosition(computerScore, computerTrackOffset);
-  const computerPrevPos = getHolePosition(computerScore - 1, computerTrackOffset);
+  const computerPrevPos = getHolePosition(computerBackPeg, computerTrackOffset);
 
   return (
     <div className="mb-6 bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-4 shadow-xl">
@@ -188,9 +198,9 @@ export default function CribbageBoard({ playerScore, computerScore }) {
           />
         ))}
 
-        {/* Player pegs (blue) */}
+        {/* Player pegs (blue) - both same color like real cribbage */}
         {playerPrevPos && (
-          <circle cx={playerPrevPos.x} cy={playerPrevPos.y} r="5" fill="#4466cc" stroke="#000" strokeWidth="1" opacity="0.5" />
+          <circle cx={playerPrevPos.x} cy={playerPrevPos.y} r="5" fill="#2266ff" stroke="#fff" strokeWidth="1" />
         )}
         {playerPos && (
           <circle
@@ -205,9 +215,9 @@ export default function CribbageBoard({ playerScore, computerScore }) {
           />
         )}
 
-        {/* Computer pegs (red) */}
+        {/* Computer pegs (red) - both same color like real cribbage */}
         {computerPrevPos && (
-          <circle cx={computerPrevPos.x} cy={computerPrevPos.y} r="5" fill="#cc4444" stroke="#000" strokeWidth="1" opacity="0.5" />
+          <circle cx={computerPrevPos.x} cy={computerPrevPos.y} r="5" fill="#ff2222" stroke="#fff" strokeWidth="1" />
         )}
         {computerPos && (
           <circle
