@@ -148,26 +148,61 @@ const CribbageBoard = forwardRef(function CribbageBoard({
       // Wait for celebration animation to finish first
       await new Promise(r => setTimeout(r, BOARD_CONFIG.preAnimationDelay));
 
+      // Set peg positions to STARTING position before animation begins
+      // This ensures we animate FROM the correct position
+      setPegPositions(prev => ({
+        ...prev,
+        [player]: {
+          frontPeg: startScore,
+          backPeg: Math.max(0, startScore - 1)
+        }
+      }));
+
       setIsAnimating(true);
       setAnimatingPlayer(player);
 
       const trackOffset = player === 'player' ? playerTrackOffset : computerTrackOffset;
       const targetScore = Math.min(startScore + points, 121);
-      const targetPos = getHolePosition(targetScore, trackOffset);
 
-      // Zoom in to target area
-      setViewBox(getZoomedViewBox(targetPos.x, targetPos.y, zoomLevel));
+      // Start by showing where we're starting from
+      const startPos = getHolePosition(startScore, trackOffset);
+      setAnimatingPegPos(startPos);
+
+      // Zoom to starting position first, then we'll follow the peg
+      setViewBox(getZoomedViewBox(startPos.x, startPos.y, zoomLevel));
 
       // Wait for zoom
       await new Promise(r => setTimeout(r, zoomTransitionDuration));
 
       // Show score popup
+      const targetPos = getHolePosition(targetScore, trackOffset);
       setScorePopup({ visible: true, points, x: targetPos.x, y: targetPos.y - 15 });
 
-      // Animate each point with leapfrog
+      // Animate each point with leapfrog - one hole at a time
       for (let p = 1; p <= points && startScore + p <= 121; p++) {
-        const currentScore = startScore + p;
-        await animateSinglePoint(player, currentScore - 1, currentScore);
+        const fromScore = startScore + p - 1;
+        const toScore = startScore + p;
+
+        // Get positions for this move
+        const toPos = getHolePosition(toScore, trackOffset);
+
+        // Move the animating peg to the new position
+        setAnimatingPegPos(toPos);
+
+        // Pan the view to follow the peg
+        setViewBox(getZoomedViewBox(toPos.x, toPos.y, zoomLevel));
+
+        // Wait for the move animation
+        await new Promise(r => setTimeout(r, pointAnimationDuration));
+
+        // Update peg positions - the peg has moved one hole
+        setPegPositions(prev => ({
+          ...prev,
+          [player]: {
+            frontPeg: toScore,
+            backPeg: fromScore
+          }
+        }));
       }
 
       // Keep popup visible and pause for user to appreciate the move
