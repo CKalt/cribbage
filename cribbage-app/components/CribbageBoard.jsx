@@ -13,20 +13,38 @@ import { useState, useEffect, useRef } from 'react';
 export default function CribbageBoard({ playerScore, computerScore }) {
   // Track back peg positions (the previous score before last move)
   // This emulates real cribbage where you leapfrog two pegs
-  const [playerBackPeg, setPlayerBackPeg] = useState(0);
-  const [computerBackPeg, setComputerBackPeg] = useState(0);
+  // Initialize to a position slightly behind current score for restored games
+  const [playerBackPeg, setPlayerBackPeg] = useState(() => Math.max(0, playerScore - 1));
+  const [computerBackPeg, setComputerBackPeg] = useState(() => Math.max(0, computerScore - 1));
 
   // Track previous scores to detect changes
   const prevPlayerScore = useRef(playerScore);
   const prevComputerScore = useRef(computerScore);
 
+  // Track if this is initial mount (to handle restored games)
+  const isInitialMount = useRef(true);
+
   // Glow state for each player
   const [playerGlow, setPlayerGlow] = useState(false);
   const [computerGlow, setComputerGlow] = useState(false);
 
+  // Initialize back pegs on mount for restored games
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      // For restored games, set back peg to score-1 (or 0 if score <= 1)
+      if (playerScore > 0) {
+        setPlayerBackPeg(Math.max(0, playerScore - 1));
+      }
+      if (computerScore > 0) {
+        setComputerBackPeg(Math.max(0, computerScore - 1));
+      }
+    }
+  }, []);
+
   // Detect score changes - update back peg to previous front peg position
   useEffect(() => {
-    if (playerScore !== prevPlayerScore.current) {
+    if (!isInitialMount.current && playerScore !== prevPlayerScore.current) {
       // Move back peg to where front peg was
       setPlayerBackPeg(prevPlayerScore.current);
       setPlayerGlow(true);
@@ -37,7 +55,7 @@ export default function CribbageBoard({ playerScore, computerScore }) {
   }, [playerScore]);
 
   useEffect(() => {
-    if (computerScore !== prevComputerScore.current) {
+    if (!isInitialMount.current && computerScore !== prevComputerScore.current) {
       // Move back peg to where front peg was
       setComputerBackPeg(prevComputerScore.current);
       setComputerGlow(true);
