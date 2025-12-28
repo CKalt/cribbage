@@ -23,6 +23,7 @@ const BOARD_CONFIG = {
   zoomLevel: 2.0,
   zoomTransitionDuration: 400, // ms
   postAnimationDelay: 2000, // ms to display after animation completes
+  preAnimationDelay: 2500, // ms to wait before showing (lets celebration play first)
 };
 
 /**
@@ -143,6 +144,9 @@ const CribbageBoard = forwardRef(function CribbageBoard({
         if (onComplete) onComplete();
         continue;
       }
+
+      // Wait for celebration animation to finish first
+      await new Promise(r => setTimeout(r, BOARD_CONFIG.preAnimationDelay));
 
       setIsAnimating(true);
       setAnimatingPlayer(player);
