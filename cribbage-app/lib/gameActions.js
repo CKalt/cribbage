@@ -86,9 +86,13 @@ export function getRequiredAction(state) {
       if (currentPlayer !== 'player') {
         return { ...GAME_ACTIONS.play_waiting };
       }
+      // If player has no cards, they should be waiting for computer or moving to counting
+      if (playerPlayHand.length === 0) {
+        return { ...GAME_ACTIONS.play_waiting, noCardsLeft: true };
+      }
       // Check if player can play any card
       const canPlay = playerPlayHand.some(c => currentCount + c.value <= 31);
-      if (!canPlay && playerPlayHand.length > 0) {
+      if (!canPlay) {
         return { ...GAME_ACTIONS.play_player_go };
       }
       return { ...GAME_ACTIONS.play_player_turn };

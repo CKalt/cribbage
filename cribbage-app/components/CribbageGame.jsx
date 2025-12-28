@@ -1790,6 +1790,20 @@ export default function CribbageGame({ onLogout }) {
     } else if (gameState === 'gameOver') {
       addDebugLog('Stuck recovery: game over, starting new game');
       startNewGame();
+    } else if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore) {
+      // Computer should be playing but isn't - give turn to player
+      addDebugLog('Stuck recovery: computer stuck in play phase, switching to player');
+      setCurrentPlayer('player');
+      setMessage('Your turn');
+    } else if (gameState === 'play' && playerPlayHand.length === 0 && computerPlayHand.length === 0) {
+      // Both out of cards but didn't transition to counting
+      addDebugLog('Stuck recovery: both players out of cards, moving to counting');
+      moveToCountingPhase();
+    } else if (gameState === 'cutForStarter' && dealer === 'player') {
+      // Computer should have auto-cut but didn't - trigger it
+      addDebugLog('Stuck recovery: computer cut stuck, triggering cut');
+      const randomPosition = Math.random() * 0.6 + 0.2;
+      handleStarterCut(randomPosition);
     } else {
       addDebugLog('Unknown stuck state, no automatic recovery available');
       setMessage('Bug report sent. If still stuck, use menu to forfeit.');
