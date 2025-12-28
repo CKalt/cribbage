@@ -86,21 +86,25 @@ export default function CribbageBoard({ playerScore, computerScore }) {
     if (score > 120) score = 120;
 
     // Determine which row (0, 1, 2) and position in row
-    // Row 0: holes 1-30 (going right)
-    // Row 1: holes 31-60 (going left)
-    // Row 2: holes 61-90 (going right)
-    // Row 3: holes 91-120 (going left)
-    // But we only have 3 visual rows, so we use 4 segments across 3 rows
+    // Standard cribbage board S-pattern:
+    // Row 2 (bottom): holes 1-30, left→right (1 at left, 30 at right)
+    // Row 1 (middle): holes 31-60, right→left (31 at right, 60 at left)
+    // Row 0 (top): holes 61-90, left→right (61 at left, 90 at right)
+    // Row 0 (top): holes 91-120, right→left (91 at right, 120 at left)
 
     let row, posInRow, goingRight;
     if (score <= 30) {
+      // 1-30: row 2, going right (1 at left, 30 at right)
       row = 2; posInRow = score - 1; goingRight = true;
     } else if (score <= 60) {
-      row = 1; posInRow = 60 - score; goingRight = false;
+      // 31-60: row 1, going left (31 at right, 60 at left)
+      row = 1; posInRow = score - 31; goingRight = false;
     } else if (score <= 90) {
-      row = 1; posInRow = score - 61; goingRight = true;
+      // 61-90: row 0, going right (61 at left, 90 at right)
+      row = 0; posInRow = score - 61; goingRight = true;
     } else {
-      row = 0; posInRow = 120 - score; goingRight = false;
+      // 91-120: row 0, going left (91 at right, 120 at left)
+      row = 0; posInRow = score - 91; goingRight = false;
     }
 
     const x = goingRight
@@ -168,20 +172,20 @@ export default function CribbageBoard({ playerScore, computerScore }) {
         <rect x="5" y="5" width={boardWidth - 10} height={boardHeight - 10} fill="#654321" rx="8" />
         <rect x="10" y="10" width={boardWidth - 20} height={boardHeight - 20} fill="#8B4513" rx="6" />
 
-        {/* Row labels on left */}
-        <text x="12" y={startY + 2 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">0</text>
+        {/* Row labels on left - shows score when arriving at left side */}
+        <text x="12" y={startY + 2 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">1</text>
         <text x="8" y={startY + 1 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">60</text>
-        <text x="8" y={startY + 0 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">90</text>
+        <text x="8" y={startY + 0 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">61</text>
 
-        {/* Row labels on right */}
+        {/* Row labels on right - shows score when arriving at right side */}
         <text x={boardWidth - 28} y={startY + 2 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">30</text>
-        <text x={boardWidth - 28} y={startY + 1 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">60</text>
-        <text x={boardWidth - 32} y={startY + 0 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">120</text>
+        <text x={boardWidth - 28} y={startY + 1 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">31</text>
+        <text x={boardWidth - 28} y={startY + 0 * rowSpacing + 4} fontSize="9" fill="#ffd700" fontWeight="bold">90</text>
 
-        {/* Direction arrows */}
+        {/* Direction arrows showing flow */}
         <text x={boardWidth / 2 - 10} y={startY + 2 * rowSpacing + 4} fontSize="10" fill="#888">→</text>
-        <text x={boardWidth / 2 - 10} y={startY + 1 * rowSpacing + 4} fontSize="10" fill="#888">↔</text>
-        <text x={boardWidth / 2 - 10} y={startY + 0 * rowSpacing + 4} fontSize="10" fill="#888">←</text>
+        <text x={boardWidth / 2 - 10} y={startY + 1 * rowSpacing + 4} fontSize="10" fill="#888">←</text>
+        <text x={boardWidth / 2 - 10} y={startY + 0 * rowSpacing + 4} fontSize="10" fill="#888">↔</text>
 
         {/* Holes - player track (above) */}
         {holes.map((hole, idx) => (
