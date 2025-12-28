@@ -9,14 +9,14 @@
   - [x] [1.1: Define all possible user actions by game state 🤖](#step-11-define-all-possible-user-actions-by-game-state-🤖)
   - [x] [1.2: Create useRequiredAction hook 🤖](#step-12-create-userequiredaction-hook-🤖)
   - [x] [1.3: Add development-mode stuck detection 🤖](#step-13-add-development-mode-stuck-detection-🤖)
-- [ ] [Phase 2: Centralize Action Button Rendering](#phase-2-centralize-action-button-rendering)
-  - [ ] [2.1: Create ActionButtons component 🤖](#step-21-create-actionbuttons-component-🤖)
-  - [ ] [2.2: Replace scattered button conditionals 🤖](#step-22-replace-scattered-button-conditionals-🤖)
-  - [ ] [2.3: Add sticky action bar for mobile 🤖](#step-23-add-sticky-action-bar-for-mobile-🤖)
-- [ ] [Phase 3: Fix Current Bug and Add Safeguards](#phase-3-fix-current-bug-and-add-safeguards)
-  - [ ] [3.1: Fix the pendingCountContinue rendering bug 🤖](#step-31-fix-the-pendingcountcontinue-rendering-bug-🤖)
-  - [ ] [3.2: Add fallback "Continue" button 🤖](#step-32-add-fallback-continue-button-🤖)
-  - [ ] [3.3: Add automated stuck state recovery 🤖](#step-33-add-automated-stuck-state-recovery-🤖)
+- [x] [Phase 2: Centralize Action Button Rendering](#phase-2-centralize-action-button-rendering) ✅ *Completed 2025-12-28*
+  - [x] [2.1: Create ActionButtons component 🤖](#step-21-create-actionbuttons-component-🤖)
+  - [x] [2.2: Replace scattered button conditionals 🤖](#step-22-replace-scattered-button-conditionals-🤖)
+  - [x] [2.3: Add sticky action bar for mobile 🤖](#step-23-add-sticky-action-bar-for-mobile-🤖)
+- [x] [Phase 3: Fix Current Bug and Add Safeguards](#phase-3-fix-current-bug-and-add-safeguards) ✅ *Completed 2025-12-28*
+  - [x] [3.1: Fix the pendingCountContinue rendering bug 🤖](#step-31-fix-the-pendingcountcontinue-rendering-bug-🤖) ✅ *Fixed by sticky bar*
+  - [x] [3.2: Add fallback "Continue" button 🤖](#step-32-add-fallback-continue-button-🤖) ✅ *Changed to "I'm Stuck" menu option*
+  - [x] [3.3: Add automated stuck state recovery 🤖](#step-33-add-automated-stuck-state-recovery-🤖) ✅ *In handleStuckRecovery()*
   - [x] [3.4: Auto-submit bug report when Stuck button used 🤖](#step-34-auto-submit-bug-report-when-stuck-button-used-🤖) ✅ *Implemented early with Phase 1*
 - [ ] [Phase 4: Testing and Deployment](#phase-4-testing-and-deployment)
   - [ ] [4.1: Test all game states 👤](#step-41-test-all-game-states-👤)
