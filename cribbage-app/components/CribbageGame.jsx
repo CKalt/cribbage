@@ -29,7 +29,10 @@ import DebugPanel from './DebugPanel';
 import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
+import ActionButtons from './ActionButtons';
 import { APP_VERSION } from '@/lib/version';
+import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
+import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
 
 /**
  * Main game component with all state management and game logic
@@ -1633,6 +1636,128 @@ export default function CribbageGame({ onLogout }) {
     }
   }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn]);
 
+  // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
+  // Single source of truth for what action the user should take
+  const gameStateForAction = {
+    gameState,
+    currentPlayer,
+    selectedCards,
+    playerHand,
+    pendingScore,
+    pendingCountContinue,
+    counterIsComputer,
+    actualScore,
+    computerClaimedScore,
+    playerMadeCountDecision,
+    showMugginsPreferenceDialog,
+    playerPlayHand,
+    currentCount,
+    cutResultReady,
+    dealer,
+  };
+
+  const actionHandlers = {
+    discardToCrib,
+    acceptScoreAndContinue,
+    handleCountContinue,
+    playerGo,
+    startNewGame,
+    acceptComputerCount,
+    objectToComputerCount,
+    handleMugginsPreferenceChoice,
+  };
+
+  const requiredAction = useRequiredAction(gameStateForAction, actionHandlers);
+
+  // Development debug logging
+  useActionDebug(requiredAction, gameStateForAction);
+
+  // Handle "I'm Stuck" menu option - auto-submits bug report and attempts recovery
+  const handleStuckRecovery = useCallback(async () => {
+    addDebugLog('User clicked "I\'m Stuck" - auto-submitting bug report');
+
+    // Capture full state for bug report
+    const stuckStateReport = {
+      timestamp: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      requiredAction: {
+        type: requiredAction.type,
+        label: requiredAction.label,
+        requiresButton: requiredAction.requiresButton,
+      },
+      gameState: {
+        state: gameState,
+        dealer,
+        currentPlayer,
+        playerScore,
+        computerScore,
+        handsCountedThisRound,
+        counterIsComputer,
+        countingTurn,
+        pendingCountContinue: pendingCountContinue ? {
+          type: pendingCountContinue.type,
+          newHandsCountedThisRound: pendingCountContinue.newHandsCountedThisRound,
+        } : null,
+        pendingScore: pendingScore ? {
+          points: pendingScore.points,
+          reason: pendingScore.reason,
+        } : null,
+        computerClaimedScore,
+        playerMadeCountDecision,
+        showMugginsPreferenceDialog,
+        actualScore,
+        isProcessingCount,
+      },
+      cards: {
+        playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
+        computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
+        crib: crib?.map(c => `${c.rank}${c.suit}`),
+        cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
+        playerPlayHand: playerPlayHand?.map(c => `${c.rank}${c.suit}`),
+        computerPlayHand: computerPlayHand?.map(c => `${c.rank}${c.suit}`),
+      },
+      recentGameLog: gameLog.slice(-20),
+      recentDebugLog: debugLog.slice(-50),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+    };
+
+    // Auto-submit bug report
+    try {
+      await fetch('/api/bug-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'AUTO_STUCK_STATE',
+          description: `User clicked "Stuck" button. Required action was: ${requiredAction.type} (${requiredAction.label || 'no label'})`,
+          gameState: stuckStateReport,
+        }),
+      });
+      addDebugLog('Auto bug report submitted successfully');
+    } catch (err) {
+      addDebugLog(`Failed to submit auto bug report: ${err.message}`);
+    }
+
+    // Try to recover based on current state
+    if (pendingCountContinue) {
+      handleCountContinue();
+    } else if (pendingScore) {
+      acceptScoreAndContinue();
+    } else if (gameState === 'counting' && counterIsComputer && computerClaimedScore !== null) {
+      acceptComputerCount();
+    } else if (gameState === 'gameOver') {
+      startNewGame();
+    } else {
+      addDebugLog('Unknown stuck state, no automatic recovery available');
+      setMessage('Bug report sent. If still stuck, use menu to forfeit.');
+    }
+  }, [
+    requiredAction, gameState, dealer, currentPlayer, playerScore, computerScore,
+    handsCountedThisRound, counterIsComputer, countingTurn, pendingCountContinue,
+    pendingScore, computerClaimedScore, playerMadeCountDecision, showMugginsPreferenceDialog,
+    actualScore, isProcessingCount, playerHand, computerHand, crib, cutCard,
+    playerPlayHand, computerPlayHand, gameLog, debugLog
+  ]);
+
   // Check if player can play any card
   const playerCanPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
 
@@ -1668,6 +1793,22 @@ export default function CribbageGame({ onLogout }) {
                 </svg>
                 Report Bug
               </button>
+
+              {/* I'm Stuck option - only during active gameplay */}
+              {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    handleStuckRecovery();
+                  }}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  I'm Stuck
+                </button>
+              )}
 
               {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
                 <button
@@ -2057,14 +2198,7 @@ export default function CribbageGame({ onLogout }) {
                   <GameMessage message={message} />
                 ) : null}
 
-                {/* Pending score accept button */}
-                {pendingScore && (
-                  <div className="text-center mb-4">
-                    <Button onClick={acceptScoreAndContinue} className="bg-yellow-600 hover:bg-yellow-700">
-                      Accept {pendingScore.points} Points
-                    </Button>
-                  </div>
-                )}
+                {/* Pending score indicator (button in sticky bar) */}
 
                 {/* Player hand */}
                 <div className={`mb-6 p-2 rounded ${
@@ -2137,45 +2271,29 @@ export default function CribbageGame({ onLogout }) {
                   </div>
                 )}
 
-                {/* Computer count verification */}
+                {/* Computer count verification - info box only, buttons in sticky bar */}
                 {gameState === 'counting' && counterIsComputer && actualScore && !pendingScore && computerClaimedScore !== null && !playerMadeCountDecision && !showMugginsPreferenceDialog && (
                   <div className="text-center mb-4">
-                    <div className="bg-yellow-900 border-2 border-yellow-500 rounded p-4 mb-4 inline-block">
+                    <div className="bg-yellow-900 border-2 border-yellow-500 rounded p-4 inline-block">
                       <div className="text-yellow-300 font-bold mb-2">
                         Computer claims {computerClaimedScore} points
                       </div>
-                      <div className="text-sm text-gray-400 mb-3">
+                      <div className="text-sm text-gray-400">
                         Count the hand yourself to verify!
-                      </div>
-                      <div className="flex gap-2 justify-center">
-                        <Button onClick={acceptComputerCount} className="bg-green-600 hover:bg-green-700">
-                          Accept
-                        </Button>
-                        <Button onClick={objectToComputerCount} className="bg-red-600 hover:bg-red-700">
-                          Muggins!
-                        </Button>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Muggins penalty preference dialog */}
+                {/* Muggins penalty preference dialog - info only, buttons in sticky bar */}
                 {showMugginsPreferenceDialog && (
                   <div className="text-center mb-4">
-                    <div className="bg-purple-900 border-2 border-purple-500 rounded p-4 mb-4 inline-block">
+                    <div className="bg-purple-900 border-2 border-purple-500 rounded p-4 inline-block">
                       <div className="text-purple-300 font-bold mb-2">
                         Wrong Muggins Call!
                       </div>
-                      <div className="text-sm text-gray-300 mb-3">
-                        Computer's count was correct. What penalty for wrong Muggins calls?
-                      </div>
-                      <div className="flex gap-2 justify-center">
-                        <Button onClick={() => handleMugginsPreferenceChoice('no-penalty')} className="bg-green-600 hover:bg-green-700">
-                          No Penalty (traditional)
-                        </Button>
-                        <Button onClick={() => handleMugginsPreferenceChoice('2-points')} className="bg-red-600 hover:bg-red-700">
-                          2 Point Penalty
-                        </Button>
+                      <div className="text-sm text-gray-300">
+                        Computer's count was correct. Choose penalty below.
                       </div>
                       <div className="text-xs text-gray-400 mt-2">
                         This preference will be saved for future games
@@ -2190,54 +2308,13 @@ export default function CribbageGame({ onLogout }) {
                   show={gameState === 'counting' && (!counterIsComputer || playerMadeCountDecision)}
                 />
 
-                {/* Continue button after player miscount */}
-                {pendingCountContinue && (
-                  <div className="text-center mb-4">
-                    <Button
-                      onClick={handleCountContinue}
-                      className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-lg"
-                    >
-                      Continue
-                    </Button>
-                  </div>
-                )}
+                {/* Continue button moved to sticky bar */}
 
-                {/* Discard button - only show when 2 cards selected */}
-                {gameState === 'cribSelect' && selectedCards.length === 2 && playerHand.length === 6 && (
-                  <div className="text-center">
-                    <Button
-                      onClick={discardToCrib}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      Discard
-                    </Button>
-                  </div>
-                )}
+                {/* Discard button moved to sticky bar */}
 
-                {/* Action buttons for play phase */}
-                {gameState === 'play' && currentPlayer === 'player' && !pendingScore && (
-                  <div className="text-center space-x-2">
-                    {/* Go button only shows when count >= 22 (at count <= 21, any card can be played) */}
-                    {playerPlayHand.length > 0 && currentCount >= 22 && (
-                      <Button onClick={playerGo} className="bg-red-600 hover:bg-red-700">
-                        Say "Go"
-                      </Button>
-                    )}
-                    {lastGoPlayer === 'computer' && lastPlayedBy === 'player' && !pendingScore && (
-                      <Button onClick={claimLastCard} className="bg-green-600 hover:bg-green-700">
-                        Claim Last Card (1 point)
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {/* Play phase buttons moved to sticky bar */}
 
-                {gameState === 'gameOver' && (
-                  <div className="text-center">
-                    <Button onClick={startNewGame} className="bg-green-600 hover:bg-green-700">
-                      New Game
-                    </Button>
-                  </div>
-                )}
+                {/* Game over button moved to sticky bar */}
 
 
                 {/* Forfeit Confirmation Modal */}
@@ -2301,7 +2378,37 @@ export default function CribbageGame({ onLogout }) {
             )}
           </CardContent>
         </Card>
+
+        {/* Bottom padding to account for sticky action bar */}
+        {gameState !== 'menu' && requiredAction.requiresButton && (
+          <div className="h-20" />
+        )}
       </div>
+
+      {/* Sticky action bar - always visible at bottom on mobile */}
+      {gameState !== 'menu' && requiredAction.requiresButton && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 border-t border-gray-700 p-3 z-40 backdrop-blur-sm">
+          <div className="max-w-md mx-auto text-center">
+            <ActionButtons
+              requiredAction={requiredAction}
+              handlers={{
+                discardToCrib,
+                acceptScoreAndContinue,
+                handleCountContinue,
+                playerGo,
+                startNewGame,
+                acceptComputerCount,
+                objectToComputerCount,
+                handleMugginsPreferenceChoice,
+                proceedAfterCut: () => {}, // TODO: implement if needed
+              }}
+              pendingScore={pendingScore}
+              computerClaimedScore={computerClaimedScore}
+              selectedCardsLength={selectedCards.length}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
