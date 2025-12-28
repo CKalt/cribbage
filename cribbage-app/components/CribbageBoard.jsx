@@ -19,10 +19,10 @@ const BOARD_CONFIG = {
   holeRadius: 3,
   pegRadius: 5,
   // Animation settings
-  pointAnimationDuration: 150, // ms per point (slowed down)
+  pointAnimationDuration: 250, // ms per point (slower for visibility)
   zoomLevel: 2.0,
-  zoomTransitionDuration: 300, // ms
-  postAnimationDelay: 1500, // ms to display after animation completes
+  zoomTransitionDuration: 400, // ms
+  postAnimationDelay: 2000, // ms to display after animation completes
 };
 
 /**
@@ -425,31 +425,36 @@ const CribbageBoard = forwardRef(function CribbageBoard({
         {boardSvg}
       </div>
 
-      {/* Fixed overlay for animation (always visible on screen) */}
+      {/* Fixed overlay for animation (always visible on screen) - z-60 to show above celebration */}
       {isAnimating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="flex flex-col items-center justify-center h-full w-full p-4">
-            {/* Pegging indicator - at top */}
-            <div className="text-yellow-400 text-lg font-bold mb-4 animate-pulse">
-              {scorePopup.points > 0 ? `+${scorePopup.points} points` : 'Pegging...'}
-            </div>
-
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85">
+          <div className="flex flex-col items-center justify-center h-full w-full p-2">
             {/* Rotated board container for portrait orientation */}
             <div
-              className="bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-3 shadow-2xl"
+              className="relative bg-gradient-to-br from-amber-800 to-amber-900 rounded-lg p-3 shadow-2xl"
               style={{
                 transform: 'rotate(90deg)',
                 transformOrigin: 'center center',
-                width: '85vh', // Use viewport height for width since rotated
-                maxWidth: '600px',
+                width: '90vh', // Use viewport height for width since rotated
+                maxWidth: '650px',
               }}
             >
               {boardSvg}
-            </div>
 
-            {/* Instructions - at bottom */}
-            <div className="text-gray-400 text-sm mt-4">
-              Watch the pegs move...
+              {/* Counter-rotated text overlay so it appears upright */}
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{ transform: 'rotate(-90deg)' }}
+              >
+                <div className="text-center">
+                  <div className="text-yellow-400 text-2xl font-bold animate-pulse mb-2">
+                    {scorePopup.points > 0 ? `+${scorePopup.points} points` : 'Pegging...'}
+                  </div>
+                  <div className="text-gray-300 text-sm">
+                    Watch the pegs move
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
