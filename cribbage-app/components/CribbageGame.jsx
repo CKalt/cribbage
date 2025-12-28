@@ -23,6 +23,7 @@ import {
 import CribbageBoard from './CribbageBoard';
 import PlayingCard, { PlayedCard, LargeCard, CutCard } from './PlayingCard';
 import GameMessage from './GameMessage';
+import GameStatus from './GameStatus';
 import ScoreBreakdown from './ScoreBreakdown';
 import DebugPanel from './DebugPanel';
 import ScoreSelector from './ScoreSelector';
@@ -1861,6 +1862,23 @@ export default function CribbageGame({ onLogout }) {
               </div>
             )}
 
+            {/* Game Status - shows current phase and progress */}
+            {gameState !== 'menu' && (
+              <GameStatus
+                gameState={gameState}
+                dealer={dealer}
+                playerScore={playerScore}
+                computerScore={computerScore}
+                playerHandLength={playerHand.length}
+                selectedCardsLength={selectedCards.length}
+                playerPlayedCards={playerPlayedCards.length}
+                computerPlayedCards={computerPlayedCards.length}
+                handsCountedThisRound={handsCountedThisRound}
+                counterIsComputer={counterIsComputer}
+                currentPlayer={currentPlayer}
+              />
+            )}
+
             {gameState !== 'menu' && gameState !== 'cutting' && gameState !== 'cutForStarter' && (
               <>
                 {/* Visual Cribbage Board */}
@@ -1868,16 +1886,6 @@ export default function CribbageGame({ onLogout }) {
                   playerScore={playerScore}
                   computerScore={computerScore}
                 />
-
-                {/* Scores */}
-                <div className="flex justify-between mb-6">
-                  <div>
-                    <div className="text-lg">Player: {playerScore}/121</div>
-                  </div>
-                  <div>
-                    <div className="text-lg">Computer: {computerScore}/121</div>
-                  </div>
-                </div>
 
                 {/* Dealer indicator */}
                 <div className="text-center mb-4">
@@ -1892,33 +1900,23 @@ export default function CribbageGame({ onLogout }) {
                   </div>
                 )}
 
-                {/* Counting phase indicator */}
+                {/* Counting phase buttons */}
                 {gameState === 'counting' && (
-                  <div className="text-center mb-4">
-                    <div className="text-sm text-yellow-300 mb-2">
-                      Counting: {handsCountedThisRound === 0 ? 'Non-dealer hand' :
-                                 handsCountedThisRound === 1 ? 'Dealer hand' :
-                                 handsCountedThisRound === 2 ? 'Crib' : 'Complete'}
-                      {' • '}
-                      {counterIsComputer ? "Computer's turn" : 'Your turn'}
-                      {dealer === 'player' && handsCountedThisRound === 2 && ' (your crib)'}
-                    </div>
-                    <div className="space-x-2">
+                  <div className="text-center mb-4 space-x-2">
+                    <Button
+                      onClick={() => setShowPeggingSummary(!showPeggingSummary)}
+                      className="bg-purple-600 hover:bg-purple-700 text-xs"
+                    >
+                      {showPeggingSummary ? 'Hide' : 'Show'} Pegging Summary
+                    </Button>
+                    {countingHistory.length > 0 && (
                       <Button
-                        onClick={() => setShowPeggingSummary(!showPeggingSummary)}
-                        className="bg-purple-600 hover:bg-purple-700 text-xs"
+                        onClick={() => setShowCountingHistory(!showCountingHistory)}
+                        className="bg-blue-600 hover:bg-blue-700 text-xs"
                       >
-                        {showPeggingSummary ? 'Hide' : 'Show'} Pegging Summary
+                        {showCountingHistory ? 'Hide' : 'Show'} Counting History
                       </Button>
-                      {countingHistory.length > 0 && (
-                        <Button
-                          onClick={() => setShowCountingHistory(!showCountingHistory)}
-                          className="bg-blue-600 hover:bg-blue-700 text-xs"
-                        >
-                          {showCountingHistory ? 'Hide' : 'Show'} Counting History
-                        </Button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
 

@@ -1,11 +1,42 @@
+'use client';
+
 // Cribbage Board Component - Traditional 3-row layout with SVG
 
+import { useState, useEffect, useRef } from 'react';
+
 /**
- * Visual cribbage board with score pegs
+ * Visual cribbage board with score pegs and glow effect on score changes
  * @param {number} playerScore - Player's current score (0-121)
  * @param {number} computerScore - Computer's current score (0-121)
  */
 export default function CribbageBoard({ playerScore, computerScore }) {
+  // Track previous scores to detect changes
+  const prevPlayerScore = useRef(playerScore);
+  const prevComputerScore = useRef(computerScore);
+
+  // Glow state for each player
+  const [playerGlow, setPlayerGlow] = useState(false);
+  const [computerGlow, setComputerGlow] = useState(false);
+
+  // Detect score changes and trigger glow
+  useEffect(() => {
+    if (playerScore !== prevPlayerScore.current) {
+      setPlayerGlow(true);
+      const timer = setTimeout(() => setPlayerGlow(false), 1500);
+      prevPlayerScore.current = playerScore;
+      return () => clearTimeout(timer);
+    }
+  }, [playerScore]);
+
+  useEffect(() => {
+    if (computerScore !== prevComputerScore.current) {
+      setComputerGlow(true);
+      const timer = setTimeout(() => setComputerGlow(false), 1500);
+      prevComputerScore.current = computerScore;
+      return () => clearTimeout(timer);
+    }
+  }, [computerScore]);
+
   const boardWidth = 620;
   const boardHeight = 140;
   const holeSpacing = 18;
@@ -75,6 +106,30 @@ export default function CribbageBoard({ playerScore, computerScore }) {
         className="mx-auto w-full max-w-[620px]"
         preserveAspectRatio="xMidYMid meet"
       >
+        {/* Glow filters */}
+        <defs>
+          <filter id="playerGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feFlood floodColor="#60a5fa" result="color" />
+            <feComposite in="color" in2="blur" operator="in" result="glow" />
+            <feMerge>
+              <feMergeNode in="glow" />
+              <feMergeNode in="glow" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="computerGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feFlood floodColor="#f87171" result="color" />
+            <feComposite in="color" in2="blur" operator="in" result="glow" />
+            <feMerge>
+              <feMergeNode in="glow" />
+              <feMergeNode in="glow" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
         {/* Board background */}
         <rect x="5" y="5" width={boardWidth - 10} height={boardHeight - 10} fill="#654321" rx="8" />
         <rect x="10" y="10" width={boardWidth - 20} height={boardHeight - 20} fill="#8B4513" rx="6" />
@@ -138,7 +193,16 @@ export default function CribbageBoard({ playerScore, computerScore }) {
           <circle cx={playerPrevPos.x} cy={playerPrevPos.y} r="5" fill="#4466cc" stroke="#000" strokeWidth="1" opacity="0.5" />
         )}
         {playerPos && (
-          <circle cx={playerPos.x} cy={playerPos.y} r="5" fill="#2266ff" stroke="#fff" strokeWidth="1.5" />
+          <circle
+            cx={playerPos.x}
+            cy={playerPos.y}
+            r={playerGlow ? 6 : 5}
+            fill="#2266ff"
+            stroke="#fff"
+            strokeWidth="1.5"
+            filter={playerGlow ? "url(#playerGlow)" : "none"}
+            className={playerGlow ? "animate-pulse" : ""}
+          />
         )}
 
         {/* Computer pegs (red) */}
@@ -146,7 +210,16 @@ export default function CribbageBoard({ playerScore, computerScore }) {
           <circle cx={computerPrevPos.x} cy={computerPrevPos.y} r="5" fill="#cc4444" stroke="#000" strokeWidth="1" opacity="0.5" />
         )}
         {computerPos && (
-          <circle cx={computerPos.x} cy={computerPos.y} r="5" fill="#ff2222" stroke="#fff" strokeWidth="1.5" />
+          <circle
+            cx={computerPos.x}
+            cy={computerPos.y}
+            r={computerGlow ? 6 : 5}
+            fill="#ff2222"
+            stroke="#fff"
+            strokeWidth="1.5"
+            filter={computerGlow ? "url(#computerGlow)" : "none"}
+            className={computerGlow ? "animate-pulse" : ""}
+          />
         )}
 
         {/* Score legend */}
