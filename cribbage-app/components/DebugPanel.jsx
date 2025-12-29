@@ -19,6 +19,7 @@ export default function DebugPanel({
   gameState = {},
   showBugModalExternal = false,
   onBugModalClose = () => {},
+  userEmail = 'unknown',
 }) {
   const [showBugModal, setShowBugModal] = useState(false);
 
@@ -52,6 +53,7 @@ export default function DebugPanel({
           debugLog,
           gameLog,
           gameState,
+          userEmail,
         }),
       });
 

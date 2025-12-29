@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Import game logic from lib/
 import { createDeck, shuffleDeck } from '@/lib/deck';
@@ -38,6 +39,9 @@ import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
  * Main game component with all state management and game logic
  */
 export default function CribbageGame({ onLogout }) {
+  // Get authenticated user for bug reports
+  const { user } = useAuth();
+
   // Menu state
   const [showMenu, setShowMenu] = useState(false);
   const [showBugReport, setShowBugReport] = useState(false);
@@ -1758,6 +1762,7 @@ export default function CribbageGame({ onLogout }) {
           type: 'AUTO_STUCK_STATE',
           description: `User clicked "Stuck" button. Required action was: ${requiredAction.type} (${requiredAction.label || 'no label'})`,
           gameState: stuckStateReport,
+          userEmail: user?.attributes?.email || user?.username || 'unknown',
         }),
       });
       addDebugLog('Auto bug report submitted successfully');
@@ -1813,7 +1818,7 @@ export default function CribbageGame({ onLogout }) {
     handsCountedThisRound, counterIsComputer, countingTurn, pendingCountContinue,
     pendingScore, computerClaimedScore, playerMadeCountDecision, showMugginsPreferenceDialog,
     actualScore, isProcessingCount, playerHand, computerHand, crib, cutCard,
-    playerPlayHand, computerPlayHand, gameLog, debugLog
+    playerPlayHand, computerPlayHand, gameLog, debugLog, user
   ]);
 
   // Check if player can play any card
@@ -2431,6 +2436,7 @@ export default function CribbageGame({ onLogout }) {
                   }}
                   showBugModalExternal={showBugReport}
                   onBugModalClose={() => setShowBugReport(false)}
+                  userEmail={user?.attributes?.email || user?.username || 'unknown'}
                 />
               </>
             )}

@@ -5,7 +5,7 @@ import path from 'path';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { description, debugLog, gameLog, gameState } = body;
+    const { description, debugLog, gameLog, gameState, userEmail, type } = body;
 
     // Create bug-reports directory if it doesn't exist
     const reportsDir = path.join(process.cwd(), 'bug-reports');
@@ -21,6 +21,8 @@ export async function POST(request) {
     // Compile the report
     const report = {
       timestamp: new Date().toISOString(),
+      userEmail: userEmail || 'unknown',
+      type: type || 'MANUAL',
       description: description || 'No description provided',
       gameState: gameState || {},
       debugLog: debugLog || [],
