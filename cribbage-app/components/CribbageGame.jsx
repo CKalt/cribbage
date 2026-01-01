@@ -940,7 +940,8 @@ export default function CribbageGame({ onLogout }) {
           if (score > 0) {
             // Set currentPlayer to 'player' to prevent useEffect from firing again while waiting for Accept
             setCurrentPlayer('player');
-            if (isLastCard && playerOutOfCards) {
+            // Only award last card if NOT hitting 31 (31 already includes 2-point bonus)
+            if (isLastCard && playerOutOfCards && newCount !== 31) {
               setPendingScore({
                 player: 'computer',
                 points: score,
@@ -1052,7 +1053,8 @@ export default function CribbageGame({ onLogout }) {
     const computerOutOfCards = computerPlayHand.length === 0;
 
     if (score > 0) {
-      if (isLastCard && computerOutOfCards) {
+      // Only award last card if NOT hitting 31 (31 already includes 2-point bonus)
+      if (isLastCard && computerOutOfCards && newCount !== 31) {
         setPendingScore({
           player: 'player',
           points: score,
