@@ -31,6 +31,7 @@ import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
+import BugReportViewer from './BugReportViewer';
 import { APP_VERSION } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
@@ -45,6 +46,8 @@ export default function CribbageGame({ onLogout }) {
   // Menu state
   const [showMenu, setShowMenu] = useState(false);
   const [showBugReport, setShowBugReport] = useState(false);
+  const [showBugReportViewer, setShowBugReportViewer] = useState(false);
+  const [unreadBugReports, setUnreadBugReports] = useState(0);
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -253,6 +256,28 @@ export default function CribbageGame({ onLogout }) {
 
     loadSavedGame();
   }, []);
+
+  // Fetch unread bug report count on mount
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      const email = user?.attributes?.email || user?.username;
+      if (!email) return;
+
+      try {
+        const response = await fetch(`/api/bug-reports?email=${encodeURIComponent(email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUnreadBugReports(data.unreadCount);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread bug reports:', error);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [user]);
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -1859,6 +1884,24 @@ export default function CribbageGame({ onLogout }) {
                 Report Bug
               </button>
 
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowBugReportViewer(true);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                My Bug Reports
+                {unreadBugReports > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {unreadBugReports}
+                  </span>
+                )}
+              </button>
+
               {/* I'm Stuck option - only during active gameplay */}
               {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
                 <button
@@ -2444,6 +2487,14 @@ export default function CribbageGame({ onLogout }) {
             )}
           </CardContent>
         </Card>
+
+        {/* Bug Report Viewer Modal */}
+        <BugReportViewer
+          isOpen={showBugReportViewer}
+          onClose={() => setShowBugReportViewer(false)}
+          userEmail={user?.attributes?.email || user?.username}
+          onUnreadCountChange={setUnreadBugReports}
+        />
 
         {/* Bottom padding to account for sticky action bar */}
         {gameState !== 'menu' && requiredAction.requiresButton && (
