@@ -1222,6 +1222,8 @@ export default function CribbageGame({ onLogout }) {
     }
 
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
+    console.log('Player count - hand:', hand.map(c => `${c.rank}${c.suit}`).join(', '), '+ cut:', `${cutCard.rank}${cutCard.suit}`);
+    console.log('Player count - score:', score, 'breakdown items:', breakdown.length);
     console.log('Player count breakdown:', JSON.stringify(breakdown));
     setActualScore({ score, breakdown });
 
@@ -1233,7 +1235,7 @@ export default function CribbageGame({ onLogout }) {
       handsCountedThisRound: handsCountedThisRound
     });
 
-    // Add to counting history
+    // Add to counting history (copy breakdown array to avoid any reference issues)
     setCountingHistory(prev => [...prev, {
       player: 'player',
       handType,
@@ -1241,7 +1243,7 @@ export default function CribbageGame({ onLogout }) {
       cutCard: `${cutCard.rank}${cutCard.suit}`,
       claimed,
       actual: score,
-      breakdown
+      breakdown: [...breakdown]
     }]);
 
     const newHandsCountedThisRound = handsCountedThisRound + 1;
@@ -2251,7 +2253,7 @@ export default function CribbageGame({ onLogout }) {
                         <div key={idx} className={`p-2 rounded ${entry.player === 'player' ? 'bg-blue-800' : 'bg-red-900'}`}>
                           <div className="flex justify-between items-start mb-1">
                             <span className={`font-bold ${entry.player === 'player' ? 'text-blue-300' : 'text-red-300'}`}>
-                              {entry.player === 'player' ? 'You' : 'CPU'} - {entry.handType === 'crib' ? 'Crib' : 'Hand'}
+                              {entry.player === 'player' ? 'Your' : 'CPU'} {entry.handType === 'crib' ? 'Crib' : 'Hand'}
                             </span>
                             <span className="text-yellow-300">
                               {entry.claimed === entry.actual ? (
@@ -2554,6 +2556,7 @@ export default function CribbageGame({ onLogout }) {
                     computerClaimedScore,
                     pendingCountContinue,
                     peggingHistory,
+                    countingHistory,
                     playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
                     computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
