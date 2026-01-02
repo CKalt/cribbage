@@ -1222,9 +1222,6 @@ export default function CribbageGame({ onLogout }) {
     }
 
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
-    console.log('Player count - hand:', hand.map(c => `${c.rank}${c.suit}`).join(', '), '+ cut:', `${cutCard.rank}${cutCard.suit}`);
-    console.log('Player count - score:', score, 'breakdown items:', breakdown.length);
-    console.log('Player count breakdown:', JSON.stringify(breakdown));
     setActualScore({ score, breakdown });
 
     logGameEvent('PLAYER_COUNT', {
@@ -2270,22 +2267,25 @@ export default function CribbageGame({ onLogout }) {
                           </div>
                           {entry.breakdown && entry.breakdown.length > 0 && (
                             <div className="text-gray-400 mt-1 font-mono text-xs">
-                              <div className="text-yellow-500 text-xs mb-1">[DEBUG: {entry.breakdown.length} items]</div>
-                              {entry.breakdown.map((b, i) => {
-                                // Parse breakdown string like "Fifteen (8♥+7♥): 2" or "Run of 3 (3♠-4♥-5♣): 3"
+                              {entry.breakdown.reduce((acc, b, i) => {
                                 const str = typeof b === 'string' ? b : `${b.description}: ${b.points}`;
                                 const match = str.match(/^(.+?)\s*\((.+?)\):\s*(\d+)$/);
                                 if (match) {
                                   const [, type, cards, pts] = match;
-                                  return (
-                                    <div key={i} className="border border-green-500 mb-1 p-1">
-                                      <span>{i + 1}. {cards.replace(/\+/g, ' + ').replace(/-/g, ', ')} = {type.toLowerCase()} {pts}</span>
+                                  const points = parseInt(pts, 10);
+                                  const cumulative = acc.cumulative + points;
+                                  acc.elements.push(
+                                    <div key={i} className="flex justify-between gap-2">
+                                      <span>{i + 1}. {cards.replace(/\+/g, ' + ').replace(/-/g, ', ')}</span>
+                                      <span className="text-right whitespace-nowrap">{type.toLowerCase()} {points} → {cumulative}</span>
                                     </div>
                                   );
+                                  acc.cumulative = cumulative;
+                                } else {
+                                  acc.elements.push(<div key={i}>{str}</div>);
                                 }
-                                // Fallback for unparseable strings
-                                return <div key={i} className="border border-red-500 mb-1 p-1">[PARSE FAIL {i}]: {str}</div>;
-                              })}
+                                return acc;
+                              }, { elements: [], cumulative: 0 }).elements}
                             </div>
                           )}
                         </div>
@@ -2550,26 +2550,11 @@ export default function CribbageGame({ onLogout }) {
                     computerClaimedScore,
                     pendingCountContinue,
                     peggingHistory,
-                    // Detailed countingHistory with breakdown analysis
-                    countingHistory: countingHistory.map(entry => ({
-                      player: entry.player,
-                      handType: entry.handType,
-                      cards: entry.cards,
-                      cutCard: entry.cutCard,
-                      claimed: entry.claimed,
-                      actual: entry.actual,
-                      breakdownLength: entry.breakdown?.length ?? 'undefined',
-                      breakdownRaw: entry.breakdown,
-                    })),
-                    actualScore: actualScore ? {
-                      score: actualScore.score,
-                      breakdownLength: actualScore.breakdown?.length ?? 'undefined',
-                      breakdownRaw: actualScore.breakdown,
-                    } : null,
-                    playerHand: playerHand?.map(c => ({ rank: c.rank, suit: c.suit, value: c.value })),
-                    computerHand: computerHand?.map(c => ({ rank: c.rank, suit: c.suit, value: c.value })),
-                    crib: crib?.map(c => ({ rank: c.rank, suit: c.suit, value: c.value })),
-                    cutCard: cutCard ? { rank: cutCard.rank, suit: cutCard.suit, value: cutCard.value } : null,
+                    countingHistory,
+                    playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
+                    computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
+                    crib: crib?.map(c => `${c.rank}${c.suit}`),
+                    cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
                   }}
                   showBugModalExternal={showBugReport}
                   onBugModalClose={() => setShowBugReport(false)}

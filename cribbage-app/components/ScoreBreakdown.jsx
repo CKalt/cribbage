@@ -34,27 +34,25 @@ export default function ScoreBreakdown({ actualScore, show = true }) {
         <div className="px-4 pb-4 text-sm border-t border-gray-600">
           <div className="pt-3 font-mono">
             {breakdown && breakdown.length > 0 ? (
-              (() => {
-                let cumulative = 0;
-                return breakdown.map((item, idx) => {
-                  // Parse breakdown string like "Fifteen (8♥+7♥): 2" or "Run of 3 (3♠-4♥-5♣): 3"
-                  const str = typeof item === 'string' ? item : `${item.description}: ${item.points}`;
-                  const match = str.match(/^(.+?)\s*\((.+?)\):\s*(\d+)$/);
-                  if (match) {
-                    const [, type, cards, pts] = match;
-                    const points = parseInt(pts, 10);
-                    cumulative += points;
-                    return (
-                      <div key={idx} className="text-green-300 py-1 flex justify-between gap-4">
-                        <span>{idx + 1}. {cards.replace(/\+/g, ' + ').replace(/-/g, ', ')}</span>
-                        <span className="text-right whitespace-nowrap">{type.toLowerCase()} {points} → {cumulative}</span>
-                      </div>
-                    );
-                  }
-                  // Fallback for unparseable strings
-                  return <div key={idx} className="text-green-300 py-1">{str}</div>;
-                });
-              })()
+              breakdown.reduce((acc, item, idx) => {
+                const str = typeof item === 'string' ? item : `${item.description}: ${item.points}`;
+                const match = str.match(/^(.+?)\s*\((.+?)\):\s*(\d+)$/);
+                if (match) {
+                  const [, type, cards, pts] = match;
+                  const points = parseInt(pts, 10);
+                  const cumulative = acc.cumulative + points;
+                  acc.elements.push(
+                    <div key={idx} className="text-green-300 py-1 flex justify-between gap-4">
+                      <span>{idx + 1}. {cards.replace(/\+/g, ' + ').replace(/-/g, ', ')}</span>
+                      <span className="text-right whitespace-nowrap">{type.toLowerCase()} {points} → {cumulative}</span>
+                    </div>
+                  );
+                  acc.cumulative = cumulative;
+                } else {
+                  acc.elements.push(<div key={idx} className="text-green-300 py-1">{str}</div>);
+                }
+                return acc;
+              }, { elements: [], cumulative: 0 }).elements
             ) : (
               <div className="text-gray-400">No scoring combinations</div>
             )}
