@@ -32,7 +32,7 @@ import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
 import BugReportViewer from './BugReportViewer';
-import { APP_VERSION } from '@/lib/version';
+import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
 
@@ -282,8 +282,10 @@ export default function CribbageGame({ onLogout }) {
     fetchUnreadCount();
   }, [user]);
 
-  // Check for new version every 5 minutes (randomized to spread server load)
+  // Check for new version periodically (randomized to spread server load)
   useEffect(() => {
+    const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
+
     const checkVersion = async () => {
       try {
         const response = await fetch('/api/version');
@@ -298,15 +300,15 @@ export default function CribbageGame({ onLogout }) {
       }
     };
 
-    // Initial check after random delay (0-5 minutes) to spread load on page loads
-    const initialDelay = Math.random() * 5 * 60 * 1000;
+    // Initial check after random delay to spread load on page loads
+    const initialDelay = Math.random() * intervalMs;
     const initialTimeout = setTimeout(checkVersion, initialDelay);
 
-    // Then check every 5 minutes with randomized offset (0-5 minutes)
+    // Then check periodically with randomized offset
     const interval = setInterval(() => {
-      const randomOffset = Math.random() * 5 * 60 * 1000;
+      const randomOffset = Math.random() * intervalMs;
       setTimeout(checkVersion, randomOffset);
-    }, 5 * 60 * 1000);
+    }, intervalMs);
 
     return () => {
       clearTimeout(initialTimeout);
