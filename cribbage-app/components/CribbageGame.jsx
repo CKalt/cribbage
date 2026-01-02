@@ -2231,10 +2231,28 @@ export default function CribbageGame({ onLogout }) {
                             Cards: {entry.cards.join(', ')} + {entry.cutCard}
                           </div>
                           {entry.breakdown && entry.breakdown.length > 0 && (
-                            <div className="text-gray-400 mt-1">
-                              {entry.breakdown.map((b, i) => (
-                                <span key={i}>{i > 0 ? ', ' : ''}{typeof b === 'string' ? b : `${b.points}pts (${b.description})`}</span>
-                              ))}
+                            <div className="text-gray-400 mt-1 font-mono text-xs">
+                              {(() => {
+                                let cumulative = 0;
+                                return entry.breakdown.map((b, i) => {
+                                  // Parse breakdown string like "Fifteen (8♥+7♥): 2" or "Run of 3 (3♠-4♥-5♣): 3"
+                                  const str = typeof b === 'string' ? b : `${b.description}: ${b.points}`;
+                                  const match = str.match(/^(.+?)\s*\((.+?)\):\s*(\d+)$/);
+                                  if (match) {
+                                    const [, type, cards, pts] = match;
+                                    const points = parseInt(pts, 10);
+                                    cumulative += points;
+                                    return (
+                                      <div key={i} className="flex justify-between gap-2">
+                                        <span>{i + 1}. {cards.replace(/\+/g, ' + ').replace(/-/g, ', ')}</span>
+                                        <span className="text-right whitespace-nowrap">{type.toLowerCase()} {points} → {cumulative}</span>
+                                      </div>
+                                    );
+                                  }
+                                  // Fallback for unparseable strings
+                                  return <div key={i}>{str}</div>;
+                                });
+                              })()}
                             </div>
                           )}
                         </div>
