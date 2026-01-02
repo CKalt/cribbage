@@ -2556,11 +2556,26 @@ export default function CribbageGame({ onLogout }) {
                     computerClaimedScore,
                     pendingCountContinue,
                     peggingHistory,
-                    countingHistory,
-                    playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
-                    computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
-                    crib: crib?.map(c => `${c.rank}${c.suit}`),
-                    cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
+                    // Detailed countingHistory with breakdown analysis
+                    countingHistory: countingHistory.map(entry => ({
+                      player: entry.player,
+                      handType: entry.handType,
+                      cards: entry.cards,
+                      cutCard: entry.cutCard,
+                      claimed: entry.claimed,
+                      actual: entry.actual,
+                      breakdownLength: entry.breakdown?.length ?? 'undefined',
+                      breakdownRaw: entry.breakdown,
+                    })),
+                    actualScore: actualScore ? {
+                      score: actualScore.score,
+                      breakdownLength: actualScore.breakdown?.length ?? 'undefined',
+                      breakdownRaw: actualScore.breakdown,
+                    } : null,
+                    playerHand: playerHand?.map(c => ({ rank: c.rank, suit: c.suit, value: c.value })),
+                    computerHand: computerHand?.map(c => ({ rank: c.rank, suit: c.suit, value: c.value })),
+                    crib: crib?.map(c => ({ rank: c.rank, suit: c.suit, value: c.value })),
+                    cutCard: cutCard ? { rank: cutCard.rank, suit: cutCard.suit, value: cutCard.value } : null,
                   }}
                   showBugModalExternal={showBugReport}
                   onBugModalClose={() => setShowBugReport(false)}
