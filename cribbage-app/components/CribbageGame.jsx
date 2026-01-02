@@ -2233,7 +2233,7 @@ export default function CribbageGame({ onLogout }) {
                           {entry.breakdown && entry.breakdown.length > 0 && (
                             <div className="text-gray-400 mt-1">
                               {entry.breakdown.map((b, i) => (
-                                <span key={i}>{i > 0 ? ', ' : ''}{b.points}pts ({b.description})</span>
+                                <span key={i}>{i > 0 ? ', ' : ''}{typeof b === 'string' ? b : `${b.points}pts (${b.description})`}</span>
                               ))}
                             </div>
                           )}
