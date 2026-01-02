@@ -2270,7 +2270,7 @@ export default function CribbageGame({ onLogout }) {
                           </div>
                           {entry.breakdown && entry.breakdown.length > 0 && (
                             <div className="text-gray-400 mt-1 font-mono text-xs">
-                              {console.log('Displaying breakdown for', entry.player, entry.handType, ':', JSON.stringify(entry.breakdown))}
+                              <div className="text-yellow-500 text-xs mb-1">[DEBUG: {entry.breakdown.length} items]</div>
                               {(() => {
                                 let cumulative = 0;
                                 return entry.breakdown.map((b, i) => {
@@ -2289,7 +2289,7 @@ export default function CribbageGame({ onLogout }) {
                                     );
                                   }
                                   // Fallback for unparseable strings
-                                  return <div key={i}>{str}</div>;
+                                  return <div key={i} className="text-red-400">[PARSE FAIL {i}]: {str}</div>;
                                 });
                               })()}
                             </div>
