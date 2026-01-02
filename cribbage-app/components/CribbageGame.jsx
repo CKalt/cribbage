@@ -1222,6 +1222,7 @@ export default function CribbageGame({ onLogout }) {
     }
 
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
+    console.log('Player count breakdown:', JSON.stringify(breakdown));
     setActualScore({ score, breakdown });
 
     logGameEvent('PLAYER_COUNT', {
@@ -2267,6 +2268,7 @@ export default function CribbageGame({ onLogout }) {
                           </div>
                           {entry.breakdown && entry.breakdown.length > 0 && (
                             <div className="text-gray-400 mt-1 font-mono text-xs">
+                              {console.log('Displaying breakdown for', entry.player, entry.handType, ':', JSON.stringify(entry.breakdown))}
                               {(() => {
                                 let cumulative = 0;
                                 return entry.breakdown.map((b, i) => {
