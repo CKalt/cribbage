@@ -1427,71 +1427,73 @@ export default function CribbageGame({ onLogout }) {
   };
 
   // Accept computer's count
+  // When user accepts, computer gets what they claimed (that's the muggins rule -
+  // if you don't challenge an over-count, they get away with it)
   const acceptComputerCount = () => {
-    addDebugLog(`acceptComputerCount() - claimed: ${computerClaimedScore}, handsCountedThisRound: ${handsCountedThisRound}, dealer: ${dealer}`);
+    addDebugLog(`acceptComputerCount() - claimed: ${computerClaimedScore}, actual: ${actualScore?.score}, handsCountedThisRound: ${handsCountedThisRound}, dealer: ${dealer}`);
 
     setPlayerMadeCountDecision(true);
     const { score, breakdown } = actualScore;
-    if (computerClaimedScore <= score) {
-      // Add to counting history
-      if (computerCountingHand) {
-        setCountingHistory(prev => [...prev, {
-          player: 'computer',
-          handType: computerCountingHand.handType,
-          cards: computerCountingHand.cards,
-          cutCard: `${cutCard.rank}${cutCard.suit}`,
-          claimed: computerClaimedScore,
-          actual: score,
-          breakdown
-        }]);
-      }
 
-      const handType = computerCountingHand?.handType || 'hand';
-      const { gameEnded } = addPoints('computer', computerClaimedScore, `accepted count (${handType})`);
-
-      const newHandsCountedThisRound = handsCountedThisRound + 1;
-      setHandsCountedThisRound(newHandsCountedThisRound);
-      addDebugLog(`Computer count accepted. Hands counted now: ${newHandsCountedThisRound}`);
-
-      setMessage(`Computer scores ${computerClaimedScore} points`);
-      setShowBreakdown(false);
-      setActualScore(null);
-      setComputerClaimedScore(null);
-      setIsProcessingCount(false);
-
-      // If game ended due to win, stop processing
-      if (gameEnded) return;
-
-      setTimeout(() => {
-        addDebugLog(`After accepting computer count, newHandsCountedThisRound: ${newHandsCountedThisRound}`);
-
-        if (newHandsCountedThisRound >= 3) {
-          addDebugLog('All counting complete - dealing next hand');
-          setCountingTurn('');
-          setCounterIsComputer(null);
-
-          setTimeout(() => {
-            setMessage('Hand complete - Dealing next hand...');
-            setTimeout(() => {
-              setDealer(dealer === 'player' ? 'computer' : 'player');
-              const newDeck = shuffleDeck(createDeck());
-              setDeck(newDeck);
-              dealHands(newDeck);
-            }, 1500);
-          }, 100);
-        } else if (newHandsCountedThisRound === 1) {
-          addDebugLog(`First count done, dealer (${dealer}) counts hand next`);
-          setCountingTurn(dealer);
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
-        } else if (newHandsCountedThisRound === 2) {
-          addDebugLog(`Second count done, dealer (${dealer}) counts crib next`);
-          setCountingTurn('crib');
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
-        }
-      }, 1500);
+    // Add to counting history
+    if (computerCountingHand) {
+      setCountingHistory(prev => [...prev, {
+        player: 'computer',
+        handType: computerCountingHand.handType,
+        cards: computerCountingHand.cards,
+        cutCard: `${cutCard.rank}${cutCard.suit}`,
+        claimed: computerClaimedScore,
+        actual: score,
+        breakdown
+      }]);
     }
+
+    const handType = computerCountingHand?.handType || 'hand';
+    // Give computer what they claimed (user accepted without challenging)
+    const { gameEnded } = addPoints('computer', computerClaimedScore, `accepted count (${handType})`);
+
+    const newHandsCountedThisRound = handsCountedThisRound + 1;
+    setHandsCountedThisRound(newHandsCountedThisRound);
+    addDebugLog(`Computer count accepted. Hands counted now: ${newHandsCountedThisRound}`);
+
+    setMessage(`Computer scores ${computerClaimedScore} points`);
+    setShowBreakdown(false);
+    setActualScore(null);
+    setComputerClaimedScore(null);
+    setIsProcessingCount(false);
+
+    // If game ended due to win, stop processing
+    if (gameEnded) return;
+
+    setTimeout(() => {
+      addDebugLog(`After accepting computer count, newHandsCountedThisRound: ${newHandsCountedThisRound}`);
+
+      if (newHandsCountedThisRound >= 3) {
+        addDebugLog('All counting complete - dealing next hand');
+        setCountingTurn('');
+        setCounterIsComputer(null);
+
+        setTimeout(() => {
+          setMessage('Hand complete - Dealing next hand...');
+          setTimeout(() => {
+            setDealer(dealer === 'player' ? 'computer' : 'player');
+            const newDeck = shuffleDeck(createDeck());
+            setDeck(newDeck);
+            dealHands(newDeck);
+          }, 1500);
+        }, 100);
+      } else if (newHandsCountedThisRound === 1) {
+        addDebugLog(`First count done, dealer (${dealer}) counts hand next`);
+        setCountingTurn(dealer);
+        setCounterIsComputer(dealer === 'computer');
+        setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
+      } else if (newHandsCountedThisRound === 2) {
+        addDebugLog(`Second count done, dealer (${dealer}) counts crib next`);
+        setCountingTurn('crib');
+        setCounterIsComputer(dealer === 'computer');
+        setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+      }
+    }, 1500);
   };
 
   // Apply the result of a wrong muggins call based on preference
