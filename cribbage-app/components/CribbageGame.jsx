@@ -48,6 +48,7 @@ export default function CribbageGame({ onLogout }) {
   const [showBugReport, setShowBugReport] = useState(false);
   const [showBugReportViewer, setShowBugReportViewer] = useState(false);
   const [unreadBugReports, setUnreadBugReports] = useState(0);
+  const [showUnreadNotification, setShowUnreadNotification] = useState(false);
 
   // Version check state
   const [newVersionAvailable, setNewVersionAvailable] = useState(null); // { version, releaseNote }
@@ -281,6 +282,13 @@ export default function CribbageGame({ onLogout }) {
 
     fetchUnreadCount();
   }, [user]);
+
+  // Show notification when there are unread bug report replies
+  useEffect(() => {
+    if (unreadBugReports > 0) {
+      setShowUnreadNotification(true);
+    }
+  }, [unreadBugReports]);
 
   // Check for new version periodically (randomized to spread server load)
   useEffect(() => {
@@ -2493,6 +2501,37 @@ export default function CribbageGame({ onLogout }) {
                           className="bg-blue-600 hover:bg-blue-700"
                         >
                           Upgrade Now
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Unread bug report replies notification */}
+                {showUnreadNotification && unreadBugReports > 0 && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl border border-yellow-500">
+                      <h2 className="text-xl font-bold text-yellow-400 mb-2">
+                        New Reply{unreadBugReports > 1 ? 's' : ''} on Bug Report{unreadBugReports > 1 ? 's' : ''}
+                      </h2>
+                      <p className="text-gray-300 text-sm mb-4">
+                        You have {unreadBugReports} unread {unreadBugReports === 1 ? 'reply' : 'replies'} on your bug report{unreadBugReports > 1 ? 's' : ''}.
+                      </p>
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          onClick={() => setShowUnreadNotification(false)}
+                          className="bg-gray-600 hover:bg-gray-700"
+                        >
+                          Dismiss
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowUnreadNotification(false);
+                            setShowBugReportViewer(true);
+                          }}
+                          className="bg-yellow-600 hover:bg-yellow-700"
+                        >
+                          View Reports
                         </Button>
                       </div>
                     </div>

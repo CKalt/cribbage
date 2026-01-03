@@ -1,6 +1,6 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.1.0-b75';
-export const RELEASE_NOTE = 'Let user review muggins results at their own pace (Continue button)';
+export const APP_VERSION = 'v0.1.0-b76';
+export const RELEASE_NOTE = 'Add notification for unread bug report replies';
 
 // Version check interval in seconds - increase as user base grows to reduce server load
 // Current: 60s check + 0-60s random offset = checks spread over 60-120s window
