@@ -1309,9 +1309,19 @@ export default function CribbageGame({ onLogout }) {
   const handleCountContinue = () => {
     // If pendingCountContinue is set, use it
     if (pendingCountContinue) {
-      const { newHandsCountedThisRound } = pendingCountContinue;
-      addDebugLog(`Player acknowledged count result. Continuing...`);
+      const { type, newHandsCountedThisRound } = pendingCountContinue;
+      addDebugLog(`Player acknowledged count result (type=${type}). Continuing...`);
       setPendingCountContinue(null);
+
+      // For wrongMuggins and undercount, need to clear additional state
+      if (type === 'wrongMuggins' || type === 'undercount') {
+        setShowBreakdown(false);
+        setActualScore(null);
+        setComputerClaimedScore(null);
+        setIsProcessingCount(false);
+        setPlayerMadeCountDecision(false);
+      }
+
       proceedAfterPlayerCount(newHandsCountedThisRound);
       return;
     }
@@ -1533,37 +1543,8 @@ export default function CribbageGame({ onLogout }) {
     setShowBreakdown(true);
     setPlayerMadeCountDecision(true);
 
-    setTimeout(() => {
-      setShowBreakdown(false);
-      setActualScore(null);
-      setComputerClaimedScore(null);
-      setIsProcessingCount(false);
-      setPlayerMadeCountDecision(false);
-
-      if (newHandsCountedThisRound >= 3) {
-        addDebugLog('All counting complete after wrong muggins');
-        setCountingTurn('');
-        setCounterIsComputer(null);
-
-        setTimeout(() => {
-          setMessage('Hand complete - Dealing next hand...');
-          setTimeout(() => {
-            setDealer(dealer === 'player' ? 'computer' : 'player');
-            const newDeck = shuffleDeck(createDeck());
-            setDeck(newDeck);
-            dealHands(newDeck);
-          }, 1500);
-        }, 100);
-      } else if (newHandsCountedThisRound === 1) {
-        setCountingTurn(dealer);
-        setCounterIsComputer(dealer === 'computer');
-        setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
-      } else if (newHandsCountedThisRound === 2) {
-        setCountingTurn('crib');
-        setCounterIsComputer(dealer === 'computer');
-        setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
-      }
-    }, 3000);
+    // Let user review the breakdown at their own pace - they click Continue when ready
+    setPendingCountContinue({ type: 'wrongMuggins', newHandsCountedThisRound });
   };
 
   // Handle muggins preference selection
@@ -1680,39 +1661,8 @@ export default function CribbageGame({ onLogout }) {
       const newHandsCountedThisRound = handsCountedThisRound + 1;
       setHandsCountedThisRound(newHandsCountedThisRound);
 
-      setTimeout(() => {
-        setShowBreakdown(false);
-        setActualScore(null);
-        setComputerClaimedScore(null);
-        setIsProcessingCount(false);
-        setPlayerMadeCountDecision(false);
-
-        if (newHandsCountedThisRound >= 3) {
-          addDebugLog('All counting complete after undercount');
-          setCountingTurn('');
-          setCounterIsComputer(null);
-
-          setTimeout(() => {
-            setMessage('Hand complete - Dealing next hand...');
-            setTimeout(() => {
-              setDealer(dealer === 'player' ? 'computer' : 'player');
-              const newDeck = shuffleDeck(createDeck());
-              setDeck(newDeck);
-              dealHands(newDeck);
-            }, 1500);
-          }, 100);
-        } else if (newHandsCountedThisRound === 1) {
-          addDebugLog(`First count done (undercount), dealer (${dealer}) counts hand next`);
-          setCountingTurn(dealer);
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
-        } else if (newHandsCountedThisRound === 2) {
-          addDebugLog(`Second count done (undercount), dealer (${dealer}) counts crib next`);
-          setCountingTurn('crib');
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
-        }
-      }, 3000);
+      // Let user review the breakdown at their own pace - they click Continue when ready
+      setPendingCountContinue({ type: 'undercount', newHandsCountedThisRound });
     }
   };
 
