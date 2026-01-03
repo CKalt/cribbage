@@ -1456,7 +1456,6 @@ export default function CribbageGame({ onLogout }) {
     setHandsCountedThisRound(newHandsCountedThisRound);
     addDebugLog(`Computer count accepted. Hands counted now: ${newHandsCountedThisRound}`);
 
-    setMessage(`Computer scores ${computerClaimedScore} points`);
     setShowBreakdown(false);
     setActualScore(null);
     setComputerClaimedScore(null);
@@ -1465,35 +1464,32 @@ export default function CribbageGame({ onLogout }) {
     // If game ended due to win, stop processing
     if (gameEnded) return;
 
-    setTimeout(() => {
-      addDebugLog(`After accepting computer count, newHandsCountedThisRound: ${newHandsCountedThisRound}`);
+    // Immediately set up next counter and message (don't delay with setTimeout)
+    addDebugLog(`After accepting computer count, newHandsCountedThisRound: ${newHandsCountedThisRound}`);
 
-      if (newHandsCountedThisRound >= 3) {
-        addDebugLog('All counting complete - dealing next hand');
-        setCountingTurn('');
-        setCounterIsComputer(null);
+    if (newHandsCountedThisRound >= 3) {
+      addDebugLog('All counting complete - dealing next hand');
+      setCountingTurn('');
+      setCounterIsComputer(null);
+      setMessage('Hand complete - Dealing next hand...');
 
-        setTimeout(() => {
-          setMessage('Hand complete - Dealing next hand...');
-          setTimeout(() => {
-            setDealer(dealer === 'player' ? 'computer' : 'player');
-            const newDeck = shuffleDeck(createDeck());
-            setDeck(newDeck);
-            dealHands(newDeck);
-          }, 1500);
-        }, 100);
-      } else if (newHandsCountedThisRound === 1) {
-        addDebugLog(`First count done, dealer (${dealer}) counts hand next`);
-        setCountingTurn(dealer);
-        setCounterIsComputer(dealer === 'computer');
-        setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
-      } else if (newHandsCountedThisRound === 2) {
-        addDebugLog(`Second count done, dealer (${dealer}) counts crib next`);
-        setCountingTurn('crib');
-        setCounterIsComputer(dealer === 'computer');
-        setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
-      }
-    }, 1500);
+      setTimeout(() => {
+        setDealer(dealer === 'player' ? 'computer' : 'player');
+        const newDeck = shuffleDeck(createDeck());
+        setDeck(newDeck);
+        dealHands(newDeck);
+      }, 1500);
+    } else if (newHandsCountedThisRound === 1) {
+      addDebugLog(`First count done, dealer (${dealer}) counts hand next`);
+      setCountingTurn(dealer);
+      setCounterIsComputer(dealer === 'computer');
+      setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
+    } else if (newHandsCountedThisRound === 2) {
+      addDebugLog(`Second count done, dealer (${dealer}) counts crib next`);
+      setCountingTurn('crib');
+      setCounterIsComputer(dealer === 'computer');
+      setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+    }
   };
 
   // Apply the result of a wrong muggins call based on preference
