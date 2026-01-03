@@ -2540,21 +2540,36 @@ export default function CribbageGame({ onLogout }) {
                   debugLog={debugLog}
                   gameLog={gameLog}
                   gameState={{
+                    // Core game state
                     state: gameState,
                     dealer,
                     playerScore,
                     computerScore,
+                    currentPlayer,
+                    // Counting phase state
                     handsCountedThisRound,
                     counterIsComputer,
                     countingTurn,
                     computerClaimedScore,
-                    pendingCountContinue,
+                    isProcessingCount,
+                    actualScore: actualScore ? { score: actualScore.score, hasBreakdown: !!actualScore.breakdown } : null,
+                    pendingScore: pendingScore ? { points: pendingScore.points, reason: pendingScore.reason } : null,
+                    pendingCountContinue: pendingCountContinue ? { type: pendingCountContinue.type, handsCount: pendingCountContinue.newHandsCountedThisRound } : null,
+                    playerMadeCountDecision,
+                    // Display state - critical for debugging message issues
+                    currentMessage: message,
+                    showBreakdown,
+                    // History
                     peggingHistory,
                     countingHistory,
+                    // Cards
                     playerHand: playerHand?.map(c => `${c.rank}${c.suit}`),
                     computerHand: computerHand?.map(c => `${c.rank}${c.suit}`),
                     crib: crib?.map(c => `${c.rank}${c.suit}`),
                     cutCard: cutCard ? `${cutCard.rank}${cutCard.suit}` : null,
+                    // Session info
+                    wasGameRestored: isLoadingGame ? 'loading' : (gameLog.length > 0 && gameLog[0]?.type === 'GAME_RESTORED' ? 'yes' : 'no'),
+                    appVersion: APP_VERSION,
                   }}
                   showBugModalExternal={showBugReport}
                   onBugModalClose={() => setShowBugReport(false)}

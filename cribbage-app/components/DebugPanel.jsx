@@ -2,7 +2,7 @@
 
 // Debug Panel Component with Bug Reporting
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -22,6 +22,7 @@ export default function DebugPanel({
   userEmail = 'unknown',
 }) {
   const [showBugModal, setShowBugModal] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Handle external trigger
   useEffect(() => {
@@ -30,8 +31,42 @@ export default function DebugPanel({
     }
   }, [showBugModalExternal]);
   const [bugDescription, setBugDescription] = useState('');
+  const [screenshot, setScreenshot] = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
+
+  const handleScreenshotChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setSubmitStatus({ success: false, message: 'Please select an image file' });
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setSubmitStatus({ success: false, message: 'Screenshot must be less than 5MB' });
+        return;
+      }
+
+      setScreenshot(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshotPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeScreenshot = () => {
+    setScreenshot(null);
+    setScreenshotPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmitBug = async () => {
     if (!bugDescription.trim()) {
@@ -43,6 +78,16 @@ export default function DebugPanel({
     setSubmitStatus(null);
 
     try {
+      // Convert screenshot to base64 if present
+      let screenshotData = null;
+      if (screenshot) {
+        screenshotData = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(screenshot);
+        });
+      }
+
       const response = await fetch('/api/bug-report', {
         method: 'POST',
         headers: {
@@ -54,6 +99,7 @@ export default function DebugPanel({
           gameLog,
           gameState,
           userEmail,
+          screenshot: screenshotData,
         }),
       });
 
@@ -62,6 +108,8 @@ export default function DebugPanel({
       if (result.success) {
         setSubmitStatus({ success: true, message: 'Bug report submitted successfully!' });
         setBugDescription('');
+        setScreenshot(null);
+        setScreenshotPreview(null);
         setTimeout(() => {
           setShowBugModal(false);
           setSubmitStatus(null);
@@ -80,6 +128,8 @@ export default function DebugPanel({
   const handleClose = () => {
     setShowBugModal(false);
     setBugDescription('');
+    setScreenshot(null);
+    setScreenshotPreview(null);
     setSubmitStatus(null);
     onBugModalClose();
   };
@@ -89,7 +139,7 @@ export default function DebugPanel({
       {/* Bug Report Modal */}
       {showBugModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-white mb-4">Report a Bug</h2>
 
             <p className="text-gray-300 text-sm mb-4">
@@ -102,6 +152,48 @@ export default function DebugPanel({
               placeholder="Describe the bug... (e.g., 'I was the dealer but couldn't count my crib after counting my hand')"
               className="w-full h-32 p-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none resize-none"
             />
+
+            {/* Screenshot upload */}
+            <div className="mt-4">
+              <label className="block text-gray-300 text-sm mb-2">
+                Attach Screenshot (optional)
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleScreenshotChange}
+                className="hidden"
+                id="screenshot-input"
+              />
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-gray-600 hover:bg-gray-700 text-sm"
+                >
+                  {screenshot ? 'Change Screenshot' : 'Add Screenshot'}
+                </Button>
+                {screenshot && (
+                  <Button
+                    type="button"
+                    onClick={removeScreenshot}
+                    className="bg-red-600 hover:bg-red-700 text-sm"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              {screenshotPreview && (
+                <div className="mt-3">
+                  <img
+                    src={screenshotPreview}
+                    alt="Screenshot preview"
+                    className="max-w-full max-h-40 rounded border border-gray-600"
+                  />
+                </div>
+              )}
+            </div>
 
             {submitStatus && (
               <div className={`mt-3 p-2 rounded text-sm ${

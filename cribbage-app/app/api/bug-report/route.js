@@ -13,7 +13,7 @@ function generateBugReportId() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { description, debugLog, gameLog, gameState, userEmail, type } = body;
+    const { description, debugLog, gameLog, gameState, userEmail, type, screenshot } = body;
 
     // Create bug-reports directory if it doesn't exist
     const reportsDir = path.join(process.cwd(), 'bug-reports');
@@ -27,6 +27,20 @@ export async function POST(request) {
     const filename = `bug-report-${timestamp}.json`;
     const filepath = path.join(reportsDir, filename);
 
+    // Handle screenshot if provided
+    let screenshotFilename = null;
+    if (screenshot) {
+      // Extract mime type and base64 data
+      const matches = screenshot.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (matches) {
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const base64Data = matches[2];
+        screenshotFilename = `screenshot-${timestamp}.${ext}`;
+        const screenshotPath = path.join(reportsDir, screenshotFilename);
+        fs.writeFileSync(screenshotPath, Buffer.from(base64Data, 'base64'));
+      }
+    }
+
     // Compile the report
     const report = {
       id: reportId,
@@ -37,6 +51,7 @@ export async function POST(request) {
       gameState: gameState || {},
       debugLog: debugLog || [],
       gameLog: gameLog || [],
+      screenshot: screenshotFilename,  // Reference to screenshot file
       replies: [],
       seenByUser: true,  // User just submitted it, so they've "seen" it
     };
@@ -48,7 +63,8 @@ export async function POST(request) {
       success: true,
       message: 'Bug report saved',
       id: reportId,
-      filename
+      filename,
+      screenshot: screenshotFilename
     });
   } catch (error) {
     console.error('Error saving bug report:', error);
