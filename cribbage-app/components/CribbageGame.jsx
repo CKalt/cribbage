@@ -426,6 +426,28 @@ export default function CribbageGame({ onLogout }) {
         console.log(`[Resume] Fixing countingTurn: ${restored.countingTurn} → ${correctCountingTurn}`);
         setCountingTurn(correctCountingTurn);
       }
+
+      // Fix the message to match the current counting state
+      // Use correctCounterIsComputer if we fixed it, otherwise use restored value
+      const isComputerCounting = correctCounterIsComputer !== undefined ? correctCounterIsComputer : restored.counterIsComputer;
+      const turn = correctCountingTurn !== undefined ? correctCountingTurn : restored.countingTurn;
+
+      if (isComputerCounting) {
+        // Computer's turn to count
+        if (turn === 'crib') {
+          setMessage('Computer counts the crib');
+        } else {
+          setMessage(hands === 0 ? 'Computer counts their hand (non-dealer)' : 'Computer counts their hand (dealer)');
+        }
+      } else {
+        // Player's turn to count
+        if (turn === 'crib') {
+          setMessage('Count your crib');
+        } else {
+          setMessage(hands === 0 ? 'Count your hand (non-dealer)' : 'Count your hand (dealer)');
+        }
+      }
+      console.log(`[Resume] Set counting message for hands=${hands}, turn=${turn}, isComputer=${isComputerCounting}`);
     }
 
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
