@@ -6,6 +6,7 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
+    const showArchived = searchParams.get('archived') === 'true';
 
     if (!email) {
       return NextResponse.json(
@@ -14,7 +15,8 @@ export async function GET(request) {
       );
     }
 
-    const reportsDir = path.join(process.cwd(), 'bug-reports');
+    const baseDir = path.join(process.cwd(), 'bug-reports');
+    const reportsDir = showArchived ? path.join(baseDir, 'archive') : baseDir;
 
     // Check if directory exists
     if (!fs.existsSync(reportsDir)) {

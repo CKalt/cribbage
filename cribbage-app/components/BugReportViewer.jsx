@@ -17,23 +17,27 @@ export default function BugReportViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveConfirm, setArchiveConfirm] = useState(null); // report id to confirm
 
-  // Fetch reports when modal opens
+  // Fetch reports when modal opens or view changes
   useEffect(() => {
     if (isOpen && userEmail) {
       fetchReports();
     }
-  }, [isOpen, userEmail]);
+  }, [isOpen, userEmail, showArchived]);
 
   const fetchReports = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/bug-reports?email=${encodeURIComponent(userEmail)}`);
+      const url = `/api/bug-reports?email=${encodeURIComponent(userEmail)}${showArchived ? '&archived=true' : ''}`;
+      const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
         setReports(data.reports);
-        if (onUnreadCountChange) {
+        // Only update unread count from active reports
+        if (onUnreadCountChange && !showArchived) {
           onUnreadCountChange(data.unreadCount);
         }
       } else {
@@ -43,6 +47,25 @@ export default function BugReportViewer({
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const archiveReport = async (reportId) => {
+    try {
+      const response = await fetch(`/api/bug-reports/${reportId}/archive`, { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        // Remove from local state and refresh
+        setReports(prev => prev.filter(r => r.id !== reportId));
+        setArchiveConfirm(null);
+        setExpandedId(null);
+        // Refresh to update counts
+        fetchReports();
+      } else {
+        setError(data.error || 'Failed to archive report');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
     }
   };
 
@@ -92,13 +115,37 @@ export default function BugReportViewer({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg p-4 max-w-lg w-full mx-4 shadow-xl max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-bold text-white">My Bug Reports</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white text-2xl leading-none"
           >
             &times;
+          </button>
+        </div>
+
+        {/* Tab Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setShowArchived(false)}
+            className={`px-3 py-1 text-sm rounded ${
+              !showArchived
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setShowArchived(true)}
+            className={`px-3 py-1 text-sm rounded ${
+              showArchived
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Archived
           </button>
         </div>
 
@@ -110,7 +157,7 @@ export default function BugReportViewer({
             <div className="text-red-400 text-center py-8">{error}</div>
           ) : reports.length === 0 ? (
             <div className="text-gray-400 text-center py-8">
-              No bug reports submitted yet.
+              {showArchived ? 'No archived reports.' : 'No bug reports submitted yet.'}
             </div>
           ) : (
             <div className="space-y-3">
@@ -191,9 +238,22 @@ export default function BugReportViewer({
                         </div>
                       )}
 
-                      {/* Report ID for reference */}
-                      <div className="mt-3 text-gray-500 text-xs">
-                        Report ID: {report.id}
+                      {/* Report ID and Archive button */}
+                      <div className="mt-3 flex justify-between items-center">
+                        <span className="text-gray-500 text-xs">
+                          Report ID: {report.id}
+                        </span>
+                        {!showArchived && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setArchiveConfirm(report.id);
+                            }}
+                            className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
+                          >
+                            Archive
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -212,6 +272,32 @@ export default function BugReportViewer({
             Close
           </Button>
         </div>
+
+        {/* Archive Confirmation Dialog */}
+        {archiveConfirm && (
+          <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center rounded-lg">
+            <div className="bg-gray-700 rounded-lg p-4 max-w-xs w-full mx-4">
+              <h3 className="text-white font-bold mb-2">Archive Report?</h3>
+              <p className="text-gray-300 text-sm mb-4">
+                This will move the report to your archive. You can view it later in the Archived tab.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => setArchiveConfirm(null)}
+                  className="bg-gray-600 hover:bg-gray-500 text-sm px-3 py-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => archiveReport(archiveConfirm)}
+                  className="bg-blue-600 hover:bg-blue-700 text-sm px-3 py-1"
+                >
+                  Archive
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
