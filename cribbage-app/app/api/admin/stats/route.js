@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { CognitoIdentityProviderClient, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
 
 const ADMIN_EMAIL = 'chris@chrisk.com';
-const USER_POOL_ID = 'us-east-2_7plg1ZB4F';
+
+// Static user ID to email mapping (from Cognito user pool)
+// TODO: Consider storing email in user data files or setting up IAM role for Cognito access
+const USER_EMAIL_MAP = {
+  '31db1510-a011-7093-0732-7ab5770a3c98': 'jeffgreenwheel@gmail.com',
+  '31eba580-9081-70ad-baeb-05d2acc7ce4f': 'cswilson@rogers.com',
+  '814bd530-e011-704d-0532-5daec65d7ea3': 'steinermbsk@aol.com',
+  'a12ba5d0-0031-70cc-394c-104c2c92c0a6': 'penguinracing@gmail.com',
+  'b1ebc530-e011-704a-081c-2c2e6c048621': 'chris@chrisk.com',
+  'd15b45f0-50f1-7064-23ce-342dbe3b06ce': 'ckwasser@gmail.com',
+  'f11bc520-a081-704f-db20-36c62066b19e': 'shawnbourne@sympatico.ca',
+};
 
 export async function GET(request) {
   try {
@@ -17,21 +27,6 @@ export async function GET(request) {
         { success: false, error: 'Unauthorized' },
         { status: 403 }
       );
-    }
-
-    // Get all users from Cognito
-    const client = new CognitoIdentityProviderClient({ region: 'us-east-2' });
-    const command = new ListUsersCommand({ UserPoolId: USER_POOL_ID });
-    const cognitoResponse = await client.send(command);
-
-    // Build user ID to email map
-    const userMap = {};
-    for (const user of cognitoResponse.Users || []) {
-      const sub = user.Attributes?.find(a => a.Name === 'sub')?.Value;
-      const userEmail = user.Attributes?.find(a => a.Name === 'email')?.Value;
-      if (sub && userEmail) {
-        userMap[sub] = userEmail;
-      }
     }
 
     // Read all user data files
@@ -50,7 +45,7 @@ export async function GET(request) {
 
           if (gameStats) {
             stats.push({
-              email: userMap[userId] || userId,
+              email: USER_EMAIL_MAP[userId] || userId,
               wins: gameStats[1] || 0,
               losses: gameStats[2] || 0,
               forfeits: gameStats[3] || 0,
@@ -59,7 +54,7 @@ export async function GET(request) {
           } else {
             // User has data file but no games played
             stats.push({
-              email: userMap[userId] || userId,
+              email: USER_EMAIL_MAP[userId] || userId,
               wins: 0,
               losses: 0,
               forfeits: 0,
