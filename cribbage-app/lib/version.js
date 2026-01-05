@@ -1,6 +1,6 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.1.0-b79';
-export const RELEASE_NOTE = 'Add admin panel with game stats and bug reports';
+export const APP_VERSION = 'v0.1.0-b80';
+export const RELEASE_NOTE = 'Fix admin panel email display';
 
 // Version check interval in seconds - increase as user base grows to reduce server load
 // Current: 60s check + 0-60s random offset = checks spread over 60-120s window
