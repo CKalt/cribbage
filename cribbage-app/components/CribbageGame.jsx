@@ -32,6 +32,7 @@ import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
 import BugReportViewer from './BugReportViewer';
+import AdminPanel from './AdminPanel';
 import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
@@ -49,6 +50,7 @@ export default function CribbageGame({ onLogout }) {
   const [showBugReportViewer, setShowBugReportViewer] = useState(false);
   const [unreadBugReports, setUnreadBugReports] = useState(0);
   const [showUnreadNotification, setShowUnreadNotification] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Version check state
   const [newVersionAvailable, setNewVersionAvailable] = useState(null); // { version, releaseNote }
@@ -1917,6 +1919,23 @@ export default function CribbageGame({ onLogout }) {
                 )}
               </button>
 
+              {/* Admin Panel - only for chris@chrisk.com */}
+              {user?.attributes?.email === 'chris@chrisk.com' && (
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowAdminPanel(true);
+                  }}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Admin Panel
+                </button>
+              )}
+
               {/* I'm Stuck option - only during active gameplay */}
               {gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'cutting' && (
                 <button
@@ -2566,6 +2585,13 @@ export default function CribbageGame({ onLogout }) {
           onClose={() => setShowBugReportViewer(false)}
           userEmail={user?.attributes?.email || user?.username}
           onUnreadCountChange={setUnreadBugReports}
+        />
+
+        {/* Admin Panel Modal - only for admin user */}
+        <AdminPanel
+          isOpen={showAdminPanel}
+          onClose={() => setShowAdminPanel(false)}
+          userEmail={user?.attributes?.email || user?.username}
         />
 
         {/* Unread bug report replies notification - outside gameState conditional so it shows at menu */}

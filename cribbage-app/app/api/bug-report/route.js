@@ -10,6 +10,44 @@ function generateBugReportId() {
   return `BR-${dateStr}-${randomPart}`;
 }
 
+// Get the next available reference number
+function getNextRefNum(reportsDir) {
+  let maxRefNum = 0;
+
+  // Check main directory
+  if (fs.existsSync(reportsDir)) {
+    const files = fs.readdirSync(reportsDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const report = JSON.parse(fs.readFileSync(path.join(reportsDir, file), 'utf8'));
+        if (report.refNum && report.refNum > maxRefNum) {
+          maxRefNum = report.refNum;
+        }
+      } catch (e) {
+        // Skip invalid files
+      }
+    }
+  }
+
+  // Check archive directory
+  const archiveDir = path.join(reportsDir, 'archive');
+  if (fs.existsSync(archiveDir)) {
+    const files = fs.readdirSync(archiveDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const report = JSON.parse(fs.readFileSync(path.join(archiveDir, file), 'utf8'));
+        if (report.refNum && report.refNum > maxRefNum) {
+          maxRefNum = report.refNum;
+        }
+      } catch (e) {
+        // Skip invalid files
+      }
+    }
+  }
+
+  return maxRefNum + 1;
+}
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -41,9 +79,13 @@ export async function POST(request) {
       }
     }
 
+    // Get next reference number
+    const refNum = getNextRefNum(reportsDir);
+
     // Compile the report
     const report = {
       id: reportId,
+      refNum,  // Persistent reference number for easy discussion
       timestamp: new Date().toISOString(),
       userEmail: userEmail || 'unknown',
       type: type || 'MANUAL',
