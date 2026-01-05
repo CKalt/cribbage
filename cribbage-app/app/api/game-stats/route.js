@@ -9,9 +9,9 @@ import {
 } from '@/lib/game-schema';
 
 /**
- * Decode JWT token to extract user ID (sub claim)
+ * Decode JWT token to extract user ID (sub) and email
  */
-function getUserIdFromToken(token) {
+function getUserInfoFromToken(token) {
   if (!token) return null;
 
   try {
@@ -22,7 +22,10 @@ function getUserIdFromToken(token) {
       Buffer.from(parts[1], 'base64url').toString('utf8')
     );
 
-    return payload.sub || null;
+    return {
+      userId: payload.sub || null,
+      email: payload.email || null
+    };
   } catch (error) {
     console.error('Error decoding token:', error);
     return null;
@@ -79,14 +82,16 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const userId = getUserIdFromToken(token);
+    const userInfo = getUserInfoFromToken(token);
 
-    if (!userId) {
+    if (!userInfo?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    const { userId } = userInfo;
 
     const userData = readUserData(userId);
     const statsData = userData.game_stats?.data || [];
@@ -131,14 +136,16 @@ export async function POST(request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const userId = getUserIdFromToken(token);
+    const userInfo = getUserInfoFromToken(token);
 
-    if (!userId) {
+    if (!userInfo?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    const { userId, email } = userInfo;
 
     const body = await request.json();
     const { result } = body;
@@ -189,6 +196,12 @@ export async function POST(request) {
     }
 
     userData.game_stats.data = statsData;
+
+    // Store email in user data for admin panel access
+    if (email) {
+      userData.email = email;
+    }
+
     writeUserData(userId, userData);
 
     return NextResponse.json({

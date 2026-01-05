@@ -4,18 +4,6 @@ import path from 'path';
 
 const ADMIN_EMAIL = 'chris@chrisk.com';
 
-// Static user ID to email mapping (from Cognito user pool)
-// TODO: Consider storing email in user data files or setting up IAM role for Cognito access
-const USER_EMAIL_MAP = {
-  '31db1510-a011-7093-0732-7ab5770a3c98': 'jeffgreenwheel@gmail.com',
-  '31eba580-9081-70ad-baeb-05d2acc7ce4f': 'cswilson@rogers.com',
-  '814bd530-e011-704d-0532-5daec65d7ea3': 'steinermbsk@aol.com',
-  'a12ba5d0-0031-70cc-394c-104c2c92c0a6': 'penguinracing@gmail.com',
-  'b1ebc530-e011-704a-081c-2c2e6c048621': 'chris@chrisk.com',
-  'd15b45f0-50f1-7064-23ce-342dbe3b06ce': 'ckwasser@gmail.com',
-  'f11bc520-a081-704f-db20-36c62066b19e': 'shawnbourne@sympatico.ca',
-};
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -43,9 +31,12 @@ export async function GET(request) {
           const userData = JSON.parse(fs.readFileSync(filepath, 'utf8'));
           const gameStats = userData.game_stats?.data?.[0];
 
+          // Email is stored in the user data file (set when recording game stats)
+          const userEmail = userData.email || userId;
+
           if (gameStats) {
             stats.push({
-              email: USER_EMAIL_MAP[userId] || userId,
+              email: userEmail,
               wins: gameStats[1] || 0,
               losses: gameStats[2] || 0,
               forfeits: gameStats[3] || 0,
@@ -54,7 +45,7 @@ export async function GET(request) {
           } else {
             // User has data file but no games played
             stats.push({
-              email: USER_EMAIL_MAP[userId] || userId,
+              email: userEmail,
               wins: 0,
               losses: 0,
               forfeits: 0,
