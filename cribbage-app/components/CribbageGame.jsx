@@ -2594,6 +2594,18 @@ export default function CribbageGame({ onLogout }) {
           userEmail={user?.attributes?.email || user?.username}
         />
 
+        {/* Bug Report Modal - always available even at menu screen */}
+        {(gameState === 'menu' || gameState === 'cutting' || gameState === 'cutForStarter') && (
+          <DebugPanel
+            debugLog={debugLog}
+            gameLog={gameLog}
+            gameState={{ state: gameState, appVersion: APP_VERSION }}
+            showBugModalExternal={showBugReport}
+            onBugModalClose={() => setShowBugReport(false)}
+            userEmail={user?.attributes?.email || user?.username || 'unknown'}
+          />
+        )}
+
         {/* Unread bug report replies notification - outside gameState conditional so it shows at menu */}
         {showUnreadNotification && unreadBugReports > 0 && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
