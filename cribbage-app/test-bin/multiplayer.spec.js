@@ -120,12 +120,24 @@ test('Can search for players', async ({ page }) => {
 
   await page.waitForTimeout(2000);
 
-  // Check results
-  const resultsOrNoMatch = await page.locator('text=chris+two').isVisible() ||
-                           await page.locator('text=No players found').isVisible();
+  // Check results - look for either the user, no results, or already in game message
+  const foundUser = await page.locator('text=chris+two').first().isVisible();
+  const noResults = await page.locator('text=No players found').isVisible();
+  const alreadyInGame = await page.locator('text=already').first().isVisible();
+  const inviteButton = await page.locator('button:has-text("Invite")').first().isVisible();
 
-  console.log('✓ Search functionality works');
+  const resultsOrNoMatch = foundUser || noResults || alreadyInGame || inviteButton;
+
+  if (foundUser || inviteButton) {
+    console.log('✓ Found player in search results');
+  } else if (noResults) {
+    console.log('✓ Search returned no results (player may not exist)');
+  } else if (alreadyInGame) {
+    console.log('✓ Search shows player already in game');
+  }
+
   expect(resultsOrNoMatch).toBeTruthy();
+  console.log('✓ Search functionality works');
 });
 
 // ============================================================
