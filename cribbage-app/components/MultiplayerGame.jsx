@@ -104,6 +104,63 @@ export default function MultiplayerGame({ gameId, onExit }) {
     }
   };
 
+  // Get playable cards during play phase
+  const getPlayableCards = () => {
+    const gs = gameState?.gameState;
+    if (!gs || gs.phase !== GAME_PHASE.PLAYING) return [];
+
+    const playerKey = gameState?.myPlayerKey;
+    const playHand = gs.playState?.[`${playerKey}PlayHand`] || [];
+    const currentCount = gs.playState?.currentCount || 0;
+
+    return playHand.filter(card => {
+      const cardValue = Math.min(card.value, 10);
+      return currentCount + cardValue <= 31;
+    });
+  };
+
+  // Check if player can play any card
+  const canPlayAnyCard = () => {
+    return getPlayableCards().length > 0;
+  };
+
+  // Check if card is playable
+  const isCardPlayable = (card) => {
+    const playable = getPlayableCards();
+    return playable.some(c => c.suit === card.suit && c.rank === card.rank);
+  };
+
+  // Handle playing a card
+  const handlePlayCard = async (card) => {
+    if (!isMyTurn || submitting) return;
+    if (!isCardPlayable(card)) return;
+
+    setSubmitting(true);
+    try {
+      const result = await submitMove('play', { card });
+      if (!result.success) {
+        console.error('Play failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle saying "Go"
+  const handleGo = async () => {
+    if (!isMyTurn || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const result = await submitMove('go', {});
+      if (!result.success) {
+        console.error('Go failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Clear selected cards when phase changes
   useEffect(() => {
     setSelectedCards([]);
@@ -297,37 +354,78 @@ export default function MultiplayerGame({ gameId, onExit }) {
               {/* Current count */}
               <div className="text-center mb-3">
                 <span className="text-gray-400">Count: </span>
-                <span className="text-2xl text-white font-bold">
+                <span className={`text-2xl font-bold ${
+                  (gameState?.gameState?.playState?.currentCount || 0) === 15 ||
+                  (gameState?.gameState?.playState?.currentCount || 0) === 31
+                    ? 'text-yellow-400'
+                    : 'text-white'
+                }`}>
                   {gameState?.gameState?.playState?.currentCount || 0}
                 </span>
                 <span className="text-gray-400"> / 31</span>
               </div>
 
               {/* Played cards this round */}
-              {gameState?.gameState?.playState?.roundCards?.length > 0 && (
-                <div className="flex justify-center gap-1 mb-3">
-                  {gameState.gameState.playState.roundCards.map((card, idx) => (
-                    <PlayedCard key={idx} card={card} />
-                  ))}
+              <div className="bg-gray-700 rounded p-3 mb-4 min-h-[60px]">
+                <div className="text-gray-400 text-xs text-center mb-2">Cards played this round:</div>
+                {gameState?.gameState?.playState?.roundCards?.length > 0 ? (
+                  <div className="flex justify-center gap-1 flex-wrap">
+                    {gameState.gameState.playState.roundCards.map((card, idx) => (
+                      <PlayedCard key={idx} card={card} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-center text-sm">No cards played yet</div>
+                )}
+              </div>
+
+              {/* Player's hand (remaining cards) */}
+              <div className="text-gray-400 text-sm text-center mb-2">
+                Your cards ({(gameState?.gameState?.playState?.[`${gameState?.myPlayerKey}PlayHand`] || []).length} remaining):
+              </div>
+              <div className="flex justify-center gap-2 flex-wrap mb-4">
+                {(gameState?.gameState?.playState?.[`${gameState?.myPlayerKey}PlayHand`] || []).map((card, idx) => {
+                  const playable = isCardPlayable(card);
+                  return (
+                    <PlayingCard
+                      key={`${card.rank}${card.suit}`}
+                      card={card}
+                      onClick={() => handlePlayCard(card)}
+                      disabled={!isMyTurn || submitting || !playable}
+                      highlighted={isMyTurn && playable}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Action buttons */}
+              {isMyTurn && (
+                <div className="text-center">
+                  {canPlayAnyCard() ? (
+                    <div className="text-yellow-400 mb-2">
+                      Tap a highlighted card to play it
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-red-400 mb-2">
+                        No playable cards (would exceed 31)
+                      </div>
+                      <Button
+                        onClick={handleGo}
+                        disabled={submitting}
+                        className="bg-orange-600 hover:bg-orange-700 text-lg px-6 py-3"
+                      >
+                        {submitting ? 'Saying Go...' : 'Say "Go"'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Player's hand (remaining cards) */}
-              <div className="text-gray-400 text-sm text-center mb-2">Your cards:</div>
-              <div className="flex justify-center gap-2 flex-wrap mb-4">
-                {(gameState?.gameState?.playState?.[`${gameState?.myPlayerKey}PlayHand`] || []).map((card, idx) => (
-                  <PlayingCard
-                    key={`${card.rank}${card.suit}`}
-                    card={card}
-                    onClick={() => {/* TODO: handle play */}}
-                    disabled={!isMyTurn || submitting}
-                  />
-                ))}
-              </div>
-
-              {isMyTurn && (
-                <div className="text-center text-yellow-400">
-                  Play a card or say "Go"
+              {/* Opponent said Go indicator */}
+              {gameState?.gameState?.playState?.[`${gameState?.myPlayerKey === 'player1' ? 'player2' : 'player1'}Said`] === 'go' && (
+                <div className="text-center text-orange-400 mt-2">
+                  {opponent?.username} said "Go" - play if you can!
                 </div>
               )}
             </div>
