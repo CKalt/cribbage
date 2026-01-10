@@ -180,7 +180,7 @@ export async function POST(request) {
 
     // Create invitation
     const inviteId = generateInviteId();
-    const invitation = createInvitation(inviteId, userInfo, toEmail);
+    const invitation = createInvitation(inviteId, { id: userInfo.userId, email: userInfo.email }, toEmail);
 
     // Save invitation
     const invitesDir = path.join(process.cwd(), 'data', 'invitations');
