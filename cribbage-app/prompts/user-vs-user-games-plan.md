@@ -69,6 +69,30 @@ This plan outlines the implementation of user vs user multiplayer games for the 
 - **One game per opponent**: Only ONE active game between any two specific players at a time (cannot start a second game with someone until the current game is finished)
 - **Game list**: Players see a list of all their active games with indicators showing which games are waiting for their move
 
+### Single-Player vs Computer Preserved
+
+The existing single-player mode against the computer AI remains fully available. From the main menu, players can choose:
+- **Play vs Computer** - Launches the existing single-player game (unchanged)
+- **Play vs Friend** - Opens the multiplayer lobby to invite/join games
+
+This is an additive feature - no existing functionality is removed.
+
+### How Invitations Work
+
+**To invite another player:**
+1. Player opens "Play vs Friend" from the main menu
+2. Player enters the email address of the person they want to play
+3. System verifies the email belongs to a registered user
+4. An invitation is created and appears in the recipient's invitation list
+5. Recipient can Accept or Decline the invitation
+6. If accepted, both players are placed into a new game
+
+**Invitation visibility:**
+- Players see a notification badge when they have pending invitations
+- Invitations appear in the Game Lobby under "Pending Invitations"
+- Invitations expire after 24 hours if not accepted/declined
+- Players cannot send a new invitation to someone they already have an active game with
+
 **Current Architecture:**
 - Single-player only (vs computer AI)
 - File-based storage per user (`data/{userId}-dml-ast.json`)
