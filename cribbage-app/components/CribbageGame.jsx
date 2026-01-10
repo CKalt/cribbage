@@ -35,6 +35,7 @@ import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
 import GameLobby from './GameLobby';
+import MultiplayerGame from './MultiplayerGame';
 import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
@@ -55,6 +56,7 @@ export default function CribbageGame({ onLogout }) {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showGameLobby, setShowGameLobby] = useState(false);
+  const [activeMultiplayerGameId, setActiveMultiplayerGameId] = useState(null);
 
   // Version check state
   const [newVersionAvailable, setNewVersionAvailable] = useState(null); // { version, releaseNote }
@@ -2638,11 +2640,18 @@ export default function CribbageGame({ onLogout }) {
           onClose={() => setShowGameLobby(false)}
           onStartGame={(gameId) => {
             setShowGameLobby(false);
-            // TODO: Navigate to multiplayer game with gameId
-            console.log('Starting multiplayer game:', gameId);
+            setActiveMultiplayerGameId(gameId);
           }}
           userEmail={user?.attributes?.email || user?.username}
         />
+
+        {/* Multiplayer Game - renders full-screen when active */}
+        {activeMultiplayerGameId && (
+          <MultiplayerGame
+            gameId={activeMultiplayerGameId}
+            onExit={() => setActiveMultiplayerGameId(null)}
+          />
+        )}
 
         {/* Bug Report Modal - always available even at menu screen */}
         {(gameState === 'menu' || gameState === 'cutting' || gameState === 'cutForStarter') && (
