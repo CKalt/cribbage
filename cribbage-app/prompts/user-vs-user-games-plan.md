@@ -22,7 +22,7 @@
   - [ ] [Step 2.3: Create move submission endpoint](#step-23-create-move-submission-endpoint-🤖)
   - [ ] [Step 2.4: Create game listing endpoint](#step-24-create-game-listing-endpoint-🤖)
 - [Phase 3: Invitation System](#phase-3-invitation-system)
-  - [ ] [Step 3.1: Create player search endpoint](#step-31-create-player-search-endpoint-🤖)
+  - [ ] [Step 3.1: Create player listing and search endpoint](#step-31-create-player-listing-and-search-endpoint-🤖)
   - [ ] [Step 3.2: Create invitation endpoints](#step-32-create-invitation-endpoints-🤖)
   - [ ] [Step 3.3: Create invitation UI component](#step-33-create-invitation-ui-component-🤖)
 - [Phase 4: Game Lobby](#phase-4-game-lobby)
@@ -79,10 +79,15 @@ This is an additive feature - no existing functionality is removed.
 
 ### How Invitations Work
 
+**Finding players to invite:**
+- **Browse all players**: See a list of all registered users (showing usernames/emails)
+- **Search**: Type to filter the list by email or username
+- **Status indicators**: See who is currently online, who you already have a game with
+
 **To invite another player:**
 1. Player opens "Play vs Friend" from the main menu
-2. Player enters the email address of the person they want to play
-3. System verifies the email belongs to a registered user
+2. Player browses the player list or searches by email/username
+3. Player clicks "Invite" next to the person they want to play
 4. An invitation is created and appears in the recipient's invitation list
 5. Recipient can Accept or Decline the invitation
 6. If accepted, both players are placed into a new game
@@ -382,18 +387,39 @@ export const createMultiplayerStatsRow = (userId) => [
 
 ## Phase 3: Invitation System
 
-### Step 3.1: Create player search endpoint 🤖
+### Step 3.1: Create player listing and search endpoint 🤖
 
-**File**: `app/api/multiplayer/players/search/route.js`
+**File**: `app/api/multiplayer/players/route.js`
 
 ```javascript
-// GET /api/multiplayer/players/search?email=foo@bar.com
+// GET /api/multiplayer/players - List all players
+// GET /api/multiplayer/players?search=foo - Search/filter players
+```
+
+**Response:**
+```javascript
+{
+  success: true,
+  players: [
+    {
+      id: 'user-123',
+      email: 'player@example.com',
+      username: 'player',           // Email prefix or display name
+      isOnline: true,               // Active in last 5 minutes
+      hasActiveGame: false,         // Already playing against requester
+      lastSeen: '2026-01-09T10:30:00Z'
+    }
+  ]
+}
 ```
 
 **Functionality:**
-- Search for users by email (partial match)
-- Return list of matching players (email only, no sensitive data)
+- List all registered users (from data directory scan)
+- Optional `search` param filters by email/username (partial match)
 - Exclude self from results
+- Include online status (based on recent activity)
+- Flag users who already have an active game with requester
+- Sort by: online first, then alphabetically
 
 [Back to TOC](#table-of-contents)
 
