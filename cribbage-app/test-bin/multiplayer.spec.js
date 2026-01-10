@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 
 // Test accounts
 const USER1 = {
-  email: 'chris@chrisk.com',
+  email: 'chris+one@chrisk.com',
   password: 'Hello123$'
 };
 

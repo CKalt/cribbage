@@ -5,7 +5,7 @@ const BASE_URL = 'https://beta.cribbage.chrisk.com';
 
 // Test accounts
 const USER1 = {
-  email: 'chris@chrisk.com',
+  email: 'chris+one@chrisk.com',
   password: 'Hello123$'
 };
 

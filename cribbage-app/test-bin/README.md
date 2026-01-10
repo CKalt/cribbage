@@ -15,20 +15,45 @@ npx playwright install chromium
 ## Test Accounts
 
 The tests use two pre-configured accounts:
-- **User 1:** chris@chrisk.com / Hello123$
+- **User 1:** chris+one@chrisk.com / Hello123$
 - **User 2:** chris+two@chrisk.com / Hello123$
 
 ## Running Tests
 
-### Run All Tests
+### Reset Game State (Recommended First Step)
+
+Before running tests, reset the game state to ensure a fresh game:
+
 ```bash
 cd test-bin
-./run-tests.sh
+./run-tests.sh reset
+```
+
+This will:
+1. Login as both test users
+2. Forfeit any existing games
+3. Decline any pending invitations
+4. Create a fresh game invitation from User 1 to User 2
+5. Accept the invitation, creating a new game in "discarding" phase
+
+### Run All Tests (with Reset)
+
+```bash
+./run-tests.sh all    # Reset + run all tests
+```
+
+### Run All Tests (without Reset)
+
+```bash
+./run-tests.sh        # Run tests without resetting
 ```
 
 ### Run Specific Test Suites
 
 ```bash
+# Reset game state only
+./run-tests.sh reset
+
 # API endpoint tests
 ./run-tests.sh api
 
@@ -68,12 +93,13 @@ npx playwright test --debug --config=playwright.config.js
 
 | File | Description | Tests |
 |------|-------------|-------|
+| `reset-game.spec.js` | Reset game state (forfeit games, create fresh game) | 1 |
 | `multiplayer.spec.js` | Login, lobby, search, invite/accept flows | 7 |
 | `join-game.spec.js` | Join existing game tests | 7 |
 | `gameplay.spec.js` | Discard, cut, and play phase UI tests | 21 |
 | `api.spec.js` | API endpoint validation tests | 15 |
 
-**Total: 44 tests**
+**Total: 45 tests** (44 main tests + 1 reset)
 
 ## Test Coverage
 
