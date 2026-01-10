@@ -48,7 +48,26 @@
 
 ## Overview
 
-This plan outlines the implementation of user vs user multiplayer games for the Cribbage app. Currently, the app only supports single-player games against a computer opponent. This feature will allow two authenticated users to play cribbage against each other in real-time.
+This plan outlines the implementation of user vs user multiplayer games for the Cribbage app. Currently, the app only supports single-player games against a computer opponent. This feature will allow two authenticated users to play cribbage against each other.
+
+### Gameplay Model: Real-Time AND Asynchronous
+
+**The multiplayer system supports both real-time and asynchronous play:**
+
+- **Real-time play**: When both players are online simultaneously, they can play in real-time with automatic polling to detect opponent moves within seconds.
+
+- **Asynchronous play**: Players do NOT need to be online at the same time. A player can make their move and log off. When their opponent logs in later (minutes, hours, or days), they will see the move that was made and can take their turn. This is similar to "play-by-mail" or turn-based mobile games.
+
+- **Session persistence**: Game state is preserved across login sessions. Players can close the app, come back later, and resume exactly where they left off. When returning, players see:
+  - The last move their opponent made while they were offline
+  - Clear indication of whose turn it is
+  - Full game history/context
+
+### Multiple Concurrent Games
+
+- **Many games at once**: Players can participate in multiple multiplayer games simultaneously (e.g., playing games against 5 different friends at the same time)
+- **One game per opponent**: Only ONE active game between any two specific players at a time (cannot start a second game with someone until the current game is finished)
+- **Game list**: Players see a list of all their active games with indicators showing which games are waiting for their move
 
 **Current Architecture:**
 - Single-player only (vs computer AI)
@@ -60,7 +79,8 @@ This plan outlines the implementation of user vs user multiplayer games for the 
 **Target Architecture:**
 - Support both single-player and multiplayer modes
 - Shared game state storage for multiplayer games
-- Turn-based polling for real-time sync (Phase 1)
+- Turn-based polling for real-time sync when both players online
+- Persistent game state for asynchronous play across sessions
 - Optional WebSocket upgrade (future)
 
 [Back to TOC](#table-of-contents)
@@ -158,10 +178,23 @@ export const createMultiplayerGame = (gameId, player1Id, player1Email) => ({
   currentTurn: null,  // 'player1' or 'player2'
   turnStartedAt: null,
 
+  // Last move info - shown to returning player who was offline
+  lastMove: {
+    by: null,           // 'player1' or 'player2'
+    type: null,         // 'discard', 'play', 'go', 'count', etc.
+    description: null,  // Human-readable: "Played 5♠ (count: 15 for 2)"
+    timestamp: null
+  },
+
   // History for replay/debugging
   moveHistory: []
 });
 ```
+
+**Important Constraints:**
+- Only ONE active game allowed between any two players
+- Before creating a game or accepting an invite, check for existing active games between the pair
+- Completed/abandoned games don't count toward this limit
 
 [Back to TOC](#table-of-contents)
 
