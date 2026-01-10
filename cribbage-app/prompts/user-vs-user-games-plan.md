@@ -12,6 +12,7 @@
 - [Overview](#overview)
 - [Problem Statement](#problem-statement)
 - [Architecture Decision](#architecture-decision)
+- [Deployment Strategy](#deployment-strategy)
 - [Phase 1: Data Schema Extension](#phase-1-data-schema-extension)
   - [ ] [Step 1.1: Create multiplayer game schema](#step-11-create-multiplayer-game-schema-🤖)
   - [ ] [Step 1.2: Create game invitation schema](#step-12-create-game-invitation-schema-🤖)
@@ -161,6 +162,110 @@ data/
     {gameId}.json                # Multiplayer game state
   invitations/
     {inviteId}.json              # Game invitations
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Deployment Strategy
+
+### Beta Subdomain Approach
+
+To allow testing the multiplayer feature without affecting the stable version:
+
+| Environment | URL | Branch | Port |
+|-------------|-----|--------|------|
+| **Stable** | `cribbage.chrisk.com` | `main` | 3000 |
+| **Beta** | `beta.cribbage.chrisk.com` | `multiplayer` | 3001 |
+
+### Setup Steps
+
+**1. Create multiplayer branch:**
+```bash
+git checkout -b multiplayer
+git push -u origin multiplayer
+```
+
+**2. Add DNS record:**
+- Add `beta.cribbage.chrisk.com` A record pointing to `3.132.10.219`
+
+**3. Get SSL certificate for beta:**
+```bash
+sudo certbot --nginx -d beta.cribbage.chrisk.com
+```
+
+**4. Configure Nginx** (`/etc/nginx/conf.d/cribbage-beta.conf`):
+```nginx
+server {
+    server_name beta.cribbage.chrisk.com;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/beta.cribbage.chrisk.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/beta.cribbage.chrisk.com/privkey.pem;
+}
+```
+
+**5. PM2 configuration** - Run two instances:
+```bash
+# Stable (existing)
+pm2 start npm --name "cribbage" -- start
+
+# Beta (new)
+cd ~/cribbage-beta/cribbage-app
+pm2 start npm --name "cribbage-beta" -- start -- -p 3001
+```
+
+**6. Clone beta repo:**
+```bash
+cd ~
+git clone git@github.com:CKalt/cribbage.git cribbage-beta
+cd cribbage-beta
+git checkout multiplayer
+cd cribbage-app
+npm ci --ignore-scripts
+npm run build
+```
+
+### Deployment Commands
+
+**Deploy to stable (main branch):**
+```bash
+ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
+  "cd cribbage && git pull && cd cribbage-app && npm run build && pm2 restart cribbage"
+```
+
+**Deploy to beta (multiplayer branch):**
+```bash
+ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
+  "cd cribbage-beta && git pull && cd cribbage-app && npm run build && pm2 restart cribbage-beta"
+```
+
+### Shared Data
+
+Both versions share the same data directories:
+- `/home/ec2-user/cribbage/cribbage-app/data/` - User data and games
+- `/home/ec2-user/cribbage/cribbage-app/bug-reports/` - Bug reports
+
+This allows users to switch between versions and retain their data.
+
+### Merging to Stable
+
+When multiplayer is stable:
+```bash
+git checkout main
+git merge multiplayer
+git push origin main
+# Deploy to stable
 ```
 
 [Back to TOC](#table-of-contents)
