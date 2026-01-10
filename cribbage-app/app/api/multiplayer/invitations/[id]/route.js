@@ -9,6 +9,7 @@ import {
   INVITE_STATUS,
   GAME_STATUS
 } from '@/lib/multiplayer-schema';
+import { initializeGameState } from '@/lib/multiplayer-game';
 
 /**
  * Decode JWT token to extract user ID and email
@@ -156,10 +157,23 @@ export async function POST(request, { params }) {
     // Game is now active
     game.status = GAME_STATUS.ACTIVE;
 
-    // Randomly decide who goes first (non-dealer plays first in cribbage)
-    // Player 1 is dealer in first hand if they won the cut, but we'll randomize for simplicity
-    game.currentTurn = Math.random() < 0.5 ? 'player1' : 'player2';
+    // Randomly pick dealer for first hand
+    const dealer = Math.random() < 0.5 ? 'player1' : 'player2';
+
+    // Initialize game state with dealt cards
+    game.gameState = initializeGameState(dealer);
+
+    // Both players need to discard - start with player1
+    game.currentTurn = 'player1';
     game.turnStartedAt = new Date().toISOString();
+
+    // Set last move to indicate game started
+    game.lastMove = {
+      by: null,
+      type: 'game_start',
+      description: `Game started! ${dealer === 'player1' ? invitation.from.email.split('@')[0] : userInfo.email.split('@')[0]} is dealer. Discard 2 cards to the crib.`,
+      timestamp: new Date().toISOString()
+    };
 
     // Save game
     const gamesDir = path.join(process.cwd(), 'data', 'games');

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
 import { getPlayerKey, GAME_STATUS } from '@/lib/multiplayer-schema';
+import { processDiscard, processCut, processPlay, GAME_PHASE } from '@/lib/multiplayer-game';
 
 /**
  * Decode JWT token to extract user ID and email
@@ -90,16 +91,29 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Verify it's this player's turn
-    if (game.currentTurn !== playerKey) {
-      return NextResponse.json(
-        { success: false, error: "It's not your turn" },
-        { status: 400 }
-      );
+    // Special handling for discard phase - both players can discard
+    const gamePhase = game.gameState?.phase;
+    if (gamePhase === GAME_PHASE.DISCARDING && moveType === 'discard') {
+      // Allow discard if player hasn't discarded yet
+      const discardsKey = `${playerKey}Discards`;
+      if (game.gameState[discardsKey]?.length > 0) {
+        return NextResponse.json(
+          { success: false, error: 'You have already discarded' },
+          { status: 400 }
+        );
+      }
+    } else {
+      // For other phases, verify it's this player's turn
+      if (game.currentTurn !== playerKey) {
+        return NextResponse.json(
+          { success: false, error: "It's not your turn" },
+          { status: 400 }
+        );
+      }
     }
 
     // Process the move based on type
-    const moveResult = processMove(game, playerKey, moveType, data);
+    const moveResult = processMove(game, playerKey, moveType, data, userInfo);
 
     if (!moveResult.success) {
       return NextResponse.json(
@@ -132,7 +146,9 @@ export async function POST(request, { params }) {
 
     // Update scores if applicable
     if (moveResult.scoreChange) {
-      game.scores[playerKey] += moveResult.scoreChange;
+      // Use scorePlayer if specified (e.g., His Heels goes to dealer, not cutter)
+      const scoringPlayer = moveResult.scorePlayer || playerKey;
+      game.scores[scoringPlayer] += moveResult.scoreChange;
     }
 
     // Check for game over
@@ -179,7 +195,7 @@ export async function POST(request, { params }) {
 
 /**
  * Process a move and return the new game state
- * This is a simplified version - real implementation will use existing game logic
+ * Uses the game logic functions from lib/multiplayer-game.js
  */
 function processMove(game, playerKey, moveType, data) {
   const state = game.gameState || {};
@@ -198,58 +214,83 @@ function processMove(game, playerKey, moveType, data) {
         description: data.description || 'Game state synchronized'
       };
 
-    case 'discard':
+    case 'discard': {
       // Player discarding cards to crib
       if (!data.cards || !Array.isArray(data.cards)) {
         return { success: false, error: 'Cards array required for discard' };
       }
+
+      const result = processDiscard(state, playerKey, data.cards);
+      if (!result.success) {
+        return result;
+      }
+
       return {
         success: true,
-        newGameState: {
-          ...state,
-          phase: 'play',
-          [`${playerKey}Discarded`]: true,
-          crib: [...(state.crib || []), ...data.cards]
-        },
-        nextTurn: state[`${opponentKey}Discarded`] ? playerKey : opponentKey,
-        description: `${username} discarded ${data.cards.length} cards to crib`
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        description: `${username} ${result.description}`
       };
+    }
 
-    case 'play':
+    case 'cut': {
+      // Player cutting the deck
+      const cutIndex = data.cutIndex ?? null;
+      const result = processCut(state, playerKey, cutIndex);
+
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        scoreChange: result.scoreChange,
+        scorePlayer: result.scorePlayer,
+        description: `${username} ${result.description}`
+      };
+    }
+
+    case 'play': {
       // Player playing a card in pegging
       if (!data.card) {
         return { success: false, error: 'Card required for play' };
       }
-      const playedCards = [...(state.playedCards || []), data.card];
-      const count = playedCards.reduce((sum, c) => sum + Math.min(c.value, 10), 0);
-      let scoreChange = data.points || 0;
+
+      const result = processPlay(state, playerKey, data.card);
+      if (!result.success) {
+        return result;
+      }
 
       return {
         success: true,
-        newGameState: {
-          ...state,
-          playedCards,
-          count,
-          lastPlayedBy: playerKey
-        },
-        nextTurn: opponentKey,
-        scoreChange,
-        description: `${username} played ${data.card.rank}${data.card.suit}${scoreChange > 0 ? ` for ${scoreChange}` : ''}`
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        scoreChange: result.scoreChange,
+        scorePlayer: result.scorePlayer,
+        description: `${username} ${result.description}`
       };
+    }
 
-    case 'go':
-      // Player says "Go"
+    case 'go': {
+      // Player says "Go" - pass null card to processPlay
+      const result = processPlay(state, playerKey, null);
+      if (!result.success) {
+        return result;
+      }
+
       return {
         success: true,
-        newGameState: {
-          ...state,
-          [`${playerKey}Said`]: 'go'
-        },
-        nextTurn: opponentKey,
-        description: `${username} said "Go"`
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        scoreChange: result.scoreChange,
+        scorePlayer: result.scorePlayer,
+        description: `${username} ${result.description}`
       };
+    }
 
-    case 'count':
+    case 'count': {
       // Player counting their hand
       const scoreForCount = data.points || 0;
       return {
@@ -263,6 +304,7 @@ function processMove(game, playerKey, moveType, data) {
         scoreChange: scoreForCount,
         description: `${username} counted ${scoreForCount} points`
       };
+    }
 
     case 'accept_count':
       // Player accepting opponent's count (for muggins support later)
@@ -271,27 +313,6 @@ function processMove(game, playerKey, moveType, data) {
         newGameState: state,
         nextTurn: opponentKey,
         description: `${username} accepted the count`
-      };
-
-    case 'cut':
-      // Player cutting the deck
-      if (!data.card) {
-        return { success: false, error: 'Card required for cut' };
-      }
-      let cutScore = 0;
-      if (data.card.rank === 'J') {
-        cutScore = 2; // His heels
-      }
-      return {
-        success: true,
-        newGameState: {
-          ...state,
-          cutCard: data.card,
-          phase: 'play'
-        },
-        nextTurn: opponentKey,
-        scoreChange: cutScore,
-        description: `${username} cut ${data.card.rank}${data.card.suit}${cutScore > 0 ? ' - His Heels for 2!' : ''}`
       };
 
     default:
