@@ -33,6 +33,7 @@ import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
 import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
+import Leaderboard from './Leaderboard';
 import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
@@ -51,6 +52,7 @@ export default function CribbageGame({ onLogout }) {
   const [unreadBugReports, setUnreadBugReports] = useState(0);
   const [showUnreadNotification, setShowUnreadNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // Version check state
   const [newVersionAvailable, setNewVersionAvailable] = useState(null); // { version, releaseNote }
@@ -1919,6 +1921,20 @@ export default function CribbageGame({ onLogout }) {
                 )}
               </button>
 
+              {/* Leaderboard - available to all users */}
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowLeaderboard(true);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Leaderboard
+              </button>
+
               {/* Admin Panel - only for chris@chrisk.com */}
               {user?.attributes?.email === 'chris@chrisk.com' && (
                 <button
@@ -2592,6 +2608,12 @@ export default function CribbageGame({ onLogout }) {
           isOpen={showAdminPanel}
           onClose={() => setShowAdminPanel(false)}
           userEmail={user?.attributes?.email || user?.username}
+        />
+
+        {/* Leaderboard Modal - available to all users */}
+        <Leaderboard
+          isOpen={showLeaderboard}
+          onClose={() => setShowLeaderboard(false)}
         />
 
         {/* Bug Report Modal - always available even at menu screen */}

@@ -1,6 +1,6 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.1.0-b81';
-export const RELEASE_NOTE = 'Fix Report Bug button at menu screen';
+export const APP_VERSION = 'v0.1.0-b82';
+export const RELEASE_NOTE = 'Add Leaderboard for all users';
 
 // Version check interval in seconds - increase as user base grows to reduce server load
 // Current: 60s check + 0-60s random offset = checks spread over 60-120s window
