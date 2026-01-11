@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMultiplayerSync } from '@/hooks/useMultiplayerSync';
+import { useAuth } from '@/contexts/AuthContext';
 import PlayingCard, { CutCard, PlayedCard } from '@/components/PlayingCard';
 import { GAME_PHASE } from '@/lib/multiplayer-game';
 
@@ -14,6 +15,10 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
   const [selectedCards, setSelectedCards] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Get current user for email display
+  const { user } = useAuth();
+  const userEmail = user?.attributes?.email || user?.username || '';
 
   const {
     gameState,
@@ -221,6 +226,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <span className="text-gray-400 text-sm">{userEmail}</span>
           <button
             onClick={() => setShowForfeitConfirm(true)}
             className="text-red-400 hover:text-red-300 text-sm"
