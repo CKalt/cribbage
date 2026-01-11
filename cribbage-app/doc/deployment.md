@@ -65,10 +65,11 @@ ssh -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com
 
 ### Web Access
 
-| URL | Description |
-|-----|-------------|
-| https://cribbage.chrisk.com | Production (HTTPS) |
-| http://cribbage.chrisk.com | Redirects to HTTPS |
+| URL | Description | Branch | PM2 Process |
+|-----|-------------|--------|-------------|
+| https://cribbage.chrisk.com | Production (HTTPS) | main | cribbage |
+| https://beta.cribbage.chrisk.com | Beta/Multiplayer (HTTPS) | multiplayer | cribbage-beta |
+| http://cribbage.chrisk.com | Redirects to HTTPS | - | - |
 
 ---
 
@@ -292,6 +293,33 @@ sudo tail -f /var/log/nginx/error.log
    ```
 
 **Security Note:** Always use `npm ci --ignore-scripts` to prevent malware execution from compromised packages.
+
+### Deploying to Beta
+
+The beta environment runs the `multiplayer` branch and is separate from production.
+
+**Server Path:** `/home/ec2-user/cribbage-beta/cribbage-app`
+
+**Deploy beta (one-liner):**
+```bash
+ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
+  "cd cribbage-beta && git pull && cd cribbage-app && npm run build && pm2 restart cribbage-beta"
+```
+
+**Beta Configuration:**
+
+| Property | Value |
+|----------|-------|
+| URL | https://beta.cribbage.chrisk.com |
+| Git Branch | multiplayer |
+| Server Path | ~/cribbage-beta |
+| PM2 Process | cribbage-beta |
+| Port | 3001 |
+
+**Important:**
+- Production (`cribbage.chrisk.com`) runs the `main` branch from `~/cribbage`
+- Beta (`beta.cribbage.chrisk.com`) runs the `multiplayer` branch from `~/cribbage-beta`
+- Never deploy multiplayer changes to production until ready to merge
 
 ---
 
