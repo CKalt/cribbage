@@ -4,6 +4,7 @@
  */
 
 import { createDeck, shuffleDeck } from './deck';
+import { calculateHandScore } from './scoring';
 
 /**
  * Game phases
@@ -414,4 +415,176 @@ export function getPlayableCards(gameState, playerKey) {
   const currentCount = gameState.playState.currentCount;
 
   return hand.filter(card => currentCount + Math.min(card.value, 10) <= 31);
+}
+
+/**
+ * Process a count move (hand scoring)
+ * Order: non-dealer hand, dealer hand, crib (dealer)
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - Player doing the count
+ * @returns {object} { success, newState, error, description, nextTurn, scoreChange, scoreBreakdown }
+ */
+export function processCount(gameState, playerKey) {
+  if (gameState.phase !== GAME_PHASE.COUNTING) {
+    return { success: false, error: 'Not in counting phase' };
+  }
+
+  const countingState = { ...gameState.countingState };
+  const dealer = gameState.dealer;
+  const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
+
+  // Determine what phase of counting we're in
+  let countPhase = countingState.phase;
+  if (!countPhase) {
+    countPhase = 'nonDealer';  // Non-dealer counts first
+  }
+
+  // Validate it's the correct player's turn to count
+  let expectedPlayer;
+  if (countPhase === 'nonDealer') {
+    expectedPlayer = nonDealer;
+  } else if (countPhase === 'dealer') {
+    expectedPlayer = dealer;
+  } else if (countPhase === 'crib') {
+    expectedPlayer = dealer;
+  }
+
+  if (playerKey !== expectedPlayer) {
+    return { success: false, error: `Not your turn to count. Waiting for ${expectedPlayer}` };
+  }
+
+  // Get the hand to count
+  let handToCount;
+  let isCrib = false;
+  let handLabel;
+
+  if (countPhase === 'nonDealer') {
+    handToCount = gameState[`${nonDealer}Hand`];
+    handLabel = 'hand';
+  } else if (countPhase === 'dealer') {
+    handToCount = gameState[`${dealer}Hand`];
+    handLabel = 'hand';
+  } else if (countPhase === 'crib') {
+    handToCount = gameState.crib;
+    isCrib = true;
+    handLabel = 'crib';
+  }
+
+  // Calculate score
+  const { score, breakdown } = calculateHandScore(handToCount, gameState.cutCard, isCrib);
+
+  // Record this count
+  countingState.handsScored = [
+    ...countingState.handsScored,
+    {
+      phase: countPhase,
+      player: playerKey,
+      hand: handToCount,
+      score,
+      breakdown
+    }
+  ];
+
+  // Determine next phase
+  let nextPhase;
+  let nextTurn;
+  let newGamePhase = GAME_PHASE.COUNTING;
+
+  if (countPhase === 'nonDealer') {
+    nextPhase = 'dealer';
+    nextTurn = dealer;
+  } else if (countPhase === 'dealer') {
+    nextPhase = 'crib';
+    nextTurn = dealer;  // Dealer counts crib
+  } else if (countPhase === 'crib') {
+    // All counting done - start new round or end game
+    nextPhase = null;
+    newGamePhase = GAME_PHASE.DEALING;  // Will trigger new round setup
+    nextTurn = dealer === 'player1' ? 'player2' : 'player1';  // Alternate dealer
+  }
+
+  countingState.phase = nextPhase;
+  countingState.currentCounter = nextTurn;
+
+  const description = `Counted ${handLabel}: ${score} points`;
+
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      phase: newGamePhase,
+      countingState
+    },
+    description,
+    nextTurn,
+    scoreChange: score,
+    scorePlayer: playerKey,
+    scoreBreakdown: breakdown,
+    countedHand: handToCount,
+    countPhase
+  };
+}
+
+/**
+ * Start a new round after counting is complete
+ * @param {object} gameState - Current game state after counting
+ * @param {number} player1Score - Player 1's total score
+ * @param {number} player2Score - Player 2's total score
+ * @returns {object} New game state for next round
+ */
+export function startNewRound(gameState, player1Score, player2Score) {
+  // Check for game over (121 points)
+  if (player1Score >= 121 || player2Score >= 121) {
+    return {
+      ...gameState,
+      phase: GAME_PHASE.GAME_OVER
+    };
+  }
+
+  // Alternate dealer
+  const newDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
+
+  // Create fresh game state for new round
+  const deck = shuffleDeck(createDeck());
+  const player1Hand = deck.slice(0, 6);
+  const player2Hand = deck.slice(6, 12);
+  const remainingDeck = deck.slice(12);
+
+  return {
+    phase: GAME_PHASE.DISCARDING,
+    round: gameState.round + 1,
+    dealer: newDealer,
+
+    player1Hand,
+    player2Hand,
+
+    player1Discards: [],
+    player2Discards: [],
+    crib: [],
+
+    cutCard: null,
+    remainingDeck,
+
+    playState: {
+      player1PlayHand: [],
+      player2PlayHand: [],
+      playedCards: [],
+      currentCount: 0,
+      lastPlayedBy: null,
+      player1Said: null,
+      player2Said: null,
+      roundCards: []
+    },
+
+    countingState: {
+      phase: null,
+      currentCounter: null,
+      handsScored: []
+    },
+
+    peggingPoints: {
+      player1: 0,
+      player2: 0
+    }
+  };
 }

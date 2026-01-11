@@ -440,21 +440,127 @@ export default function MultiplayerGame({ gameId, onExit }) {
           {/* Counting Phase */}
           {getCurrentPhase() === GAME_PHASE.COUNTING && (
             <div className="text-center mb-4">
-              <div className="text-white mb-2">Counting Phase</div>
-              <div className="text-gray-400">
-                {isMyTurn ? 'Your turn to count' : `Waiting for ${opponent?.username} to count...`}
-              </div>
+              <div className="text-white text-xl font-bold mb-2">Counting Phase</div>
 
-              {/* Show hand */}
-              <div className="flex justify-center gap-2 flex-wrap mt-4">
-                {getMyHand().map((card, idx) => (
-                  <PlayingCard
-                    key={`${card.rank}${card.suit}`}
-                    card={card}
-                    disabled={true}
-                  />
-                ))}
-              </div>
+              {/* Show counting sub-phase */}
+              {(() => {
+                const countPhase = gameState?.gameState?.countingState?.phase || 'nonDealer';
+                const dealer = gameState?.gameState?.dealer;
+                const isDealer = gameState?.myPlayerKey === dealer;
+                const handsScored = gameState?.gameState?.countingState?.handsScored || [];
+
+                let phaseLabel;
+                let whoseTurn;
+                if (countPhase === 'nonDealer') {
+                  phaseLabel = isDealer ? `${opponent?.username}'s Hand` : 'Your Hand';
+                  whoseTurn = !isDealer;
+                } else if (countPhase === 'dealer') {
+                  phaseLabel = isDealer ? 'Your Hand' : `${opponent?.username}'s Hand`;
+                  whoseTurn = isDealer;
+                } else if (countPhase === 'crib') {
+                  phaseLabel = 'Crib';
+                  whoseTurn = isDealer;
+                }
+
+                return (
+                  <>
+                    <div className="text-yellow-400 mb-2">
+                      Counting: {phaseLabel}
+                    </div>
+                    <div className="text-gray-400 mb-4">
+                      {isMyTurn ? 'Click "Count" to score your hand' : `Waiting for ${opponent?.username}...`}
+                    </div>
+
+                    {/* Cut card display */}
+                    {gameState?.gameState?.cutCard && (
+                      <div className="mb-4">
+                        <div className="text-gray-400 text-sm mb-1">Cut Card:</div>
+                        <div className="flex justify-center">
+                          <CutCard card={gameState.gameState.cutCard} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show hand being counted */}
+                    <div className="mb-4">
+                      <div className="text-gray-400 text-sm mb-1">
+                        {countPhase === 'crib' ? 'Crib:' : 'Hand:'}
+                      </div>
+                      <div className="flex justify-center gap-2 flex-wrap">
+                        {countPhase === 'crib' ? (
+                          // Show crib (dealer counts it)
+                          isDealer && gameState?.gameState?.crib?.map((card, idx) => (
+                            <PlayingCard
+                              key={`crib-${card.rank}${card.suit}`}
+                              card={card}
+                              disabled={true}
+                            />
+                          ))
+                        ) : (
+                          // Show the current player's hand being counted
+                          getMyHand().map((card, idx) => (
+                            <PlayingCard
+                              key={`${card.rank}${card.suit}`}
+                              card={card}
+                              disabled={true}
+                            />
+                          ))
+                        )}
+                        {countPhase === 'crib' && !isDealer && (
+                          <div className="text-gray-500 italic">Dealer is counting the crib...</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Count button */}
+                    {isMyTurn && (
+                      <Button
+                        onClick={async () => {
+                          setSubmitting(true);
+                          try {
+                            const result = await submitMove('count', {});
+                            if (!result.success) {
+                              console.error('Count failed:', result.error);
+                            }
+                          } finally {
+                            setSubmitting(false);
+                          }
+                        }}
+                        disabled={submitting}
+                        className="bg-blue-600 hover:bg-blue-700 text-lg px-6 py-2"
+                      >
+                        {submitting ? 'Counting...' : 'Count Hand'}
+                      </Button>
+                    )}
+
+                    {/* Show previously counted hands */}
+                    {handsScored.length > 0 && (
+                      <div className="mt-6 bg-gray-700 rounded-lg p-4 text-left">
+                        <div className="text-white font-bold mb-2">Scores This Round:</div>
+                        {handsScored.map((scored, idx) => {
+                          const isMyHand = scored.player === gameState?.myPlayerKey;
+                          const label = scored.phase === 'crib' ? 'Crib' :
+                                        (isMyHand ? 'Your Hand' : `${opponent?.username}'s Hand`);
+                          return (
+                            <div key={idx} className="mb-2">
+                              <div className={`font-medium ${isMyHand ? 'text-green-400' : 'text-gray-300'}`}>
+                                {label}: {scored.score} points
+                              </div>
+                              {scored.breakdown && scored.breakdown.length > 0 && (
+                                <div className="text-gray-400 text-sm ml-4">
+                                  {scored.breakdown.map((item, i) => (
+                                    <div key={i}>{item}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 

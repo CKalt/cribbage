@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
 import { getPlayerKey, GAME_STATUS } from '@/lib/multiplayer-schema';
-import { processDiscard, processCut, processPlay, GAME_PHASE } from '@/lib/multiplayer-game';
+import { processDiscard, processCut, processPlay, processCount, startNewRound, GAME_PHASE } from '@/lib/multiplayer-game';
 
 /**
  * Decode JWT token to extract user ID and email
@@ -291,18 +291,33 @@ function processMove(game, playerKey, moveType, data) {
     }
 
     case 'count': {
-      // Player counting their hand
-      const scoreForCount = data.points || 0;
+      // Player counting their hand (or crib)
+      const result = processCount(state, playerKey);
+      if (!result.success) {
+        return result;
+      }
+
+      let finalState = result.newState;
+
+      // If counting is complete (phase changed to DEALING), start new round
+      if (finalState.phase === GAME_PHASE.DEALING) {
+        // Calculate current scores (will be added by caller after this returns)
+        const currentP1Score = game.scores.player1 + (result.scorePlayer === 'player1' ? result.scoreChange : 0);
+        const currentP2Score = game.scores.player2 + (result.scorePlayer === 'player2' ? result.scoreChange : 0);
+
+        finalState = startNewRound(finalState, currentP1Score, currentP2Score);
+      }
+
       return {
         success: true,
-        newGameState: {
-          ...state,
-          [`${playerKey}Counted`]: true,
-          [`${playerKey}CountedPoints`]: scoreForCount
-        },
-        nextTurn: state[`${opponentKey}Counted`] ? playerKey : opponentKey,
-        scoreChange: scoreForCount,
-        description: `${username} counted ${scoreForCount} points`
+        newGameState: finalState,
+        nextTurn: result.nextTurn,
+        scoreChange: result.scoreChange,
+        scorePlayer: result.scorePlayer,
+        scoreBreakdown: result.scoreBreakdown,
+        countedHand: result.countedHand,
+        countPhase: result.countPhase,
+        description: `${username} ${result.description}`
       };
     }
 
