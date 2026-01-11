@@ -241,31 +241,19 @@ test('Game shows turn indicator', async ({ page }) => {
   // Wait for the game UI to fully load
   await page.waitForTimeout(1000);
 
-  // Should show either "Your Turn" or "Waiting for..."
-  const yourTurnLocator = page.locator('text=Your Turn');
-  const waitingLocator = page.locator('text=/Waiting for/');
+  // The turn indicator is a prominent element - check for either state
+  // Use .first() since "Waiting for" may appear in multiple places
+  const yourTurn = await page.locator('text=Your Turn').first().isVisible();
+  const waiting = await page.locator('text=/^Waiting for .+\\.\\.\\.$/').first().isVisible();
 
-  // Try to find either indicator with proper waiting
-  let found = false;
-  try {
-    await expect(yourTurnLocator).toBeVisible({ timeout: 3000 });
+  if (yourTurn) {
     console.log('✓ Shows "Your Turn"');
-    found = true;
-  } catch {
-    // Not "Your Turn", check for waiting
+  } else if (waiting) {
+    console.log('✓ Shows "Waiting for opponent"');
   }
 
-  if (!found) {
-    try {
-      await expect(waitingLocator).toBeVisible({ timeout: 3000 });
-      console.log('✓ Shows "Waiting for opponent"');
-      found = true;
-    } catch {
-      // Neither found
-    }
-  }
-
-  expect(found).toBeTruthy();
+  // At least one turn indicator should be visible
+  expect(yourTurn || waiting).toBeTruthy();
 });
 
 // ============================================================
