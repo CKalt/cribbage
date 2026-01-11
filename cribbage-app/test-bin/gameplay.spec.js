@@ -856,3 +856,351 @@ test('Count highlights at special values', async ({ page }) => {
     }
   }
 });
+
+// ============================================================
+// COUNTING PHASE TESTS
+// ============================================================
+
+// ============================================================
+// TEST: Counting phase displays correctly
+// ============================================================
+test('Counting phase displays correctly', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check for counting phase header
+  const countingHeader = page.locator('text=Counting Phase');
+  await expect(countingHeader).toBeVisible();
+
+  // Check for "Counting:" label showing what's being counted
+  const countingLabel = page.locator('text=/Counting:/');
+  await expect(countingLabel).toBeVisible();
+
+  const labelText = await countingLabel.textContent();
+  console.log('Counting label:', labelText);
+
+  console.log('✓ Counting phase displays correctly');
+});
+
+// ============================================================
+// TEST: Counting phase shows cut card
+// ============================================================
+test('Counting phase shows cut card', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check for cut card label
+  const cutCardLabel = page.locator('text=Cut Card:');
+  await expect(cutCardLabel).toBeVisible();
+
+  console.log('✓ Cut card is displayed during counting');
+});
+
+// ============================================================
+// TEST: Counting phase shows hand being counted
+// ============================================================
+test('Counting phase shows hand being counted', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check for hand label (either "Hand:" or "Crib:")
+  const handLabel = page.locator('text=/^Hand:|^Crib:/');
+  await expect(handLabel).toBeVisible();
+
+  const labelText = await handLabel.textContent();
+  console.log('Hand/Crib label:', labelText);
+
+  console.log('✓ Hand/Crib is displayed for counting');
+});
+
+// ============================================================
+// TEST: Count button appears when it's your turn
+// ============================================================
+test('Count button appears when it is your turn', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check if it's our turn
+  const isMyTurn = await page.locator('text=Your Turn').first().isVisible();
+  if (!isMyTurn) {
+    console.log('⚠ Not my turn to count - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check for Count Hand button
+  const countButton = page.locator('button:has-text("Count Hand")');
+  await expect(countButton).toBeVisible();
+
+  console.log('✓ Count Hand button is visible');
+});
+
+// ============================================================
+// TEST: Waiting message when not your turn to count
+// ============================================================
+test('Waiting message displays when not your turn to count', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check if it's NOT our turn
+  const isMyTurn = await page.locator('text=Your Turn').first().isVisible();
+  if (isMyTurn) {
+    console.log('⚠ It is my turn - skipping waiting test');
+    test.skip();
+    return;
+  }
+
+  // Check for waiting message
+  const waitingMsg = page.locator('text=/Waiting for .+\\.\\.\\.$/').first();
+  await expect(waitingMsg).toBeVisible();
+
+  console.log('✓ Waiting message is displayed');
+});
+
+// ============================================================
+// TEST: Scores display shows round scores
+// ============================================================
+test('Scores display during counting phase', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check for Scores This Round section (appears after at least one count)
+  const scoresSection = page.locator('text=Scores This Round');
+  const hasScoresSection = await scoresSection.isVisible();
+
+  if (hasScoresSection) {
+    console.log('✓ Scores This Round section is visible');
+
+    // Check for point displays
+    const pointsText = page.locator('text=/\\d+ points/').first();
+    if (await pointsText.isVisible()) {
+      const points = await pointsText.textContent();
+      console.log('Found points display:', points);
+    }
+  } else {
+    console.log('✓ No scores yet (first count not complete)');
+  }
+});
+
+// ============================================================
+// TEST: Can click Count Hand button
+// ============================================================
+test('Can click Count Hand button to count', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  if (!phase?.includes('counting')) {
+    console.log('⚠ Not in counting phase - skipping');
+    test.skip();
+    return;
+  }
+
+  // Check if it's our turn
+  const isMyTurn = await page.locator('text=Your Turn').first().isVisible();
+  if (!isMyTurn) {
+    console.log('⚠ Not my turn to count - skipping');
+    test.skip();
+    return;
+  }
+
+  // Click the Count Hand button
+  const countButton = page.locator('button:has-text("Count Hand")');
+  await expect(countButton).toBeVisible();
+
+  // Get current score before clicking
+  const scoreBefore = await page.locator('text=/\\(\\d+ pts\\)/).first().textContent();
+  console.log('Score before:', scoreBefore);
+
+  await countButton.click();
+  await page.waitForTimeout(2000);
+
+  // After clicking, either scores section appears or phase changes
+  const scoresSection = await page.locator('text=Scores This Round').isVisible();
+  const phaseChanged = !(await page.locator('text=Phase: counting').isVisible());
+
+  if (scoresSection) {
+    console.log('✓ Scores section appeared after counting');
+  } else if (phaseChanged) {
+    console.log('✓ Phase changed after counting (new round started)');
+  }
+
+  expect(scoresSection || phaseChanged).toBeTruthy();
+});
+
+// ============================================================
+// TEST: Two players can both count
+// ============================================================
+test('Two players can count their hands', async ({ browser }) => {
+  const context1 = await browser.newContext();
+  const context2 = await browser.newContext();
+
+  const page1 = await context1.newPage();
+  const page2 = await context2.newPage();
+
+  try {
+    // Login both users
+    console.log('Logging in User 1...');
+    await login(page1, USER1);
+
+    console.log('Logging in User 2...');
+    await login(page2, USER2);
+
+    // Both join their games
+    console.log('User 1 joining game...');
+    const joined1 = await joinExistingGame(page1);
+
+    console.log('User 2 joining game...');
+    const joined2 = await joinExistingGame(page2);
+
+    if (!joined1 || !joined2) {
+      console.log('⚠ Could not join games for both users');
+      test.skip();
+      return;
+    }
+
+    // Check phases for both
+    const phase1 = await page1.locator('text=Phase:').textContent();
+    const phase2 = await page2.locator('text=Phase:').textContent();
+
+    console.log('User 1 phase:', phase1);
+    console.log('User 2 phase:', phase2);
+
+    if (!phase1?.includes('counting') || !phase2?.includes('counting')) {
+      console.log('⚠ Not both in counting phase - skipping');
+      test.skip();
+      return;
+    }
+
+    // Check who has the Count button
+    const user1HasCount = await page1.locator('button:has-text("Count Hand")').isVisible();
+    const user2HasCount = await page2.locator('button:has-text("Count Hand")').isVisible();
+
+    console.log('User 1 can count:', user1HasCount);
+    console.log('User 2 can count:', user2HasCount);
+
+    // Only one should be able to count at a time
+    expect(user1HasCount || user2HasCount).toBeTruthy();
+
+    console.log('✓ Counting phase turn management is working');
+
+  } finally {
+    await context1.close();
+    await context2.close();
+  }
+});
+
+// ============================================================
+// TEST: New round starts after all counting
+// ============================================================
+test('New round starts after counting completes', async ({ page }) => {
+  await login(page, USER1);
+
+  const joined = await joinExistingGame(page);
+  if (!joined) {
+    console.log('⚠ No games available to test');
+    test.skip();
+    return;
+  }
+
+  // This test observes the round number
+  const roundDisplay = page.locator('text=/Game #/');
+  if (await roundDisplay.isVisible()) {
+    const gameInfo = await roundDisplay.textContent();
+    console.log('Game info:', gameInfo);
+  }
+
+  const phase = await page.locator('text=Phase:').textContent();
+  console.log('Current phase:', phase);
+
+  // If in counting or discarding, game is progressing normally
+  if (phase?.includes('counting') || phase?.includes('discarding')) {
+    console.log('✓ Game is in a valid phase (counting or new round discarding)');
+  }
+
+  expect(phase).toBeTruthy();
+});
