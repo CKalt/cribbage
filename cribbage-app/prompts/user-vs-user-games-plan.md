@@ -43,6 +43,18 @@
   - [ ] [Step 7.1: Test with two accounts](#step-71-test-with-two-accounts-👤)
   - [ ] [Step 7.2: Fix identified issues](#step-72-fix-identified-issues-🤖)
   - [ ] [Step 7.3: Deploy to production](#step-73-deploy-to-production-🤖👤)
+- [Phase 8: User Handles & Chat System](#phase-8-user-handles--chat-system)
+  - [ ] [Step 8.1: Create user handle schema](#step-81-create-user-handle-schema-🤖)
+  - [ ] [Step 8.2: Create chat message schema](#step-82-create-chat-message-schema-🤖)
+  - [ ] [Step 8.3: Create profile API endpoints](#step-83-create-profile-api-endpoints-🤖)
+  - [ ] [Step 8.4: Create chat API endpoints](#step-84-create-chat-api-endpoints-🤖)
+  - [ ] [Step 8.5: Create profile settings UI](#step-85-create-profile-settings-ui-🤖)
+  - [ ] [Step 8.6: Update leaderboard with handles](#step-86-update-leaderboard-with-handles-🤖)
+  - [ ] [Step 8.7: Create chat UI components](#step-87-create-chat-ui-components-🤖)
+  - [ ] [Step 8.8: Add chat notification system](#step-88-add-chat-notification-system-🤖)
+  - [ ] [Step 8.9: Integrate chat with game flow](#step-89-integrate-chat-with-game-flow-🤖)
+  - [ ] [Step 8.10: Handle uniqueness and migration](#step-810-handle-uniqueness-and-migration-🤖)
+  - [ ] [Step 8.11: Test chat system](#step-811-test-chat-system-👤)
 - [Future Enhancements](#future-enhancements)
 
 ---
@@ -759,21 +771,436 @@ Address bugs and issues found during testing.
 
 ---
 
+## Phase 8: User Handles & Chat System
+
+This phase adds user handles (custom usernames) and a comprehensive chat system for player communication.
+
+### Overview
+
+**User Handles:**
+- Users can create a unique handle (username) in their profile
+- Handles are displayed on the leaderboard instead of email addresses
+- Handles must be unique across all users
+- Handles can be 3-20 characters, alphanumeric with underscores
+
+**Chat System:**
+- Players can have ongoing conversations with each other
+- Chat is accessible from the leaderboard via a chat button
+- Supports both live (real-time) and offline (async) messaging
+- Conversations can be about current games or planning future games
+- Unread message indicators and notifications
+
+### Step 8.1: Create user handle schema 🤖
+
+**File**: `lib/user-profile-schema.js`
+
+```javascript
+/**
+ * User profile with handle
+ */
+export const createUserProfile = (userId, email) => ({
+  id: userId,
+  email: email,
+  handle: null,              // Unique username, set by user
+  handleSetAt: null,         // When handle was set/changed
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+
+  // Profile settings
+  settings: {
+    showOnlineStatus: true,  // Allow others to see when online
+    allowChatInvites: true,  // Allow chat from non-friends
+  }
+});
+
+/**
+ * Handle validation rules
+ */
+export const HANDLE_RULES = {
+  MIN_LENGTH: 3,
+  MAX_LENGTH: 20,
+  PATTERN: /^[a-zA-Z0-9_]+$/,  // Alphanumeric and underscores only
+  RESERVED: ['admin', 'system', 'moderator', 'cribbage', 'support']
+};
+
+export const validateHandle = (handle) => {
+  if (!handle) return { valid: false, error: 'Handle is required' };
+  if (handle.length < HANDLE_RULES.MIN_LENGTH)
+    return { valid: false, error: `Handle must be at least ${HANDLE_RULES.MIN_LENGTH} characters` };
+  if (handle.length > HANDLE_RULES.MAX_LENGTH)
+    return { valid: false, error: `Handle must be at most ${HANDLE_RULES.MAX_LENGTH} characters` };
+  if (!HANDLE_RULES.PATTERN.test(handle))
+    return { valid: false, error: 'Handle can only contain letters, numbers, and underscores' };
+  if (HANDLE_RULES.RESERVED.includes(handle.toLowerCase()))
+    return { valid: false, error: 'This handle is reserved' };
+  return { valid: true };
+};
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.2: Create chat message schema 🤖
+
+**File**: `lib/chat-schema.js`
+
+```javascript
+/**
+ * Chat conversation between two users
+ */
+export const createConversation = (conversationId, user1Id, user2Id) => ({
+  id: conversationId,
+  participants: [user1Id, user2Id],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+
+  // Last message preview
+  lastMessage: null,
+  lastMessageAt: null,
+  lastMessageBy: null,
+
+  // Unread tracking per participant
+  unreadCount: {
+    [user1Id]: 0,
+    [user2Id]: 0
+  },
+
+  // Optional link to active game
+  linkedGameId: null
+});
+
+/**
+ * Chat message
+ */
+export const createMessage = (messageId, conversationId, senderId, content) => ({
+  id: messageId,
+  conversationId: conversationId,
+  senderId: senderId,
+  content: content,
+  createdAt: new Date().toISOString(),
+
+  // Message type
+  type: 'text',  // 'text', 'game_invite', 'game_result', 'system'
+
+  // Read status per recipient
+  readBy: [senderId],  // Sender has "read" their own message
+
+  // Optional metadata
+  metadata: null  // For game_invite: { gameId }, for game_result: { winner, score }
+});
+
+/**
+ * Message content validation
+ */
+export const MESSAGE_RULES = {
+  MAX_LENGTH: 500,
+  MIN_LENGTH: 1
+};
+```
+
+**File Structure:**
+```
+data/
+  chat/
+    conversations/
+      {conversationId}.json     # Conversation metadata
+    messages/
+      {conversationId}/
+        {timestamp}-{messageId}.json  # Individual messages (sorted by timestamp)
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.3: Create profile API endpoints 🤖
+
+**File**: `app/api/profile/route.js`
+
+```javascript
+// GET /api/profile - Get current user's profile
+// PUT /api/profile - Update profile (including handle)
+```
+
+**File**: `app/api/profile/handle/check/route.js`
+
+```javascript
+// GET /api/profile/handle/check?handle=foo - Check if handle is available
+```
+
+**Functionality:**
+- Get and update user profile
+- Validate handle uniqueness before setting
+- Return error if handle is taken
+- Update all references when handle changes
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.4: Create chat API endpoints 🤖
+
+**File**: `app/api/chat/conversations/route.js`
+
+```javascript
+// GET /api/chat/conversations - List user's conversations
+// POST /api/chat/conversations - Start new conversation with user
+```
+
+**Response for GET:**
+```javascript
+{
+  success: true,
+  conversations: [
+    {
+      id: 'conv-123',
+      participant: {
+        id: 'user-456',
+        handle: 'CribbagePro',
+        email: 'player@example.com',
+        isOnline: true
+      },
+      lastMessage: 'Good game yesterday!',
+      lastMessageAt: '2026-01-10T14:30:00Z',
+      unreadCount: 2,
+      linkedGameId: 'game-789'  // If currently playing
+    }
+  ]
+}
+```
+
+**File**: `app/api/chat/conversations/[id]/route.js`
+
+```javascript
+// GET /api/chat/conversations/[id] - Get conversation with messages
+// DELETE /api/chat/conversations/[id] - Delete/archive conversation
+```
+
+**File**: `app/api/chat/conversations/[id]/messages/route.js`
+
+```javascript
+// GET /api/chat/conversations/[id]/messages - Get messages (paginated)
+// POST /api/chat/conversations/[id]/messages - Send new message
+```
+
+**File**: `app/api/chat/conversations/[id]/read/route.js`
+
+```javascript
+// POST /api/chat/conversations/[id]/read - Mark conversation as read
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.5: Create profile settings UI 🤖
+
+**File**: `components/ProfileSettings.jsx`
+
+**Features:**
+- View current profile information
+- Set/change handle with availability check
+- Real-time validation as user types
+- Preview how handle will appear
+- Privacy settings (online status visibility, chat invites)
+
+**UI Flow:**
+1. User opens menu → "Profile Settings"
+2. Current handle shown (or "Set your handle" if not set)
+3. Text input with live validation
+4. "Check Availability" button
+5. "Save" button (disabled until valid and available)
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.6: Update leaderboard with handles 🤖
+
+**File**: `components/Leaderboard.jsx`
+
+**Changes:**
+- Display handle instead of email (fall back to email prefix if no handle)
+- Add chat button next to each player
+- Show online status indicator (green dot)
+- Add "Your rank" highlight for current user
+
+**Leaderboard Row:**
+```
+Rank | Handle/Name     | Wins | Win% | Status | Chat
+#1   | CribbageMaster  | 150  | 72%  | 🟢     | 💬
+#2   | CardShark99     | 142  | 68%  | ⚫     | 💬
+#3   | You (MyHandle)  | 128  | 65%  | 🟢     | -
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.7: Create chat UI components 🤖
+
+**File**: `components/ChatPanel.jsx`
+
+**Features:**
+- Slide-out panel or modal for chat
+- Conversation list with unread indicators
+- Individual conversation view with messages
+- Message input with send button
+- Typing indicator (optional)
+- Link to game if playing against chat partner
+
+**File**: `components/ChatConversation.jsx`
+
+**Features:**
+- Message bubbles (sender on right, receiver on left)
+- Timestamps for messages
+- "Seen" indicators
+- Scroll to bottom on new message
+- Load older messages on scroll up
+
+**File**: `components/ChatBubble.jsx`
+
+**Message Bubble Styling:**
+- User's messages: Blue/right-aligned
+- Other's messages: Gray/left-aligned
+- System messages: Centered/italic
+- Game invites: Special card-style display
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.8: Add chat notification system 🤖
+
+**File**: `hooks/useChatNotifications.js`
+
+**Features:**
+- Poll for new messages when chat is closed
+- Show notification badge on chat icon
+- Show total unread count
+- Desktop notification support (optional)
+
+**Polling Strategy:**
+- When chat panel is open: Poll every 3 seconds for new messages
+- When chat panel is closed: Poll every 30 seconds for unread count
+- Use `lastCheckedAt` timestamp to minimize data transfer
+
+**File**: `components/ChatNotificationBadge.jsx`
+
+**Display:**
+- Red badge with unread count
+- Shown in header/menu area
+- Animate on new message arrival
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.9: Integrate chat with game flow 🤖
+
+**Integration Points:**
+
+1. **In-game chat button**: Quick access to chat with current opponent
+2. **Game invite via chat**: Send game invitation as chat message
+3. **Game result notification**: Automatic message when game ends
+4. **"Rematch?" button**: Sends game invite via chat
+
+**File**: `components/MultiplayerGame.jsx` (updates)
+
+Add chat integration:
+- Small chat icon in game header
+- Opens chat with current opponent
+- Unread indicator during game
+
+**Chat Message Types:**
+```javascript
+// Regular text message
+{ type: 'text', content: 'Good luck!' }
+
+// Game invitation
+{ type: 'game_invite', content: 'Want to play?', metadata: { inviteId: 'inv-123' } }
+
+// Game result
+{ type: 'game_result', content: 'Game finished!', metadata: {
+  gameId: 'game-456',
+  winner: 'user-789',
+  score: '121-98'
+}}
+
+// System message
+{ type: 'system', content: 'CribbagePro is now online' }
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.10: Handle uniqueness and migration 🤖
+
+**Handle Registry:**
+
+**File**: `data/handles/registry.json`
+```javascript
+{
+  "handles": {
+    "cribbagemaster": "user-123",  // lowercase handle -> userId
+    "cardshark99": "user-456"
+  },
+  "updatedAt": "2026-01-10T15:00:00Z"
+}
+```
+
+**Migration for Existing Users:**
+- Existing users without handles show email prefix on leaderboard
+- Prompt to set handle on first visit after feature launch
+- Handle is optional but encouraged
+
+**Uniqueness Check Flow:**
+1. User types handle
+2. Frontend validates format (length, characters)
+3. Frontend calls `/api/profile/handle/check?handle=foo`
+4. Backend checks registry.json for collision
+5. Return `{ available: true/false }`
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 8.11: Test chat system 👤
+
+**Test Scenarios:**
+1. Set handle and verify uniqueness
+2. Start conversation from leaderboard
+3. Send and receive messages (both users online)
+4. Send message while recipient offline (async)
+5. Verify unread count updates
+6. Chat during active game
+7. Send game invite via chat
+8. Verify game result appears in chat
+
+[Back to TOC](#table-of-contents)
+
+---
+
 ## Future Enhancements
 
 The following are not part of this initial plan but could be added later:
 
-1. **WebSocket Support**: Replace polling with real-time WebSocket connections
+1. **WebSocket Support**: Replace polling with real-time WebSocket connections for instant chat
 2. **Random Matchmaking**: "Play vs Random" to match with any online player
-3. **Game Chat**: In-game messaging between players
-4. **Spectator Mode**: Watch ongoing games
-5. **Tournament Mode**: Bracket-style tournaments
-6. **ELO Ranking**: Skill-based matchmaking
-7. **Push Notifications**: Notify when it's your turn (mobile)
+3. **Spectator Mode**: Watch ongoing games
+4. **Tournament Mode**: Bracket-style tournaments
+5. **ELO Ranking**: Skill-based matchmaking
+6. **Push Notifications**: Notify when it's your turn or new message (mobile)
+7. **Friends List**: Add friends for quick access
+8. **Block/Mute Users**: Prevent unwanted chat
+9. **Chat Emoji/Reactions**: Quick reactions to messages
+10. **Voice Chat**: Optional voice communication during games
 
 [Back to TOC](#table-of-contents)
 
 ---
 
 *Plan created: 2026-01-09*
-*Last updated: 2026-01-09*
+*Last updated: 2026-01-12*
