@@ -82,7 +82,7 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
     const body = await request.json();
-    const { action } = body;
+    const { action, testDeck } = body;  // testDeck is optional for testing
 
     if (!action || !['accept', 'decline'].includes(action)) {
       return NextResponse.json(
@@ -157,11 +157,11 @@ export async function POST(request, { params }) {
     // Game is now active
     game.status = GAME_STATUS.ACTIVE;
 
-    // Randomly pick dealer for first hand
-    const dealer = Math.random() < 0.5 ? 'player1' : 'player2';
+    // Randomly pick dealer for first hand (or use player1 for deterministic testing)
+    const dealer = testDeck ? 'player1' : (Math.random() < 0.5 ? 'player1' : 'player2');
 
-    // Initialize game state with dealt cards
-    game.gameState = initializeGameState(dealer);
+    // Initialize game state with dealt cards (use testDeck if provided for testing)
+    game.gameState = initializeGameState(dealer, testDeck || null);
 
     // Both players need to discard - start with player1
     game.currentTurn = 'player1';

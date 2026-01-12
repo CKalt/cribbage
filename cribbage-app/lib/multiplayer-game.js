@@ -22,11 +22,12 @@ export const GAME_PHASE = {
  * Initialize a new multiplayer game state
  * Called when an invitation is accepted and game begins
  * @param {string} dealer - 'player1' or 'player2'
+ * @param {array} testDeck - Optional pre-defined deck for testing (52 cards in specific order)
  * @returns {object} Initial game state
  */
-export function initializeGameState(dealer = 'player1') {
-  // Create and shuffle deck
-  const deck = shuffleDeck(createDeck());
+export function initializeGameState(dealer = 'player1', testDeck = null) {
+  // Use test deck if provided, otherwise create and shuffle
+  const deck = testDeck || shuffleDeck(createDeck());
 
   // Deal 6 cards to each player
   const player1Hand = deck.slice(0, 6);
@@ -530,9 +531,10 @@ export function processCount(gameState, playerKey) {
  * @param {object} gameState - Current game state after counting
  * @param {number} player1Score - Player 1's total score
  * @param {number} player2Score - Player 2's total score
+ * @param {array} testDeck - Optional pre-defined deck for testing
  * @returns {object} New game state for next round
  */
-export function startNewRound(gameState, player1Score, player2Score) {
+export function startNewRound(gameState, player1Score, player2Score, testDeck = null) {
   // Check for game over (121 points)
   if (player1Score >= 121 || player2Score >= 121) {
     return {
@@ -545,7 +547,7 @@ export function startNewRound(gameState, player1Score, player2Score) {
   const newDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
 
   // Create fresh game state for new round
-  const deck = shuffleDeck(createDeck());
+  const deck = testDeck || shuffleDeck(createDeck());
   const player1Hand = deck.slice(0, 6);
   const player2Hand = deck.slice(6, 12);
   const remainingDeck = deck.slice(12);

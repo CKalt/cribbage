@@ -9,10 +9,24 @@ const { test, expect } = require('@playwright/test');
  * 2. Forfeits/deletes any existing games between them
  * 3. Declines any pending invitations
  * 4. Creates a fresh game invitation from User 1 to User 2
- * 5. Accepts the invitation as User 2
+ * 5. Accepts the invitation as User 2 with a KNOWN DECK
  *
  * Run this before other tests to ensure a clean game state:
  *   ./run-tests.sh reset
+ *
+ * TEST DECK LAYOUT:
+ * =================
+ * Player 1 (chris+one) gets cards 0-5:  5♥, 5♦, 5♠, J♥, 4♥, 6♥
+ *   - Should discard: 4♥, 6♥ (indices 4,5) → keeps 5♥, 5♦, 5♠, J♥
+ *   - Hand value with cut: Three 5s + J (nobs) = great hand
+ *
+ * Player 2 (chris+two) gets cards 6-11: 10♣, 10♦, 5♣, K♠, Q♦, 9♥
+ *   - Should discard: K♠, Q♦ (indices 3,4 of their hand) → keeps 10♣, 10♦, 5♣, 9♥
+ *
+ * Cut card is at index 12: 5♣ (but player 2 already has it, so we use another)
+ *   - Actually cut card will be the 5♣ which gives player 1 four 5s!
+ *
+ * Remaining deck for cut starts at index 12.
  */
 
 const USER1 = {
@@ -26,6 +40,70 @@ const USER2 = {
 };
 
 const BASE_URL = 'https://beta.cribbage.chrisk.com';
+
+/**
+ * Known test deck for deterministic testing
+ * Card format: { suit: '♥'|'♦'|'♣'|'♠', rank: 'A'-'K', value: 1-10 }
+ */
+const TEST_DECK = [
+  // Player 1's hand (indices 0-5) - chris+one
+  { suit: '♥', rank: '5', value: 5 },   // 0: 5 of hearts
+  { suit: '♦', rank: '5', value: 5 },   // 1: 5 of diamonds
+  { suit: '♠', rank: '5', value: 5 },   // 2: 5 of spades
+  { suit: '♥', rank: 'J', value: 10 },  // 3: Jack of hearts (nobs if cut is ♥)
+  { suit: '♥', rank: '4', value: 4 },   // 4: 4 of hearts (discard this)
+  { suit: '♥', rank: '6', value: 6 },   // 5: 6 of hearts (discard this)
+
+  // Player 2's hand (indices 6-11) - chris+two
+  { suit: '♣', rank: '10', value: 10 }, // 6: 10 of clubs
+  { suit: '♦', rank: '10', value: 10 }, // 7: 10 of diamonds
+  { suit: '♣', rank: '6', value: 6 },   // 8: 6 of clubs
+  { suit: '♠', rank: 'K', value: 10 },  // 9: King of spades (discard)
+  { suit: '♦', rank: 'Q', value: 10 },  // 10: Queen of diamonds (discard)
+  { suit: '♥', rank: '9', value: 9 },   // 11: 9 of hearts
+
+  // Remaining deck for cut (index 12+)
+  { suit: '♣', rank: '5', value: 5 },   // 12: 5 of clubs - IDEAL CUT for player 1!
+  { suit: '♠', rank: 'A', value: 1 },   // 13
+  { suit: '♦', rank: 'A', value: 1 },   // 14
+  { suit: '♥', rank: 'A', value: 1 },   // 15
+  { suit: '♣', rank: 'A', value: 1 },   // 16
+  { suit: '♠', rank: '2', value: 2 },   // 17
+  { suit: '♦', rank: '2', value: 2 },   // 18
+  { suit: '♥', rank: '2', value: 2 },   // 19
+  { suit: '♣', rank: '2', value: 2 },   // 20
+  { suit: '♠', rank: '3', value: 3 },   // 21
+  { suit: '♦', rank: '3', value: 3 },   // 22
+  { suit: '♥', rank: '3', value: 3 },   // 23
+  { suit: '♣', rank: '3', value: 3 },   // 24
+  { suit: '♠', rank: '4', value: 4 },   // 25
+  { suit: '♦', rank: '4', value: 4 },   // 26
+  { suit: '♣', rank: '4', value: 4 },   // 27
+  { suit: '♠', rank: '6', value: 6 },   // 28
+  { suit: '♦', rank: '6', value: 6 },   // 29
+  { suit: '♠', rank: '7', value: 7 },   // 30
+  { suit: '♦', rank: '7', value: 7 },   // 31
+  { suit: '♥', rank: '7', value: 7 },   // 32
+  { suit: '♣', rank: '7', value: 7 },   // 33
+  { suit: '♠', rank: '8', value: 8 },   // 34
+  { suit: '♦', rank: '8', value: 8 },   // 35
+  { suit: '♥', rank: '8', value: 8 },   // 36
+  { suit: '♣', rank: '8', value: 8 },   // 37
+  { suit: '♠', rank: '9', value: 9 },   // 38
+  { suit: '♦', rank: '9', value: 9 },   // 39
+  { suit: '♣', rank: '9', value: 9 },   // 40
+  { suit: '♠', rank: '10', value: 10 }, // 41
+  { suit: '♥', rank: '10', value: 10 }, // 42
+  { suit: '♠', rank: 'J', value: 10 },  // 43
+  { suit: '♦', rank: 'J', value: 10 },  // 44
+  { suit: '♣', rank: 'J', value: 10 },  // 45
+  { suit: '♠', rank: 'Q', value: 10 },  // 46
+  { suit: '♥', rank: 'Q', value: 10 },  // 47
+  { suit: '♣', rank: 'Q', value: 10 },  // 48
+  { suit: '♠', rank: 'K', value: 10 },  // 49
+  { suit: '♦', rank: 'K', value: 10 },  // 50
+  { suit: '♣', rank: 'K', value: 10 },  // 51
+];
 
 /**
  * Helper: Login and get auth cookie
@@ -172,14 +250,15 @@ test('Reset game state for test users', async ({ browser }) => {
     const invitationId = inviteData.invitation?.id;
     console.log(`✓ Created invitation ${invitationId} from ${USER1.email} to ${USER2.email}`);
 
-    // ========== STEP 5: Accept invitation ==========
-    console.log('\n========== STEP 5: Accepting invitation ==========');
+    // ========== STEP 5: Accept invitation with TEST DECK ==========
+    console.log('\n========== STEP 5: Accepting invitation with TEST DECK ==========');
 
     // Wait a moment for invitation to be visible
     await page2.waitForTimeout(1000);
 
+    // Pass the TEST_DECK for deterministic card dealing
     const acceptResponse = await page2.request.post(`${BASE_URL}/api/multiplayer/invitations/${invitationId}`, {
-      data: { action: 'accept' }
+      data: { action: 'accept', testDeck: TEST_DECK }
     });
     const acceptData = await acceptResponse.json();
 
@@ -189,9 +268,10 @@ test('Reset game state for test users', async ({ browser }) => {
 
     const gameId = acceptData.gameId;
     console.log(`✓ Accepted invitation - Game ID: ${gameId}`);
+    console.log(`✓ Using TEST DECK - Player 1 has: 5♥, 5♦, 5♠, J♥, 4♥, 6♥`);
 
-    // ========== STEP 6: Verify game state ==========
-    console.log('\n========== STEP 6: Verifying game state ==========');
+    // ========== STEP 6: Verify game state and TEST DECK ==========
+    console.log('\n========== STEP 6: Verifying game state and TEST DECK ==========');
 
     const gameResponse = await page1.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
     const gameData = await gameResponse.json();
@@ -202,22 +282,38 @@ test('Reset game state for test users', async ({ browser }) => {
 
     const phase = gameData.game?.gameState?.phase;
     const dealer = gameData.game?.gameState?.dealer;
-    const player1Hand = gameData.game?.gameState?.player1Hand?.length || 0;
+    const p1Hand = gameData.game?.gameState?.player1Hand || [];
+    const p2Hand = gameData.game?.gameState?.player2Hand || [];
 
     console.log(`  Game ID: ${gameId}`);
     console.log(`  Phase: ${phase}`);
-    console.log(`  Dealer: ${dealer}`);
-    console.log(`  Player 1 hand: ${player1Hand} cards`);
+    console.log(`  Dealer: ${dealer} (always player1 with test deck)`);
+    console.log(`  Player 1 hand: ${p1Hand.map(c => c.rank + c.suit).join(', ')}`);
+    console.log(`  Player 2 hand: ${p2Hand.map(c => c.rank + c.suit).join(', ')}`);
 
+    // Verify phase and hand sizes
     expect(phase).toBe('discarding');
-    expect(player1Hand).toBe(6);
+    expect(p1Hand.length).toBe(6);
+    expect(p2Hand.length).toBe(6);
+
+    // Verify TEST DECK was used - Player 1 should have 5♥ as first card
+    expect(p1Hand[0].rank).toBe('5');
+    expect(p1Hand[0].suit).toBe('♥');
+    console.log(`  ✓ TEST DECK verified - Player 1's first card is 5♥`);
+
+    // Verify dealer is player1 (test mode always uses player1 as dealer)
+    expect(dealer).toBe('player1');
+    console.log(`  ✓ Dealer is player1 (as expected in test mode)`);
 
     console.log('\n========================================');
-    console.log('✓ RESET COMPLETE - Fresh game ready!');
+    console.log('✓ RESET COMPLETE - Fresh game with TEST DECK ready!');
     console.log('========================================');
     console.log(`  Game ID: ${gameId}`);
     console.log(`  Phase: discarding`);
-    console.log(`  Both players have 6 cards`);
+    console.log(`  Dealer: player1 (chris+one)`);
+    console.log(`  Player 1 (chris+one): 5♥, 5♦, 5♠, J♥, 4♥, 6♥`);
+    console.log(`  Player 2 (chris+two): 10♣, 10♦, 6♣, K♠, Q♦, 9♥`);
+    console.log(`  Cut card (after cut): 5♣`);
     console.log('========================================\n');
 
   } finally {
