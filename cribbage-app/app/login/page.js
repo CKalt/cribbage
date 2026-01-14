@@ -8,7 +8,6 @@ import { userPool } from '@/lib/cognito';
 import { useAuth } from '@/contexts/AuthContext';
 import { setCookie } from 'nookies';
 import PasswordInput from '@/components/PasswordInput';
-import VersionNotification from '@/components/VersionNotification';
 import { APP_VERSION } from '@/lib/version';
 
 export default function Login() {
@@ -72,7 +71,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-green-900">
-      <VersionNotification />
       <div className="w-96 p-10 bg-green-800 rounded-lg shadow-xl border border-green-700">
         <h1 className="text-2xl font-bold text-center mb-6 text-white">Login</h1>
         <form onSubmit={login} className="flex flex-col">

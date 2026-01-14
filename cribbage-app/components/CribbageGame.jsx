@@ -34,7 +34,7 @@ import ActionButtons from './ActionButtons';
 import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
-import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS } from '@/lib/version';
+import { APP_VERSION } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
 
@@ -53,9 +53,6 @@ export default function CribbageGame({ onLogout }) {
   const [showUnreadNotification, setShowUnreadNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-
-  // Version check state
-  const [newVersionAvailable, setNewVersionAvailable] = useState(null); // { version, releaseNote }
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -293,56 +290,6 @@ export default function CribbageGame({ onLogout }) {
       setShowUnreadNotification(true);
     }
   }, [unreadBugReports]);
-
-  // Check for new version on load and periodically
-  useEffect(() => {
-    const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
-    const RELEASE_NOTES_SEEN_KEY = 'cribbage_release_notes_seen';
-
-    const checkVersion = async () => {
-      try {
-        const response = await fetch('/api/version');
-        if (response.ok) {
-          const data = await response.json();
-          const lastSeenVersion = localStorage.getItem(RELEASE_NOTES_SEEN_KEY);
-
-          // Debug: show what's happening
-          console.log('Version check:', {
-            serverVersion: data.version,
-            clientVersion: APP_VERSION,
-            lastSeenVersion,
-            hasReleaseNote: !!data.releaseNote
-          });
-
-          // If server has a newer version than client, show upgrade prompt
-          if (data.version && data.version !== APP_VERSION) {
-            console.log('Showing NEW VERSION AVAILABLE modal');
-            setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
-          }
-          // If versions match but user hasn't seen this version's release notes, show "What's New"
-          else if (data.releaseNote && lastSeenVersion !== APP_VERSION) {
-            console.log('Showing WHATS NEW modal');
-            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
-          }
-        }
-      } catch (error) {
-        console.error('Version check failed:', error);
-      }
-    };
-
-    // Check immediately on page load
-    checkVersion();
-
-    // Then check periodically with randomized offset to spread server load
-    const interval = setInterval(() => {
-      const randomOffset = Math.random() * intervalMs;
-      setTimeout(checkVersion, randomOffset);
-    }, intervalMs);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -2528,49 +2475,6 @@ export default function CribbageGame({ onLogout }) {
                         >
                           Yes, Forfeit
                         </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* New Version Available Modal */}
-                {newVersionAvailable && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-blue-500 max-h-[80vh] overflow-y-auto">
-                      <h2 className="text-xl font-bold text-blue-400 mb-2">
-                        {newVersionAvailable.isNewLoad ? "What's New!" : 'New Version Available!'}
-                      </h2>
-                      <p className="text-white font-mono text-sm mb-3 bg-gray-700 px-2 py-1 rounded inline-block">{newVersionAvailable.version}</p>
-                      <div className="text-gray-300 text-sm mb-4 whitespace-pre-line leading-relaxed">
-                        {newVersionAvailable.releaseNote}
-                      </div>
-                      <div className="flex justify-end gap-3 pt-2 border-t border-gray-700">
-                        {newVersionAvailable.isNewLoad ? (
-                          <Button
-                            onClick={() => {
-                              localStorage.setItem('cribbage_release_notes_seen', APP_VERSION);
-                              setNewVersionAvailable(null);
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            Got It!
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              onClick={() => setNewVersionAvailable(null)}
-                              className="bg-gray-600 hover:bg-gray-700"
-                            >
-                              Later
-                            </Button>
-                            <Button
-                              onClick={() => window.location.reload()}
-                              className="bg-blue-600 hover:bg-blue-700"
-                            >
-                              Upgrade Now
-                            </Button>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>
