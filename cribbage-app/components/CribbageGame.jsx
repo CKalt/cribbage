@@ -294,32 +294,24 @@ export default function CribbageGame({ onLogout }) {
     }
   }, [unreadBugReports]);
 
-  // Check for new version periodically AND show release notes on fresh load if version changed
+  // Check for new version on load and periodically
   useEffect(() => {
     const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
-    const LAST_SEEN_VERSION_KEY = 'cribbage_last_seen_version';
-
-    // Check if user has seen this version's release notes
-    const lastSeenVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
-    if (lastSeenVersion !== APP_VERSION) {
-      // Fetch release note from server to show on fresh load
-      fetch('/api/version')
-        .then(res => res.json())
-        .then(data => {
-          if (data.releaseNote) {
-            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
-          }
-        })
-        .catch(() => {});
-    }
+    const SHOW_RELEASE_NOTES_KEY = 'cribbage_show_release_notes';
 
     const checkVersion = async () => {
       try {
         const response = await fetch('/api/version');
         if (response.ok) {
           const data = await response.json();
+          // Check if server has a newer version than what we're running
           if (data.version && data.version !== APP_VERSION) {
             setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
+          }
+          // Check if we should show "What's New" after an upgrade
+          else if (data.version === APP_VERSION && localStorage.getItem(SHOW_RELEASE_NOTES_KEY) === 'true') {
+            localStorage.removeItem(SHOW_RELEASE_NOTES_KEY);
+            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
           }
         }
       } catch (error) {
@@ -327,18 +319,16 @@ export default function CribbageGame({ onLogout }) {
       }
     };
 
-    // Initial check after random delay to spread load on page loads
-    const initialDelay = Math.random() * intervalMs;
-    const initialTimeout = setTimeout(checkVersion, initialDelay);
+    // Check immediately on load (no delay)
+    checkVersion();
 
-    // Then check periodically with randomized offset
+    // Then check periodically with randomized offset to spread server load
     const interval = setInterval(() => {
       const randomOffset = Math.random() * intervalMs;
       setTimeout(checkVersion, randomOffset);
     }, intervalMs);
 
     return () => {
-      clearTimeout(initialTimeout);
       clearInterval(interval);
     };
   }, []);
@@ -2546,10 +2536,7 @@ export default function CribbageGame({ onLogout }) {
                       <div className="flex justify-end gap-3 pt-2 border-t border-gray-700">
                         {newVersionAvailable.isNewLoad ? (
                           <Button
-                            onClick={() => {
-                              localStorage.setItem('cribbage_last_seen_version', APP_VERSION);
-                              setNewVersionAvailable(null);
-                            }}
+                            onClick={() => setNewVersionAvailable(null)}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
                             Got It!
@@ -2557,17 +2544,15 @@ export default function CribbageGame({ onLogout }) {
                         ) : (
                           <>
                             <Button
-                              onClick={() => {
-                                localStorage.setItem('cribbage_last_seen_version', newVersionAvailable.version);
-                                setNewVersionAvailable(null);
-                              }}
+                              onClick={() => setNewVersionAvailable(null)}
                               className="bg-gray-600 hover:bg-gray-700"
                             >
                               Later
                             </Button>
                             <Button
                               onClick={() => {
-                                localStorage.setItem('cribbage_last_seen_version', newVersionAvailable.version);
+                                // Set flag so "What's New" shows after reload
+                                localStorage.setItem('cribbage_show_release_notes', 'true');
                                 window.location.reload();
                               }}
                               className="bg-blue-600 hover:bg-blue-700"
