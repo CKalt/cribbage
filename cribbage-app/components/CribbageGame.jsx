@@ -304,20 +304,29 @@ export default function CribbageGame({ onLogout }) {
         const response = await fetch('/api/version');
         if (response.ok) {
           const data = await response.json();
+          const lastSeenVersion = localStorage.getItem(RELEASE_NOTES_SEEN_KEY);
+
+          // Debug: show what's happening
+          console.log('Version check:', {
+            serverVersion: data.version,
+            clientVersion: APP_VERSION,
+            lastSeenVersion,
+            hasReleaseNote: !!data.releaseNote
+          });
+
           // If server has a newer version than client, show upgrade prompt
           if (data.version && data.version !== APP_VERSION) {
+            console.log('Showing NEW VERSION AVAILABLE modal');
             setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
           }
           // If versions match but user hasn't seen this version's release notes, show "What's New"
-          else if (data.releaseNote) {
-            const lastSeenVersion = localStorage.getItem(RELEASE_NOTES_SEEN_KEY);
-            if (lastSeenVersion !== APP_VERSION) {
-              setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
-            }
+          else if (data.releaseNote && lastSeenVersion !== APP_VERSION) {
+            console.log('Showing WHATS NEW modal');
+            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
           }
         }
       } catch (error) {
-        // Silently ignore version check failures
+        console.error('Version check failed:', error);
       }
     };
 
