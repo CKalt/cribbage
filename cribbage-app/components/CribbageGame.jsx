@@ -297,21 +297,34 @@ export default function CribbageGame({ onLogout }) {
   // Check for new version on load and periodically
   useEffect(() => {
     const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
-    const SHOW_RELEASE_NOTES_KEY = 'cribbage_show_release_notes';
+    const LAST_SEEN_VERSION_KEY = 'cribbage_last_seen_version';
 
+    // Check version immediately on load
+    fetch('/api/version')
+      .then(res => res.json())
+      .then(data => {
+        // If server has a newer version, show upgrade prompt
+        if (data.version && data.version !== APP_VERSION) {
+          setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
+        }
+        // Otherwise, if user hasn't seen this version's release notes, show "What's New"
+        else if (data.releaseNote) {
+          const lastSeenVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+          if (lastSeenVersion !== APP_VERSION) {
+            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
+          }
+        }
+      })
+      .catch(() => {});
+
+    // Periodically check if server has a newer version
     const checkVersion = async () => {
       try {
         const response = await fetch('/api/version');
         if (response.ok) {
           const data = await response.json();
-          // Check if server has a newer version than what we're running
           if (data.version && data.version !== APP_VERSION) {
             setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
-          }
-          // Check if we should show "What's New" after an upgrade
-          else if (data.version === APP_VERSION && localStorage.getItem(SHOW_RELEASE_NOTES_KEY) === 'true') {
-            localStorage.removeItem(SHOW_RELEASE_NOTES_KEY);
-            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
           }
         }
       } catch (error) {
@@ -319,10 +332,7 @@ export default function CribbageGame({ onLogout }) {
       }
     };
 
-    // Check immediately on load (no delay)
-    checkVersion();
-
-    // Then check periodically with randomized offset to spread server load
+    // Check periodically with randomized offset to spread server load
     const interval = setInterval(() => {
       const randomOffset = Math.random() * intervalMs;
       setTimeout(checkVersion, randomOffset);
@@ -2536,7 +2546,10 @@ export default function CribbageGame({ onLogout }) {
                       <div className="flex justify-end gap-3 pt-2 border-t border-gray-700">
                         {newVersionAvailable.isNewLoad ? (
                           <Button
-                            onClick={() => setNewVersionAvailable(null)}
+                            onClick={() => {
+                              localStorage.setItem('cribbage_last_seen_version', APP_VERSION);
+                              setNewVersionAvailable(null);
+                            }}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
                             Got It!
@@ -2550,11 +2563,7 @@ export default function CribbageGame({ onLogout }) {
                               Later
                             </Button>
                             <Button
-                              onClick={() => {
-                                // Set flag so "What's New" shows after reload
-                                localStorage.setItem('cribbage_show_release_notes', 'true');
-                                window.location.reload();
-                              }}
+                              onClick={() => window.location.reload()}
                               className="bg-blue-600 hover:bg-blue-700"
                             >
                               Upgrade Now
