@@ -297,25 +297,32 @@ export default function CribbageGame({ onLogout }) {
   // Check for new version on load and periodically
   useEffect(() => {
     const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
-    const LAST_SEEN_VERSION_KEY = 'cribbage_last_seen_version';
+    const LAST_SEEN_VERSION_KEY = 'cribbage_release_notes_seen';
 
     // Check version immediately on load
     fetch('/api/version')
       .then(res => res.json())
       .then(data => {
+        console.log('Version check:', { serverVersion: data.version, clientVersion: APP_VERSION, releaseNote: !!data.releaseNote });
+
         // If server has a newer version, show upgrade prompt
         if (data.version && data.version !== APP_VERSION) {
+          console.log('Showing upgrade prompt - server has newer version');
           setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
         }
-        // Otherwise, if user hasn't seen this version's release notes, show "What's New"
+        // Otherwise, show "What's New" if user hasn't seen this version's release notes
         else if (data.releaseNote) {
           const lastSeenVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+          console.log('Checking What\'s New:', { lastSeenVersion, currentVersion: APP_VERSION, shouldShow: lastSeenVersion !== APP_VERSION });
           if (lastSeenVersion !== APP_VERSION) {
+            console.log('Showing What\'s New modal');
             setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
           }
         }
       })
-      .catch(() => {});
+      .catch(err => {
+        console.error('Version check failed:', err);
+      });
 
     // Periodically check if server has a newer version
     const checkVersion = async () => {
@@ -2547,7 +2554,7 @@ export default function CribbageGame({ onLogout }) {
                         {newVersionAvailable.isNewLoad ? (
                           <Button
                             onClick={() => {
-                              localStorage.setItem('cribbage_last_seen_version', APP_VERSION);
+                              localStorage.setItem('cribbage_release_notes_seen', APP_VERSION);
                               setNewVersionAvailable(null);
                             }}
                             className="bg-blue-600 hover:bg-blue-700"
