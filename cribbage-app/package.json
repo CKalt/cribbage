@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:prod": "PLAYWRIGHT_BASE_URL=https://cribbage.chrisk.com playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "3.940.0",
@@ -22,6 +25,7 @@
     "tailwind-merge": "3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.57.0",
     "@tailwindcss/postcss": "4.1.17",
     "eslint": "9.39.1",
     "eslint-config-next": "16.1.0",
