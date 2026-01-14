@@ -294,9 +294,24 @@ export default function CribbageGame({ onLogout }) {
     }
   }, [unreadBugReports]);
 
-  // Check for new version periodically (randomized to spread server load)
+  // Check for new version periodically AND show release notes on fresh load if version changed
   useEffect(() => {
     const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
+    const LAST_SEEN_VERSION_KEY = 'cribbage_last_seen_version';
+
+    // Check if user has seen this version's release notes
+    const lastSeenVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+    if (lastSeenVersion !== APP_VERSION) {
+      // Fetch release note from server to show on fresh load
+      fetch('/api/version')
+        .then(res => res.json())
+        .then(data => {
+          if (data.releaseNote) {
+            setNewVersionAvailable({ version: APP_VERSION, releaseNote: data.releaseNote, isNewLoad: true });
+          }
+        })
+        .catch(() => {});
+    }
 
     const checkVersion = async () => {
       try {
@@ -2521,24 +2536,46 @@ export default function CribbageGame({ onLogout }) {
                 {newVersionAvailable && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-blue-500 max-h-[80vh] overflow-y-auto">
-                      <h2 className="text-xl font-bold text-blue-400 mb-2">New Version Available!</h2>
+                      <h2 className="text-xl font-bold text-blue-400 mb-2">
+                        {newVersionAvailable.isNewLoad ? "What's New!" : 'New Version Available!'}
+                      </h2>
                       <p className="text-white font-mono text-sm mb-3 bg-gray-700 px-2 py-1 rounded inline-block">{newVersionAvailable.version}</p>
                       <div className="text-gray-300 text-sm mb-4 whitespace-pre-line leading-relaxed">
                         {newVersionAvailable.releaseNote}
                       </div>
                       <div className="flex justify-end gap-3 pt-2 border-t border-gray-700">
-                        <Button
-                          onClick={() => setNewVersionAvailable(null)}
-                          className="bg-gray-600 hover:bg-gray-700"
-                        >
-                          Later
-                        </Button>
-                        <Button
-                          onClick={() => window.location.reload()}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Upgrade Now
-                        </Button>
+                        {newVersionAvailable.isNewLoad ? (
+                          <Button
+                            onClick={() => {
+                              localStorage.setItem('cribbage_last_seen_version', APP_VERSION);
+                              setNewVersionAvailable(null);
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Got It!
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() => {
+                                localStorage.setItem('cribbage_last_seen_version', newVersionAvailable.version);
+                                setNewVersionAvailable(null);
+                              }}
+                              className="bg-gray-600 hover:bg-gray-700"
+                            >
+                              Later
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                localStorage.setItem('cribbage_last_seen_version', newVersionAvailable.version);
+                                window.location.reload();
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              Upgrade Now
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
