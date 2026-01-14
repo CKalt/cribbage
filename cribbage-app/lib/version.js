@@ -1,5 +1,5 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.1.0-b89';
+export const APP_VERSION = 'v0.1.0-b90';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 This update improves scoring notifications - you'll now see clearer indicators when points are scored during pegging.
