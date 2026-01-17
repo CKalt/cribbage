@@ -76,21 +76,45 @@ export default function ActionButtons({
     );
   }
 
-  // Accept pending score - show reason prominently
+  // Accept pending score - show reason prominently with strong visual indicator
   if (type === 'accept_score' && pendingScore) {
     // Extract the scoring reason from the full reason string
     const reasonText = pendingScore.reason?.replace(/^(You played |Computer plays )[^-]+ - /, '') || '';
+    const isPlayerScore = pendingScore.player === 'player';
+
     return (
-      <div className="flex flex-col items-center gap-2">
-        <div className="text-yellow-300 text-lg font-bold animate-pulse">
-          {pendingScore.player === 'player' ? 'You scored!' : 'Computer scored!'} {reasonText}
+      <div className="flex flex-col items-center gap-3">
+        {/* Prominent banner */}
+        <div className={`
+          w-full py-2 px-4 rounded-lg text-center
+          ${isPlayerScore ? 'bg-green-600/30 border-2 border-green-500' : 'bg-blue-600/30 border-2 border-blue-500'}
+          animate-pulse
+        `}>
+          <div className="text-xl font-bold text-white">
+            {isPlayerScore ? '🎉 You scored!' : '💻 Computer scored!'}
+          </div>
+          <div className={`text-lg font-semibold ${isPlayerScore ? 'text-green-300' : 'text-blue-300'}`}>
+            +{pendingScore.points} points - {reasonText}
+          </div>
         </div>
+
+        {/* Prominent Accept button */}
         <Button
           onClick={handlers.acceptScoreAndContinue}
-          className="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 text-lg font-bold"
+          className={`
+            px-8 py-4 text-xl font-bold rounded-lg
+            ${isPlayerScore ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}
+            shadow-lg transform hover:scale-105 transition-all
+            border-2 border-white/30
+          `}
         >
-          Accept {pendingScore.points} Points
+          ✓ Tap to Accept {pendingScore.points} Points
         </Button>
+
+        {/* Helper text */}
+        <div className="text-sm text-gray-400 animate-bounce">
+          👆 Tap the button above to continue
+        </div>
       </div>
     );
   }

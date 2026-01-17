@@ -36,7 +36,7 @@ import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
 import GameLobby from './GameLobby';
 import MultiplayerGame from './MultiplayerGame';
-import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS } from '@/lib/version';
+import { APP_VERSION } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
 
@@ -57,9 +57,6 @@ export default function CribbageGame({ onLogout }) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showGameLobby, setShowGameLobby] = useState(false);
   const [activeMultiplayerGameId, setActiveMultiplayerGameId] = useState(null);
-
-  // Version check state
-  const [newVersionAvailable, setNewVersionAvailable] = useState(null); // { version, releaseNote }
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -297,40 +294,6 @@ export default function CribbageGame({ onLogout }) {
       setShowUnreadNotification(true);
     }
   }, [unreadBugReports]);
-
-  // Check for new version periodically (randomized to spread server load)
-  useEffect(() => {
-    const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
-
-    const checkVersion = async () => {
-      try {
-        const response = await fetch('/api/version');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.version && data.version !== APP_VERSION) {
-            setNewVersionAvailable({ version: data.version, releaseNote: data.releaseNote });
-          }
-        }
-      } catch (error) {
-        // Silently ignore version check failures
-      }
-    };
-
-    // Initial check after random delay to spread load on page loads
-    const initialDelay = Math.random() * intervalMs;
-    const initialTimeout = setTimeout(checkVersion, initialDelay);
-
-    // Then check periodically with randomized offset
-    const interval = setInterval(() => {
-      const randomOffset = Math.random() * intervalMs;
-      setTimeout(checkVersion, randomOffset);
-    }, intervalMs);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, []);
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -2529,31 +2492,6 @@ export default function CribbageGame({ onLogout }) {
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Yes, Forfeit
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* New Version Available Modal */}
-                {newVersionAvailable && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl border border-blue-500">
-                      <h2 className="text-xl font-bold text-blue-400 mb-2">New Version Available</h2>
-                      <p className="text-white font-mono text-sm mb-2">{newVersionAvailable.version}</p>
-                      <p className="text-gray-300 text-sm mb-4">{newVersionAvailable.releaseNote}</p>
-                      <div className="flex justify-end gap-3">
-                        <Button
-                          onClick={() => setNewVersionAvailable(null)}
-                          className="bg-gray-600 hover:bg-gray-700"
-                        >
-                          Later
-                        </Button>
-                        <Button
-                          onClick={() => window.location.reload()}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Upgrade Now
                         </Button>
                       </div>
                     </div>

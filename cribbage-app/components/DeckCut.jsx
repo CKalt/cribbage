@@ -2,7 +2,7 @@
 
 // DeckCut Component - Visual deck cutting experience
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 /**
  * Visual deck that player can cut by tapping
@@ -22,6 +22,14 @@ export default function DeckCut({
   const [cutPosition, setCutPosition] = useState(null); // 0-1 representing where user tapped
   const [isAnimating, setIsAnimating] = useState(false);
   const deckRef = useRef(null);
+
+  // Reset internal state when revealedCard is cleared (e.g., for re-cutting after tie)
+  useEffect(() => {
+    if (revealedCard === null && !showCutAnimation) {
+      setCutPosition(null);
+      setIsAnimating(false);
+    }
+  }, [revealedCard, showCutAnimation]);
 
   // For externally-triggered animations (e.g., computer's cut), sync state with prop
   const showAnimation = isAnimating || showCutAnimation;
