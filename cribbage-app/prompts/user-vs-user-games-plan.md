@@ -55,6 +55,15 @@
   - [ ] [Step 8.9: Integrate chat with game flow](#step-89-integrate-chat-with-game-flow-🤖)
   - [ ] [Step 8.10: Handle uniqueness and migration](#step-810-handle-uniqueness-and-migration-🤖)
   - [ ] [Step 8.11: Test chat system](#step-811-test-chat-system-👤)
+- [Phase 9: Multi-Game Dashboard & Notifications](#phase-9-multi-game-dashboard--notifications)
+  - [ ] [Step 9.1: Create unified game dashboard](#step-91-create-unified-game-dashboard-🤖)
+  - [ ] [Step 9.2: Add move notification system](#step-92-add-move-notification-system-🤖)
+  - [ ] [Step 9.3: Create game switching UI](#step-93-create-game-switching-ui-🤖)
+  - [ ] [Step 9.4: Add online/offline status management](#step-94-add-onlineoffline-status-management-🤖)
+  - [ ] [Step 9.5: Integrate computer games in dashboard](#step-95-integrate-computer-games-in-dashboard-🤖)
+  - [ ] [Step 9.6: Create notification preferences UI](#step-96-create-notification-preferences-ui-🤖)
+  - [ ] [Step 9.7: Add push notification support](#step-97-add-push-notification-support-🤖)
+  - [ ] [Step 9.8: Test multi-game scenarios](#step-98-test-multi-game-scenarios-👤)
 - [Future Enhancements](#future-enhancements)
 
 ---
@@ -1185,6 +1194,539 @@ Add chat integration:
 
 ---
 
+## Phase 9: Multi-Game Dashboard & Notifications
+
+This phase creates a comprehensive dashboard for managing multiple concurrent games with robust notification support for asynchronous play.
+
+### Overview
+
+**Problem Solved:**
+- Players may have several games in progress simultaneously (e.g., 3 games with different friends + 1 vs computer)
+- When playing asynchronously, players need clear notifications about opponent moves
+- Easy switching between games without losing context
+- Mix of online (real-time) and offline (async) games
+
+**Key Features:**
+1. **Unified Game Dashboard**: Central hub showing all active games (multiplayer + computer)
+2. **Move Notifications**: "Your opponent made a move at [time] and awaits your turn"
+3. **Chat Integration**: Per-game chat with new message indicators
+4. **Smart Game Switching**: Quick navigation between games with context preservation
+5. **Online/Offline Status**: Know when opponents are available for real-time play
+
+### Step 9.1: Create unified game dashboard 🤖
+
+**File**: `components/GameDashboard.jsx`
+
+**Features:**
+- Central hub accessible from main menu
+- Shows ALL active games in one view:
+  - Multiplayer games (with different opponents)
+  - Computer game (preserves single-player features)
+- Clear visual distinction between game types
+- Sort by: Games waiting for your turn first, then by last activity
+
+**Dashboard Layout:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  🎮 Your Games                                    [+ New]   │
+├─────────────────────────────────────────────────────────────┤
+│  YOUR TURN (2)                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ 🟢 vs CribbagePro    Score: 89-76    ⏰ 2 min ago      ││
+│  │     "Played 7♠ for 15 (2 pts)"         [Chat 💬2] [Play]││
+│  ├─────────────────────────────────────────────────────────┤│
+│  │ 🤖 vs Computer       Score: 45-52    ⏰ 1 day ago       ││
+│  │     Your turn to discard               [Resume]         ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                             │
+│  WAITING FOR OPPONENT (1)                                   │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ ⚫ vs CardShark99    Score: 102-98   ⏰ 3 hrs ago       ││
+│  │     Waiting for opponent...            [Chat 💬] [View] ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                             │
+│  COMPLETED GAMES                          [Show History]    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**API Endpoint**: `GET /api/dashboard/games`
+
+**Response:**
+```javascript
+{
+  success: true,
+  games: {
+    yourTurn: [
+      {
+        id: 'game-123',
+        type: 'multiplayer',  // or 'computer'
+        opponent: { handle: 'CribbagePro', isOnline: true },
+        score: { you: 89, opponent: 76 },
+        lastMove: {
+          by: 'opponent',
+          description: 'Played 7♠ for 15 (2 pts)',
+          timestamp: '2026-01-10T14:30:00Z'
+        },
+        unreadChat: 2,
+        phase: 'pegging'  // 'dealing', 'discarding', 'pegging', 'counting'
+      }
+    ],
+    waitingForOpponent: [...],
+    recentlyCompleted: [...]
+  },
+  totalUnreadMessages: 5
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.2: Add move notification system 🤖
+
+**File**: `lib/move-notifications.js`
+
+**Move Notification Schema:**
+```javascript
+export const createMoveNotification = (gameId, playerId, move) => ({
+  id: generateId(),
+  gameId: gameId,
+  forPlayerId: playerId,  // Recipient
+
+  type: 'move',  // 'move', 'game_start', 'game_end', 'reminder'
+
+  // Human-readable move description
+  title: 'Your opponent made a move',
+  description: `${move.opponentHandle} ${move.description}`,
+  // Examples:
+  // "CribbagePro played 7♠ for 15 (2 points)"
+  // "CribbagePro discarded to crib"
+  // "CribbagePro said 'Go'"
+  // "CribbagePro counted hand for 12 points"
+
+  timestamp: new Date().toISOString(),
+  read: false,
+
+  // Action buttons
+  actions: [
+    { label: 'Play Now', action: 'open_game', gameId: gameId },
+    { label: 'Dismiss', action: 'dismiss' }
+  ]
+});
+```
+
+**File**: `app/api/notifications/route.js`
+
+```javascript
+// GET /api/notifications - Get unread notifications
+// POST /api/notifications/read - Mark notifications as read
+// POST /api/notifications/read-all - Mark all as read
+```
+
+**Response for GET:**
+```javascript
+{
+  success: true,
+  notifications: [
+    {
+      id: 'notif-123',
+      gameId: 'game-456',
+      type: 'move',
+      title: 'Your opponent made a move',
+      description: 'CribbagePro played 7♠ for 15 (2 points)',
+      timestamp: '2026-01-10T14:30:00Z',
+      read: false,
+      opponent: { handle: 'CribbagePro', isOnline: true }
+    }
+  ],
+  unreadCount: 3
+}
+```
+
+**Notification Generation:**
+When a move is made in `app/api/multiplayer/games/[gameId]/move/route.js`:
+1. Save move to game state
+2. Create notification for opponent
+3. Save to `data/notifications/{opponentId}/` directory
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.3: Create game switching UI 🤖
+
+**File**: `components/GameSwitcher.jsx`
+
+**Features:**
+- Floating action button or sidebar showing active games
+- Quick-switch without leaving current screen
+- Visual badges for games needing attention
+- Preserve game context when switching
+
+**Floating Game Switcher (Bottom-Right):**
+```
+┌──────────────────────────┐
+│   📋 3 Active Games      │
+├──────────────────────────┤
+│ 🟢 CribbagePro ⚡YOUR TURN│
+│ ⚫ CardShark99   waiting  │
+│ 🤖 Computer    ⚡YOUR TURN│
+├──────────────────────────┤
+│ [Open Dashboard]         │
+└──────────────────────────┘
+```
+
+**File**: `hooks/useGameSwitcher.js`
+
+```javascript
+export const useGameSwitcher = () => {
+  const [currentGameId, setCurrentGameId] = useState(null);
+  const [gameStack, setGameStack] = useState([]);  // For back navigation
+
+  const switchToGame = (gameId) => {
+    // Save current game context
+    if (currentGameId) {
+      setGameStack(prev => [...prev, currentGameId]);
+    }
+    setCurrentGameId(gameId);
+  };
+
+  const goBack = () => {
+    const prevGame = gameStack[gameStack.length - 1];
+    setGameStack(prev => prev.slice(0, -1));
+    setCurrentGameId(prevGame);
+  };
+
+  return { currentGameId, switchToGame, goBack, gameStack };
+};
+```
+
+**Context Preservation:**
+- When switching away from a game, save scroll position
+- When switching away from a game mid-action, show confirmation
+- When returning to a game, restore to exact state
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.4: Add online/offline status management 🤖
+
+**File**: `lib/presence.js`
+
+**Presence System:**
+```javascript
+export const PRESENCE_STATUS = {
+  ONLINE: 'online',           // Active in last 2 minutes
+  AWAY: 'away',               // Active in last 15 minutes
+  OFFLINE: 'offline',         // No activity for 15+ minutes
+  IN_GAME: 'in_game'          // Currently playing (specific game)
+};
+
+export const updatePresence = (userId, status, gameId = null) => ({
+  userId: userId,
+  status: status,
+  currentGameId: gameId,      // Which game they're currently viewing
+  lastSeen: new Date().toISOString(),
+  lastActivity: new Date().toISOString()
+});
+```
+
+**File**: `app/api/presence/route.js`
+
+```javascript
+// POST /api/presence - Update own presence (called on page focus/activity)
+// GET /api/presence/[userId] - Get specific user's presence
+// GET /api/presence?users=id1,id2,id3 - Batch get presence
+```
+
+**Presence Indicators in UI:**
+- 🟢 Online (active now)
+- 🟡 Away (recently active)
+- ⚫ Offline
+- 🎮 In-Game (with specific game indicator)
+
+**Asynchronous Play Message:**
+When opponent is offline, show:
+```
+"CardShark99 is currently offline. They'll see your move when they return."
+```
+
+When opponent comes online:
+```
+"CardShark99 is now online! They may respond soon."
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.5: Integrate computer games in dashboard 🤖
+
+**File**: `components/GameDashboard.jsx` (updates)
+
+**Features:**
+- Show computer game alongside multiplayer games
+- Computer game has its own card in dashboard
+- Preserves all single-player features:
+  - Muggins mode
+  - Scoring confirmation
+  - Computer difficulty (if implemented)
+  - Game statistics
+
+**Computer Game Card:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🤖 vs Computer (Practice Mode)                              │
+│                                                             │
+│ Current Score: You 45 - Computer 52                         │
+│ Phase: Your turn to discard                                 │
+│                                                             │
+│ Features: [Muggins: ON] [Difficulty: Normal]                │
+│                                                             │
+│ Last played: 1 day ago                                      │
+│                                         [Resume Game]       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Seamless Mode Switching:**
+- User can have 1 computer game + multiple multiplayer games
+- Computer game is always available (never expires)
+- "Play vs Computer" from main menu resumes existing game or starts new
+- Computer game uses existing single-player code path
+
+**File**: `app/api/dashboard/games/route.js` (updates)
+
+Add computer game to dashboard response:
+```javascript
+{
+  success: true,
+  games: {
+    yourTurn: [
+      // ... multiplayer games ...
+      {
+        id: 'computer-game',
+        type: 'computer',
+        opponent: { handle: 'Computer', isOnline: true },  // Always "online"
+        score: { you: 45, opponent: 52 },
+        lastMove: {
+          by: 'you',
+          description: 'Your turn to discard',
+          timestamp: '2026-01-09T10:00:00Z'
+        },
+        phase: 'discarding',
+        settings: { muggins: true, difficulty: 'normal' }
+      }
+    ],
+    // ...
+  }
+}
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.6: Create notification preferences UI 🤖
+
+**File**: `components/NotificationPreferences.jsx`
+
+**Notification Settings:**
+```javascript
+const defaultPreferences = {
+  // Move notifications
+  moveNotifications: true,        // Notify when opponent makes move
+  moveNotificationSound: true,    // Play sound for move notifications
+
+  // Chat notifications
+  chatNotifications: true,        // Notify on new chat messages
+  chatNotificationSound: true,    // Play sound for chat
+
+  // Game notifications
+  gameInviteNotifications: true,  // Notify on new game invites
+  gameEndNotifications: true,     // Notify when game ends
+
+  // Reminder notifications
+  turnReminders: true,            // Remind if your turn pending > 24 hours
+  reminderFrequency: '24h',       // '12h', '24h', '48h', 'never'
+
+  // Delivery method
+  inAppNotifications: true,       // Show in-app notifications
+  emailNotifications: false,      // Send email (future feature)
+  pushNotifications: false,       // Browser push (future feature)
+
+  // Quiet hours
+  quietHoursEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '08:00'
+};
+```
+
+**Settings UI:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  🔔 Notification Preferences                                │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  GAME NOTIFICATIONS                                         │
+│  ├─ [✓] Notify when opponent makes a move                   │
+│  │    └─ [✓] Play sound                                     │
+│  ├─ [✓] Notify on new game invitations                      │
+│  └─ [✓] Notify when games end                               │
+│                                                             │
+│  CHAT NOTIFICATIONS                                         │
+│  ├─ [✓] Notify on new messages                              │
+│  └─ [✓] Play sound                                          │
+│                                                             │
+│  REMINDERS                                                  │
+│  ├─ [✓] Remind me if it's my turn for > 24 hours            │
+│  └─ Frequency: [24 hours ▼]                                 │
+│                                                             │
+│  QUIET HOURS                                                │
+│  ├─ [ ] Enable quiet hours                                  │
+│  └─ From [22:00] to [08:00]                                 │
+│                                                             │
+│                                        [Save Preferences]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.7: Add push notification support 🤖
+
+**File**: `lib/push-notifications.js`
+
+**Browser Push Notifications:**
+```javascript
+export const requestPushPermission = async () => {
+  if (!('Notification' in window)) {
+    return { supported: false };
+  }
+
+  const permission = await Notification.requestPermission();
+  return {
+    supported: true,
+    granted: permission === 'granted'
+  };
+};
+
+export const showPushNotification = (title, options) => {
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      icon: '/cribbage-icon.png',
+      badge: '/cribbage-badge.png',
+      ...options
+    });
+  }
+};
+```
+
+**File**: `hooks/useNotificationPolling.js`
+
+```javascript
+export const useNotificationPolling = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const poll = async () => {
+      const response = await fetch('/api/notifications');
+      if (response.ok) {
+        const data = await response.json();
+
+        // Show push notification for new items
+        const newNotifs = data.notifications.filter(n => !n.read);
+        newNotifs.forEach(notif => {
+          if (document.hidden) {  // Only if tab not focused
+            showPushNotification(notif.title, {
+              body: notif.description,
+              tag: notif.id,  // Prevent duplicates
+              data: { gameId: notif.gameId }
+            });
+          }
+        });
+
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+      }
+    };
+
+    poll();  // Initial fetch
+    const interval = setInterval(poll, 30000);  // Poll every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return { notifications, unreadCount };
+};
+```
+
+**Push Notification Examples:**
+- "CribbagePro made a move - Your turn!"
+- "New message from CardShark99"
+- "CardShark99 invited you to play"
+- "Reminder: It's your turn in 2 games"
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 9.8: Test multi-game scenarios 👤
+
+**Test Scenarios:**
+
+1. **Multiple Active Games:**
+   - Have 3+ multiplayer games running simultaneously
+   - Verify dashboard shows all games correctly
+   - Verify "your turn" badge count is accurate
+
+2. **Game Switching:**
+   - Switch between games mid-action
+   - Verify context is preserved when returning
+   - Test back navigation
+
+3. **Move Notifications:**
+   - Make move as Player A
+   - Verify Player B sees notification
+   - Verify notification includes move description and timestamp
+   - Test notification when Player B is offline then comes online
+
+4. **Chat Per Game:**
+   - Send chat message in one game
+   - Switch to different game
+   - Verify chat is game-specific
+   - Verify unread indicators per game
+
+5. **Computer Game Integration:**
+   - Start computer game
+   - Play multiplayer game
+   - Verify both appear in dashboard
+   - Verify switching between them works
+   - Verify computer game retains all single-player features
+
+6. **Online/Offline Status:**
+   - Verify presence updates when user becomes active
+   - Verify offline message shows when opponent is away
+   - Verify "now online" notification when opponent returns
+
+7. **Notification Preferences:**
+   - Disable move notifications
+   - Make a move
+   - Verify no notification appears
+   - Re-enable and verify notifications resume
+
+8. **Push Notifications:**
+   - Grant push permission
+   - Background the browser tab
+   - Have opponent make move
+   - Verify browser push notification appears
+
+[Back to TOC](#table-of-contents)
+
+---
+
 ## Future Enhancements
 
 The following are not part of this initial plan but could be added later:
@@ -1205,4 +1747,4 @@ The following are not part of this initial plan but could be added later:
 ---
 
 *Plan created: 2026-01-09*
-*Last updated: 2026-01-12*
+*Last updated: 2026-01-17*
