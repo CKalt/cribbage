@@ -20,7 +20,7 @@
 - [Phase 2: Core API Endpoints](#phase-2-core-api-endpoints) ✅
   - [x] [Step 2.1: Create game creation endpoint](#step-21-create-game-creation-endpoint-🤖)
   - [x] [Step 2.2: Create game state endpoint](#step-22-create-game-state-endpoint-🤖)
-  - [ ] [Step 2.3: Create move submission endpoint](#step-23-create-move-submission-endpoint-🤖)
+  - [x] [Step 2.3: Create move submission endpoint](#step-23-create-move-submission-endpoint-🤖)
   - [x] [Step 2.4: Create game listing endpoint](#step-24-create-game-listing-endpoint-🤖)
 - [Phase 3: Invitation System](#phase-3-invitation-system) ✅
   - [x] [Step 3.1: Create player listing and search endpoint](#step-31-create-player-listing-and-search-endpoint-🤖)
@@ -448,6 +448,8 @@ export const createMultiplayerStatsRow = (userId) => [
 ---
 
 ### Step 2.3: Create move submission endpoint 🤖
+
+**Status**: ✅ Complete (2026-01-17)
 
 **File**: `app/api/multiplayer/games/[gameId]/move/route.js`
 
