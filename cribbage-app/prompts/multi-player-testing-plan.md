@@ -12,15 +12,18 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| ✅ Passed | 51 | Login, auth, API, lobby, gameplay tests |
+| ✅ Passed | 58 | Login, auth, API, lobby, gameplay, playing phase tests |
 | ❌ Failed | 0 | All tests passing |
-| ⏭️ Skipped | 21 | Phase-dependent tests (skip if game not in correct phase) |
+| ⏭️ Skipped | 14 | Counting phase tests (game in playing phase) |
 
 **Test Users Configured:**
 - Player 1: `chris+one@chrisk.com` / `Hello123$`
 - Player 2: `chris+two@chrisk.com` / `Hello123$`
 
-**Key Fix (2026-01-18):** User emails are now saved to profile files on first login, enabling multiplayer user lookup.
+**Key Fixes (2026-01-18):**
+1. User emails now saved to profile files on first login
+2. Reset test progresses game to "playing" phase (discards + cut)
+3. Playwright project dependencies ensure setup runs first
 
 ---
 
