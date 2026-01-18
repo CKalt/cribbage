@@ -18,8 +18,17 @@ module.exports = defineConfig({
   },
 
   projects: [
+    // Setup project - runs first to create game between test users
+    {
+      name: 'setup',
+      testMatch: /reset-game\.spec\.js/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Main tests - depend on setup completing first
     {
       name: 'chromium',
+      testIgnore: /reset-game\.spec\.js/,  // Don't run reset again
+      dependencies: ['setup'],  // Wait for setup to complete
       use: { ...devices['Desktop Chrome'] },
     },
   ],

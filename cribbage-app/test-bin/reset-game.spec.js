@@ -294,15 +294,87 @@ test('Reset game state for test users', async ({ browser }) => {
     expect(dealer).toBe('player1');
     console.log(`  ✓ Dealer is player1 (as expected in test mode)`);
 
+    // ========== STEP 7: Both players discard ==========
+    console.log('\n========== STEP 7: Both players discard ==========');
+
+    // Player 1 discards 4♥ and 6♥ (indices 4 and 5)
+    const p1DiscardResponse = await page1.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
+      data: {
+        moveType: 'discard',
+        data: {
+          cards: [
+            { suit: '♥', rank: '4' },
+            { suit: '♥', rank: '6' }
+          ]
+        }
+      }
+    });
+    const p1DiscardData = await p1DiscardResponse.json();
+    if (!p1DiscardData.success) {
+      throw new Error(`Player 1 discard failed: ${p1DiscardData.error}`);
+    }
+    console.log(`  ✓ Player 1 discarded 4♥, 6♥ (keeping 5♥, 5♦, 5♠, J♥)`);
+
+    // Player 2 discards K♠ and Q♦ (indices 3 and 4 of their hand)
+    const p2DiscardResponse = await page2.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
+      data: {
+        moveType: 'discard',
+        data: {
+          cards: [
+            { suit: '♠', rank: 'K' },
+            { suit: '♦', rank: 'Q' }
+          ]
+        }
+      }
+    });
+    const p2DiscardData = await p2DiscardResponse.json();
+    if (!p2DiscardData.success) {
+      throw new Error(`Player 2 discard failed: ${p2DiscardData.error}`);
+    }
+    console.log(`  ✓ Player 2 discarded K♠, Q♦ (keeping 10♣, 10♦, 6♣, 9♥)`);
+
+    // ========== STEP 8: Non-dealer (Player 2) cuts the deck ==========
+    console.log('\n========== STEP 8: Player 2 cuts the deck ==========');
+
+    // Cut index 0 gives us 5♣ (first card in remaining deck after dealing)
+    const cutResponse = await page2.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
+      data: {
+        moveType: 'cut',
+        data: {
+          cutIndex: 0
+        }
+      }
+    });
+    const cutData = await cutResponse.json();
+    if (!cutData.success) {
+      throw new Error(`Cut failed: ${cutData.error}`);
+    }
+    console.log(`  ✓ Player 2 cut the deck - cut card is 5♣`);
+
+    // ========== STEP 9: Verify game is now in playing phase ==========
+    console.log('\n========== STEP 9: Verifying playing phase ==========');
+
+    const finalGameResponse = await page1.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
+    const finalGameData = await finalGameResponse.json();
+    const finalPhase = finalGameData.game?.gameState?.phase;
+    const cutCard = finalGameData.game?.gameState?.cutCard;
+
+    console.log(`  Game phase: ${finalPhase}`);
+    console.log(`  Cut card: ${cutCard?.rank}${cutCard?.suit}`);
+
+    expect(finalPhase).toBe('playing');
+    console.log(`  ✓ Game is in playing phase!`);
+
     console.log('\n========================================');
-    console.log('✓ RESET COMPLETE - Fresh game with TEST DECK ready!');
+    console.log('✓ RESET COMPLETE - Game ready for pegging!');
     console.log('========================================');
     console.log(`  Game ID: ${gameId}`);
-    console.log(`  Phase: discarding`);
+    console.log(`  Phase: playing`);
     console.log(`  Dealer: player1 (chris+one)`);
-    console.log(`  Player 1 (chris+one): 5♥, 5♦, 5♠, J♥, 4♥, 6♥`);
-    console.log(`  Player 2 (chris+two): 10♣, 10♦, 6♣, K♠, Q♦, 9♥`);
-    console.log(`  Cut card (after cut): 5♣`);
+    console.log(`  Player 1 hand: 5♥, 5♦, 5♠, J♥`);
+    console.log(`  Player 2 hand: 10♣, 10♦, 6♣, 9♥`);
+    console.log(`  Cut card: 5♣`);
+    console.log(`  Crib: 4♥, 6♥, K♠, Q♦`);
     console.log('========================================\n');
 
   } finally {
