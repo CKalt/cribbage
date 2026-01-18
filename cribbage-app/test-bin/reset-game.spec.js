@@ -29,17 +29,12 @@ const { test, expect } = require('@playwright/test');
  * Remaining deck for cut starts at index 12.
  */
 
-const USER1 = {
-  email: 'chris+one@chrisk.com',
-  password: 'Hello123$'
-};
+const { login: authLogin, getBaseUrl } = require('./helpers/auth');
+const config = require('./test-config');
 
-const USER2 = {
-  email: 'chris+two@chrisk.com',
-  password: 'Hello123$'
-};
-
-const BASE_URL = 'https://beta.cribbage.chrisk.com';
+const BASE_URL = getBaseUrl();
+const USER1 = config.users.player1;
+const USER2 = config.users.player2;
 
 /**
  * Known test deck for deterministic testing
@@ -106,16 +101,10 @@ const TEST_DECK = [
 ];
 
 /**
- * Helper: Login and get auth cookie
+ * Helper: Login using shared auth helper
  */
-async function login(page, user) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.fill('input[type="email"]', user.email);
-  await page.fill('input[type="password"]', user.password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(BASE_URL + '/', { timeout: 15000 });
-  await expect(page.locator('text=Cribbage')).toBeVisible({ timeout: 10000 });
-  console.log(`✓ Logged in as ${user.email}`);
+async function login(page, userKey) {
+  await authLogin(page, userKey);
 }
 
 /**
@@ -209,8 +198,8 @@ test('Reset game state for test users', async ({ browser }) => {
   try {
     // ========== STEP 1: Login both users ==========
     console.log('\n========== STEP 1: Logging in both users ==========');
-    await login(page1, USER1);
-    await login(page2, USER2);
+    await login(page1, 'player1');
+    await login(page2, 'player2');
 
     // ========== STEP 2: Forfeit existing games ==========
     console.log('\n========== STEP 2: Forfeiting existing games ==========');

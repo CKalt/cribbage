@@ -1,23 +1,15 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { login, getBaseUrl } = require('./helpers/auth');
+const config = require('./test-config');
 
-const BASE_URL = 'https://beta.cribbage.chrisk.com';
-
-// Test accounts
-const USER1 = {
-  email: 'chris+one@chrisk.com',
-  password: 'Hello123$'
-};
+const BASE_URL = getBaseUrl();
 
 /**
- * Helper: Get auth token by logging in
+ * Helper: Login and get auth token
  */
-async function getAuthToken(page, user) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.fill('input[type="email"]', user.email);
-  await page.fill('input[type="password"]', user.password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(BASE_URL + '/', { timeout: 10000 });
+async function getAuthToken(page) {
+  await login(page, 'player1');
 
   // Get token from cookies
   const cookies = await page.context().cookies();
@@ -29,7 +21,7 @@ async function getAuthToken(page, user) {
 // TEST: Players API returns user list
 // ============================================================
 test('GET /api/multiplayer/players returns players', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const response = await page.request.get(`${BASE_URL}/api/multiplayer/players`);
@@ -47,7 +39,7 @@ test('GET /api/multiplayer/players returns players', async ({ page }) => {
 // TEST: Games API returns user's games
 // ============================================================
 test('GET /api/multiplayer/games returns games', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const response = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -65,7 +57,7 @@ test('GET /api/multiplayer/games returns games', async ({ page }) => {
 // TEST: Invitations API returns invitations
 // ============================================================
 test('GET /api/multiplayer/invitations returns invitations', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const response = await page.request.get(`${BASE_URL}/api/multiplayer/invitations`);
@@ -82,7 +74,7 @@ test('GET /api/multiplayer/invitations returns invitations', async ({ page }) =>
 // TEST: Game state includes gameState with cards
 // ============================================================
 test('GET /api/multiplayer/games/[id] includes game state', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   // First get list of games
@@ -127,7 +119,7 @@ test('GET /api/multiplayer/games/[id] includes game state', async ({ page }) => 
 // TEST: Move API validates move type
 // ============================================================
 test('POST /api/multiplayer/games/[id]/move validates input', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   // Get a game
@@ -162,7 +154,7 @@ test('POST /api/multiplayer/games/[id]/move validates input', async ({ page }) =
 // TEST: Discard move requires cards array
 // ============================================================
 test('POST discard move requires cards array', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -200,7 +192,7 @@ test('POST discard move requires cards array', async ({ page }) => {
 // TEST: Game state includes dealer info
 // ============================================================
 test('Game state includes dealer info', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -229,7 +221,7 @@ test('Game state includes dealer info', async ({ page }) => {
 // TEST: Game returns isMyTurn correctly
 // ============================================================
 test('Game API returns isMyTurn flag', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -254,7 +246,7 @@ test('Game API returns isMyTurn flag', async ({ page }) => {
 // TEST: Scores are tracked
 // ============================================================
 test('Game tracks scores', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -286,7 +278,7 @@ test('Game tracks scores', async ({ page }) => {
 // TEST: Play move requires card
 // ============================================================
 test('POST play move requires card', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -320,7 +312,7 @@ test('POST play move requires card', async ({ page }) => {
 // TEST: Go move works
 // ============================================================
 test('POST go move accepted', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -374,7 +366,7 @@ test('POST go move accepted', async ({ page }) => {
 // TEST: Game state includes playState during play phase
 // ============================================================
 test('Game state includes playState', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -422,7 +414,7 @@ test('Game state includes playState', async ({ page }) => {
 // TEST: Cut card is returned after cut phase
 // ============================================================
 test('Game state includes cutCard after cut', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
@@ -461,7 +453,7 @@ test('Game state includes cutCard after cut', async ({ page }) => {
 // TEST: Pegging points are tracked
 // ============================================================
 test('Pegging points are tracked', async ({ page }) => {
-  const token = await getAuthToken(page, USER1);
+  const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
   const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);

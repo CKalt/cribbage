@@ -1,33 +1,14 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { login: authLogin, getBaseUrl } = require('./helpers/auth');
 
-// Test accounts
-const USER1 = {
-  email: 'chris+one@chrisk.com',
-  password: 'Hello123$'
-};
-
-const USER2 = {
-  email: 'chris+two@chrisk.com',
-  password: 'Hello123$'
-};
-
-const BASE_URL = 'https://beta.cribbage.chrisk.com';
+const BASE_URL = getBaseUrl();
 
 /**
- * Helper: Login to the app
+ * Helper: Login to the app using shared auth helper
  */
-async function login(page, user) {
-  console.log(`Logging in as ${user.email}...`);
-  await page.goto(`${BASE_URL}/login`);
-  await page.fill('input[type="email"]', user.email);
-  await page.fill('input[type="password"]', user.password);
-  await page.click('button[type="submit"]');
-
-  // Wait for redirect to main app
-  await page.waitForURL(BASE_URL + '/', { timeout: 10000 });
-  await expect(page.locator('text=Cribbage')).toBeVisible({ timeout: 10000 });
-  console.log('✓ Logged in successfully');
+async function login(page, userKey) {
+  await authLogin(page, userKey);
 }
 
 /**
@@ -60,7 +41,7 @@ async function openMyGames(page) {
 // ============================================================
 test('User 1 (chris@chrisk.com) joins active game', async ({ page }) => {
   // Step 1: Go to beta site and login
-  await login(page, USER1);
+  await login(page, 'player1');
 
   // Step 2: Open menu and go to My Games
   await openMyGames(page);
@@ -118,7 +99,7 @@ test('User 1 (chris@chrisk.com) joins active game', async ({ page }) => {
 // ============================================================
 test('User 2 (chris+two@chrisk.com) joins active game', async ({ page }) => {
   // Step 1: Go to beta site and login
-  await login(page, USER2);
+  await login(page, 'player2');
 
   // Step 2: Open menu and go to My Games
   await openMyGames(page);
@@ -185,10 +166,10 @@ test('Both users view their game simultaneously', async ({ browser }) => {
   try {
     // Login both users
     console.log('\n=== User 1 ===');
-    await login(page1, USER1);
+    await login(page1, 'player1');
 
     console.log('\n=== User 2 ===');
-    await login(page2, USER2);
+    await login(page2, 'player2');
 
     // Both open My Games
     console.log('\n=== Both users opening My Games ===');

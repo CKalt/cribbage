@@ -1,29 +1,17 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { login: authLogin, getBaseUrl } = require('./helpers/auth');
+const config = require('./test-config');
 
-// Test accounts
-const USER1 = {
-  email: 'chris+one@chrisk.com',
-  password: 'Hello123$'
-};
-
-const USER2 = {
-  email: 'chris+two@chrisk.com',
-  password: 'Hello123$'
-};
-
-const BASE_URL = 'https://beta.cribbage.chrisk.com';
+const BASE_URL = getBaseUrl();
 
 /**
- * Helper: Login to the app
+ * Helper: Login to the app using shared auth helper
+ * @param {Page} page - Playwright page
+ * @param {'player1' | 'player2'} userKey - Which user to login as
  */
-async function login(page, user) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.fill('input[type="email"]', user.email);
-  await page.fill('input[type="password"]', user.password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(BASE_URL + '/', { timeout: 10000 });
-  await expect(page.locator('text=Cribbage')).toBeVisible({ timeout: 10000 });
+async function login(page, userKey) {
+  await authLogin(page, userKey);
 }
 
 /**
@@ -59,7 +47,7 @@ async function joinExistingGame(page) {
 // TEST: Game displays cards in discarding phase
 // ============================================================
 test('Game displays player cards in discarding phase', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -97,7 +85,7 @@ test('Game displays player cards in discarding phase', async ({ page }) => {
 // TEST: Can select cards for discard
 // ============================================================
 test('Can select cards for discard', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -153,7 +141,7 @@ test('Can select cards for discard', async ({ page }) => {
 // TEST: Discard button shows correct count
 // ============================================================
 test('Discard button shows selection count', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -183,7 +171,7 @@ test('Discard button shows selection count', async ({ page }) => {
 // TEST: Game shows dealer indicator
 // ============================================================
 test('Game shows dealer indicator', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -207,7 +195,7 @@ test('Game shows dealer indicator', async ({ page }) => {
 // TEST: Game shows score
 // ============================================================
 test('Game shows score display', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -229,7 +217,7 @@ test('Game shows score display', async ({ page }) => {
 // TEST: Game shows turn indicator
 // ============================================================
 test('Game shows turn indicator', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -260,7 +248,7 @@ test('Game shows turn indicator', async ({ page }) => {
 // TEST: Game shows last move info
 // ============================================================
 test('Game shows last move info', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -282,7 +270,7 @@ test('Game shows last move info', async ({ page }) => {
 // TEST: Full discard flow (if in discarding phase)
 // ============================================================
 test('Full discard flow', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -361,10 +349,10 @@ test('Two players can discard', async ({ browser }) => {
   try {
     // Login both users
     console.log('Logging in User 1...');
-    await login(page1, USER1);
+    await login(page1, 'player1');
 
     console.log('Logging in User 2...');
-    await login(page2, USER2);
+    await login(page2, 'player2');
 
     // Both join their games
     console.log('User 1 joining game...');
@@ -407,7 +395,7 @@ test('Two players can discard', async ({ browser }) => {
 // TEST: Cut phase displays correctly
 // ============================================================
 test('Cut phase shows cut button', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -443,7 +431,7 @@ test('Cut phase shows cut button', async ({ page }) => {
 // TEST: Cut card displays after cut
 // ============================================================
 test('Cut card displays after cutting', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -474,7 +462,7 @@ test('Cut card displays after cutting', async ({ page }) => {
 // TEST: Play phase shows count display
 // ============================================================
 test('Play phase shows count display', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -508,7 +496,7 @@ test('Play phase shows count display', async ({ page }) => {
 // TEST: Play phase shows played cards area
 // ============================================================
 test('Play phase shows played cards area', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -535,7 +523,7 @@ test('Play phase shows played cards area', async ({ page }) => {
 // TEST: Play phase shows remaining cards count
 // ============================================================
 test('Play phase shows remaining cards', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -568,7 +556,7 @@ test('Play phase shows remaining cards', async ({ page }) => {
 // TEST: Play phase shows playable cards highlighted
 // ============================================================
 test('Play phase highlights playable cards', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -612,7 +600,7 @@ test('Play phase highlights playable cards', async ({ page }) => {
 // TEST: Go button appears when no playable cards
 // ============================================================
 test('Go button appears when no playable cards', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -658,7 +646,7 @@ test('Go button appears when no playable cards', async ({ page }) => {
 // TEST: Opponent Go indicator shows
 // ============================================================
 test('Opponent Go indicator displays', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -691,7 +679,7 @@ test('Opponent Go indicator displays', async ({ page }) => {
 // TEST: Can play a card in play phase
 // ============================================================
 test('Can play a card in play phase', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -769,10 +757,10 @@ test('Two players can play in play phase', async ({ browser }) => {
 
   try {
     console.log('Logging in User 1...');
-    await login(page1, USER1);
+    await login(page1, 'player1');
 
     console.log('Logging in User 2...');
-    await login(page2, USER2);
+    await login(page2, 'player2');
 
     console.log('User 1 joining game...');
     const joined1 = await joinExistingGame(page1);
@@ -820,7 +808,7 @@ test('Two players can play in play phase', async ({ browser }) => {
 // TEST: Count highlights at 15 or 31
 // ============================================================
 test('Count highlights at special values', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -865,7 +853,7 @@ test('Count highlights at special values', async ({ page }) => {
 // TEST: Counting phase displays correctly
 // ============================================================
 test('Counting phase displays correctly', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -899,7 +887,7 @@ test('Counting phase displays correctly', async ({ page }) => {
 // TEST: Counting phase shows cut card
 // ============================================================
 test('Counting phase shows cut card', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -926,7 +914,7 @@ test('Counting phase shows cut card', async ({ page }) => {
 // TEST: Counting phase shows hand being counted
 // ============================================================
 test('Counting phase shows hand being counted', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -956,7 +944,7 @@ test('Counting phase shows hand being counted', async ({ page }) => {
 // TEST: Count button appears when it's your turn
 // ============================================================
 test('Count button appears when it is your turn', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -991,7 +979,7 @@ test('Count button appears when it is your turn', async ({ page }) => {
 // TEST: Waiting message when not your turn to count
 // ============================================================
 test('Waiting message displays when not your turn to count', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -1026,7 +1014,7 @@ test('Waiting message displays when not your turn to count', async ({ page }) =>
 // TEST: Scores display shows round scores
 // ============================================================
 test('Scores display during counting phase', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -1064,7 +1052,7 @@ test('Scores display during counting phase', async ({ page }) => {
 // TEST: Can click Count Hand button
 // ============================================================
 test('Can click Count Hand button to count', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {
@@ -1125,10 +1113,10 @@ test('Two players can count their hands', async ({ browser }) => {
   try {
     // Login both users
     console.log('Logging in User 1...');
-    await login(page1, USER1);
+    await login(page1, 'player1');
 
     console.log('Logging in User 2...');
-    await login(page2, USER2);
+    await login(page2, 'player2');
 
     // Both join their games
     console.log('User 1 joining game...');
@@ -1178,7 +1166,7 @@ test('Two players can count their hands', async ({ browser }) => {
 // TEST: New round starts after all counting
 // ============================================================
 test('New round starts after counting completes', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
 
   const joined = await joinExistingGame(page);
   if (!joined) {

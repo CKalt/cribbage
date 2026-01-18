@@ -1,31 +1,14 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { login: authLogin, getBaseUrl } = require('./helpers/auth');
 
-// Test accounts
-const USER1 = {
-  email: 'chris+one@chrisk.com',
-  password: 'Hello123$'
-};
-
-const USER2 = {
-  email: 'chris+two@chrisk.com',
-  password: 'Hello123$'
-};
-
-const BASE_URL = 'https://beta.cribbage.chrisk.com';
+const BASE_URL = getBaseUrl();
 
 /**
- * Helper: Login to the app
+ * Helper: Login to the app using shared auth helper
  */
-async function login(page, user) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.fill('input[type="email"]', user.email);
-  await page.fill('input[type="password"]', user.password);
-  await page.click('button[type="submit"]');
-
-  // Wait for redirect to main app
-  await page.waitForURL(BASE_URL + '/', { timeout: 10000 });
-  await expect(page.locator('text=Cribbage')).toBeVisible({ timeout: 10000 });
+async function login(page, userKey) {
+  await authLogin(page, userKey);
 }
 
 /**
@@ -56,7 +39,7 @@ async function closeGameLobby(page) {
 // TEST: Login with User 1
 // ============================================================
 test('User 1 can login', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
   console.log('✓ User 1 logged in successfully');
 });
 
@@ -64,7 +47,7 @@ test('User 1 can login', async ({ page }) => {
 // TEST: Login with User 2
 // ============================================================
 test('User 2 can login', async ({ page }) => {
-  await login(page, USER2);
+  await login(page, 'player2');
   console.log('✓ User 2 logged in successfully');
 });
 
@@ -72,7 +55,7 @@ test('User 2 can login', async ({ page }) => {
 // TEST: Open Game Lobby
 // ============================================================
 test('Can open Game Lobby', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
   await openGameLobby(page);
 
   // Check all three tabs are present
@@ -87,7 +70,7 @@ test('Can open Game Lobby', async ({ page }) => {
 // TEST: Find Players tab shows users
 // ============================================================
 test('Find Players tab shows other users', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
   await openGameLobby(page);
 
   // Should be on Find Players tab by default
@@ -111,7 +94,7 @@ test('Find Players tab shows other users', async ({ page }) => {
 // TEST: Search for a specific player
 // ============================================================
 test('Can search for players', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
   await openGameLobby(page);
 
   // Type in search box
@@ -154,7 +137,7 @@ test('Full multiplayer flow: invite and accept', async ({ browser }) => {
   try {
     // Step 1: User 1 logs in and sends invitation
     console.log('Step 1: User 1 logging in...');
-    await login(page1, USER1);
+    await login(page1, 'player1');
 
     console.log('Step 2: User 1 opening Game Lobby...');
     await openGameLobby(page1);
@@ -183,7 +166,7 @@ test('Full multiplayer flow: invite and accept', async ({ browser }) => {
 
     // Step 2: User 2 logs in and checks invitations
     console.log('Step 5: User 2 logging in...');
-    await login(page2, USER2);
+    await login(page2, 'player2');
 
     console.log('Step 6: User 2 opening Game Lobby...');
     await openGameLobby(page2);
@@ -236,7 +219,7 @@ test('Full multiplayer flow: invite and accept', async ({ browser }) => {
 // TEST: Join an existing game
 // ============================================================
 test('Can view My Games and join a game', async ({ page }) => {
-  await login(page, USER1);
+  await login(page, 'player1');
   await openGameLobby(page);
 
   // Click My Games tab
