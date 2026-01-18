@@ -12,17 +12,25 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| ✅ Passed | 29 | Login, auth, API tests work |
-| ❌ Failed | 3 | UI locator issues in Game Lobby |
-| ⏭️ Skipped | 40 | Need active games between test users |
+| ✅ Passed | 51 | Login, auth, API, lobby, gameplay tests |
+| ❌ Failed | 0 | All tests passing |
+| ⏭️ Skipped | 21 | Phase-dependent tests (skip if game not in correct phase) |
 
 **Test Users Configured:**
 - Player 1: `chris+one@chrisk.com` / `Hello123$`
 - Player 2: `chris+two@chrisk.com` / `Hello123$`
 
+**Key Fix (2026-01-18):** User emails are now saved to profile files on first login, enabling multiplayer user lookup.
+
 ---
 
 ## Recent Work Completed (2026-01-18)
+
+### Multiplayer User Lookup Fix
+- ✅ Fixed email not being saved to user profile files
+- ✅ Updated `game-state/route.js` to extract email from JWT token
+- ✅ Emails now saved on first API access, enabling `findUserIdByEmail` to work
+- ✅ Fixed Invitations tab test to use specific text matchers
 
 ### Infrastructure Fixes
 - ✅ Fixed Turbopack crash caused by `pgis` symlink leaving filesystem root
@@ -46,11 +54,11 @@
 
 ## Remaining Work
 
-### Phase 7: Make Skipped Tests Work 🔴 NEW
-- [ ] [Step 7.1: Ensure test users exist in local database](#step-71-ensure-test-users-exist-in-local-database-🤖)
+### Phase 7: Make Skipped Tests Work 🟡 PARTIAL
+- [x] [Step 7.1: Ensure test users exist in local database](#step-71-ensure-test-users-exist-in-local-database-🤖) ✅ Fixed - emails now saved on login
 - [ ] [Step 7.2: Create game setup fixture that creates game between test users](#step-72-create-game-setup-fixture-🤖)
 - [ ] [Step 7.3: Update skipped tests to use game fixture](#step-73-update-skipped-tests-to-use-game-fixture-🤖)
-- [ ] [Step 7.4: Fix 3 failing UI locator tests](#step-74-fix-failing-ui-locator-tests-🤖)
+- [x] [Step 7.4: Fix 3 failing UI locator tests](#step-74-fix-failing-ui-locator-tests-🤖) ✅ Fixed - updated text matchers
 
 ### Phase 4: Core Game Flow Tests (Incomplete)
 - [x] [Step 4.1: Create game setup test (invite, accept, start)](#step-41-create-game-setup-test-invite-accept-start-🤖)
@@ -89,11 +97,11 @@
   - [x] [Step 3.2: Implement login helpers for both users](#step-32-implement-login-helpers-for-both-users-🤖)
   - [x] [Step 3.3: Create game synchronization utilities](#step-33-create-game-synchronization-utilities-🤖)
   - [x] [Step 3.4: Add screenshot and logging helpers](#step-34-add-screenshot-and-logging-helpers-🤖)
-- [Phase 7: Make Skipped Tests Work](#phase-7-make-skipped-tests-work) 🔴 IN PROGRESS
-  - [ ] [Step 7.1: Ensure test users exist in local database](#step-71-ensure-test-users-exist-in-local-database-🤖)
+- [Phase 7: Make Skipped Tests Work](#phase-7-make-skipped-tests-work) 🟡 PARTIAL
+  - [x] [Step 7.1: Ensure test users exist in local database](#step-71-ensure-test-users-exist-in-local-database-🤖) ✅
   - [ ] [Step 7.2: Create game setup fixture](#step-72-create-game-setup-fixture-🤖)
   - [ ] [Step 7.3: Update skipped tests to use game fixture](#step-73-update-skipped-tests-to-use-game-fixture-🤖)
-  - [ ] [Step 7.4: Fix failing UI locator tests](#step-74-fix-failing-ui-locator-tests-🤖)
+  - [x] [Step 7.4: Fix failing UI locator tests](#step-74-fix-failing-ui-locator-tests-🤖) ✅
 - [Phase 4: Core Game Flow Tests](#phase-4-core-game-flow-tests)
   - [x] [Step 4.1: Create game setup test (invite, accept, start)](#step-41-create-game-setup-test-invite-accept-start-🤖)
   - [ ] [Step 4.2: Create discard phase tests](#step-42-create-discard-phase-tests-🤖)
