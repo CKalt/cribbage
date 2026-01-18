@@ -2,8 +2,72 @@
 
 **Created**: 2026-01-17
 **Author**: Claude Code
-**Status**: Implemented - Phases 1-5 Complete
+**Status**: In Progress - Infrastructure Fixed, Game Tests Needed
 **Branch**: multiplayer
+**Last Updated**: 2026-01-18
+
+---
+
+## Current Test Results (2026-01-18)
+
+| Status | Count | Description |
+|--------|-------|-------------|
+| ✅ Passed | 29 | Login, auth, API tests work |
+| ❌ Failed | 3 | UI locator issues in Game Lobby |
+| ⏭️ Skipped | 40 | Need active games between test users |
+
+**Test Users Configured:**
+- Player 1: `chris+one@chrisk.com` / `Hello123$`
+- Player 2: `chris+two@chrisk.com` / `Hello123$`
+
+---
+
+## Recent Work Completed (2026-01-18)
+
+### Infrastructure Fixes
+- ✅ Fixed Turbopack crash caused by `pgis` symlink leaving filesystem root
+- ✅ Added `turbopack.root: process.cwd()` to `next.config.mjs`
+- ✅ Improved "What's New" modal handling in auth helpers with proper delays
+- ✅ Updated all test files to use shared `helpers/auth.js` and `getBaseUrl()`
+- ✅ All tests now run against `localhost:3000` instead of hardcoded beta URL
+
+### Files Updated
+- `next.config.mjs` - Added turbopack.root config
+- `test-bin/helpers/auth.js` - Improved modal handling
+- `test-bin/api.spec.js` - Use shared auth
+- `test-bin/gameplay.spec.js` - Use shared auth
+- `test-bin/join-game.spec.js` - Use shared auth
+- `test-bin/multiplayer.spec.js` - Use shared auth
+- `test-bin/reset-game.spec.js` - Use shared auth
+- `test-bin/simple-login.spec.js` - New test file
+- `test-bin/playwright.config.js` - Simplified config
+
+---
+
+## Remaining Work
+
+### Phase 7: Make Skipped Tests Work 🔴 NEW
+- [ ] [Step 7.1: Ensure test users exist in local database](#step-71-ensure-test-users-exist-in-local-database-🤖)
+- [ ] [Step 7.2: Create game setup fixture that creates game between test users](#step-72-create-game-setup-fixture-🤖)
+- [ ] [Step 7.3: Update skipped tests to use game fixture](#step-73-update-skipped-tests-to-use-game-fixture-🤖)
+- [ ] [Step 7.4: Fix 3 failing UI locator tests](#step-74-fix-failing-ui-locator-tests-🤖)
+
+### Phase 4: Core Game Flow Tests (Incomplete)
+- [x] [Step 4.1: Create game setup test (invite, accept, start)](#step-41-create-game-setup-test-invite-accept-start-🤖)
+- [ ] [Step 4.2: Create discard phase tests](#step-42-create-discard-phase-tests-🤖)
+- [ ] [Step 4.3: Create cut phase tests](#step-43-create-cut-phase-tests-🤖)
+- [ ] [Step 4.4: Create pegging phase tests](#step-44-create-pegging-phase-tests-🤖)
+- [ ] [Step 4.5: Create counting phase tests](#step-45-create-counting-phase-tests-🤖)
+
+### Phase 5: Bug Reproduction Tests (Incomplete)
+- [x] [Step 5.1: Document known bugs with deck scenarios](#step-51-document-known-bugs-with-deck-scenarios-🤖)
+- [ ] [Step 5.2: Create regression test for each bug](#step-52-create-regression-test-for-each-bug-🤖)
+- [x] [Step 5.3: Add assertion helpers for scoring validation](#step-53-add-assertion-helpers-for-scoring-validation-🤖)
+
+### Phase 6: Test Execution and Verification
+- [ ] [Step 6.1: Run full test suite locally](#step-61-run-full-test-suite-locally-👤)
+- [ ] [Step 6.2: Verify deterministic behavior](#step-62-verify-deterministic-behavior-👤)
+- [ ] [Step 6.3: Document test results](#step-63-document-test-results-🤖)
 
 ---
 
@@ -25,6 +89,11 @@
   - [x] [Step 3.2: Implement login helpers for both users](#step-32-implement-login-helpers-for-both-users-🤖)
   - [x] [Step 3.3: Create game synchronization utilities](#step-33-create-game-synchronization-utilities-🤖)
   - [x] [Step 3.4: Add screenshot and logging helpers](#step-34-add-screenshot-and-logging-helpers-🤖)
+- [Phase 7: Make Skipped Tests Work](#phase-7-make-skipped-tests-work) 🔴 IN PROGRESS
+  - [ ] [Step 7.1: Ensure test users exist in local database](#step-71-ensure-test-users-exist-in-local-database-🤖)
+  - [ ] [Step 7.2: Create game setup fixture](#step-72-create-game-setup-fixture-🤖)
+  - [ ] [Step 7.3: Update skipped tests to use game fixture](#step-73-update-skipped-tests-to-use-game-fixture-🤖)
+  - [ ] [Step 7.4: Fix failing UI locator tests](#step-74-fix-failing-ui-locator-tests-🤖)
 - [Phase 4: Core Game Flow Tests](#phase-4-core-game-flow-tests)
   - [x] [Step 4.1: Create game setup test (invite, accept, start)](#step-41-create-game-setup-test-invite-accept-start-🤖)
   - [ ] [Step 4.2: Create discard phase tests](#step-42-create-discard-phase-tests-🤖)
@@ -951,6 +1020,118 @@ function logStep(step) {
 
 module.exports = { screenshotBoth, logGameState, logStep };
 ```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Phase 7: Make Skipped Tests Work
+
+The 40 skipped tests require active games between the two test users. This phase addresses that by creating a proper test setup that ensures games exist before running gameplay tests.
+
+### Step 7.1: Ensure test users exist in local database 🤖
+
+**Problem**: Tests fail with "User not found" when trying to invite player 2.
+
+**Solution**: Create a setup script or test fixture that:
+1. Checks if test users exist in local Cognito/database
+2. Creates them if they don't exist
+3. Verifies both users can log in
+
+**File**: `test-bin/helpers/setup-users.js`
+
+```javascript
+/**
+ * Ensure test users exist in the local database
+ */
+const config = require('../test-config');
+
+async function ensureTestUsersExist(page) {
+  // Check if users can log in
+  // If not, may need to create accounts via signup flow
+  // or seed database directly
+}
+
+module.exports = { ensureTestUsersExist };
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 7.2: Create game setup fixture 🤖
+
+**Problem**: Many tests skip because they check for existing games and find none.
+
+**Solution**: Create a Playwright fixture that:
+1. Logs in both users
+2. Creates a game invitation from Player 1 to Player 2
+3. Accepts the invitation as Player 2
+4. Returns both pages positioned in the active game
+
+**File**: `test-bin/fixtures/game-fixture.js`
+
+```javascript
+const { test: base } = require('@playwright/test');
+const { login } = require('../helpers/auth');
+
+// Fixture that provides an active game between both players
+const test = base.extend({
+  gameWithBothPlayers: async ({ browser }, use) => {
+    // Setup: Create contexts, login, start game
+    const context1 = await browser.newContext();
+    const context2 = await browser.newContext();
+    const page1 = await context1.newPage();
+    const page2 = await context2.newPage();
+
+    await login(page1, 'player1');
+    await login(page2, 'player2');
+
+    // Create game between them...
+    // ...
+
+    await use({ page1, page2, gameId });
+
+    // Cleanup
+    await context1.close();
+    await context2.close();
+  }
+});
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 7.3: Update skipped tests to use game fixture 🤖
+
+**Problem**: Tests like `gameplay.spec.js` skip with "No games available to test".
+
+**Solution**: Update tests to either:
+1. Use the game fixture to ensure a game exists
+2. Create the game at the start of the test
+3. Run `reset-game.spec.js` first to set up test data
+
+**Files to update**:
+- `gameplay.spec.js` - All 27 gameplay tests
+- `join-game.spec.js` - 3 tests
+- `api.spec.js` - Tests requiring game state (10 tests)
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### Step 7.4: Fix failing UI locator tests 🤖
+
+**Problem**: 3 tests fail due to UI locator issues in Game Lobby:
+1. `multiplayer-flow.spec.js:57` - Can't find Player 2 in search
+2. `multiplayer-flow.spec.js:220` - Invitations tab content not found
+3. `reset-game.spec.js:190` - User not found for invitation
+
+**Solution**:
+1. Inspect the actual Game Lobby UI and update locators
+2. Add waiting for dynamic content to load
+3. Handle "no results" states gracefully
 
 [Back to TOC](#table-of-contents)
 
