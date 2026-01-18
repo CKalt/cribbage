@@ -9,11 +9,11 @@ import {
 } from '@/lib/game-schema';
 
 /**
- * Decode JWT token to extract user ID (sub claim)
+ * Decode JWT token to extract user ID (sub claim) and email
  * Note: This is a simple decode, not a full verification.
  * The token is already verified by Cognito on the client side.
  */
-function getUserIdFromToken(token) {
+function getUserInfoFromToken(token) {
   if (!token) return null;
 
   try {
@@ -26,7 +26,10 @@ function getUserIdFromToken(token) {
       Buffer.from(parts[1], 'base64url').toString('utf8')
     );
 
-    return payload.sub || null;
+    return {
+      userId: payload.sub || null,
+      email: payload.email || null
+    };
   } catch (error) {
     console.error('Error decoding token:', error);
     return null;
@@ -42,8 +45,9 @@ function getUserDataPath(userId) {
 
 /**
  * Read user's dml-ast data file, creating if doesn't exist
+ * If email is provided, saves it to user data for multiplayer lookup
  */
-function readUserData(userId) {
+function readUserData(userId, email = null) {
   const filepath = getUserDataPath(userId);
   const dataDir = path.dirname(filepath);
 
@@ -55,13 +59,25 @@ function readUserData(userId) {
   // Create empty data file if doesn't exist
   if (!fs.existsSync(filepath)) {
     const emptyData = createEmptyUserData();
+    // Save email for multiplayer user lookup
+    if (email) {
+      emptyData.email = email;
+    }
     fs.writeFileSync(filepath, JSON.stringify(emptyData, null, 2));
     return emptyData;
   }
 
   // Read existing data
   const content = fs.readFileSync(filepath, 'utf8');
-  return JSON.parse(content);
+  const userData = JSON.parse(content);
+
+  // Update email if provided and different (or missing)
+  if (email && userData.email !== email) {
+    userData.email = email;
+    fs.writeFileSync(filepath, JSON.stringify(userData, null, 2));
+  }
+
+  return userData;
 }
 
 /**
@@ -87,16 +103,17 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const userId = getUserIdFromToken(token);
+    const userInfo = getUserInfoFromToken(token);
 
-    if (!userId) {
+    if (!userInfo?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userData = readUserData(userId);
+    const { userId, email } = userInfo;
+    const userData = readUserData(userId, email);
     const gameSessionsData = userData.game_sessions?.data || [];
 
     // Find user's game session (should be at most one)
@@ -162,19 +179,20 @@ export async function POST(request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const userId = getUserIdFromToken(token);
+    const userInfo = getUserInfoFromToken(token);
 
-    if (!userId) {
+    if (!userInfo?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    const { userId, email } = userInfo;
     const body = await request.json();
     const { gameState, version, action } = body;
 
-    const userData = readUserData(userId);
+    const userData = readUserData(userId, email);
     const gameSessionsData = userData.game_sessions?.data || [];
 
     // Find existing session index

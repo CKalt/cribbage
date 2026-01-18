@@ -229,7 +229,8 @@ test.describe('Game Lobby Functions', () => {
 
     // Should show either invitations or "no invitations" message
     const hasContent = await page1.locator('button:has-text("Accept")').isVisible().catch(() => false) ||
-                       await page1.locator('text=No').isVisible().catch(() => false);
+                       await page1.locator('text=No pending invitations').isVisible().catch(() => false) ||
+                       await page1.locator('text=No sent invitations').isVisible().catch(() => false);
 
     expect(hasContent).toBeTruthy();
     console.log('✓ Invitations tab works');
