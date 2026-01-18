@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+// Test accounts to exclude from leaderboard
+const TEST_ACCOUNTS = [
+  'chris+one@chrisk.com',
+  'chris+two@chrisk.com',
+  'chris+three@chrisk.com',
+  'chris+four@chrisk.com'
+];
+
 export async function GET() {
   try {
     // Read all user data files
@@ -20,6 +28,11 @@ export async function GET() {
 
           // Email is stored in the user data file
           const userEmail = userData.email || userId;
+
+          // Skip test accounts
+          if (TEST_ACCOUNTS.includes(userEmail)) {
+            continue;
+          }
 
           if (gameStats) {
             stats.push({

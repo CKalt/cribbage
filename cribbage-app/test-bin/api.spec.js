@@ -17,6 +17,31 @@ async function getAuthToken(page) {
   return tokenCookie?.value;
 }
 
+/**
+ * Helper: Find a game in a specific phase
+ * @param {Page} page - Playwright page (must be logged in)
+ * @param {'discarding' | 'playing' | 'counting'} targetPhase - Phase to find
+ * @returns {Promise<{gameId: string, gameData: object} | null>}
+ */
+async function findGameByPhase(page, targetPhase) {
+  const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
+  const gamesData = await gamesResponse.json();
+
+  if (!gamesData.games || gamesData.games.length === 0) {
+    return null;
+  }
+
+  for (const game of gamesData.games) {
+    const response = await page.request.get(`${BASE_URL}/api/multiplayer/games/${game.id}`);
+    const data = await response.json();
+    if (data.game?.gameState?.phase === targetPhase) {
+      return { gameId: game.id, gameData: data };
+    }
+  }
+
+  return null;
+}
+
 // ============================================================
 // TEST: Players API returns user list
 // ============================================================
@@ -315,26 +340,15 @@ test('POST go move accepted', async ({ page }) => {
   const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
-  const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
-  const gamesData = await gamesResponse.json();
-
-  if (!gamesData.games || gamesData.games.length === 0) {
-    console.log('⚠ No games to test');
+  // Find a game in playing phase
+  const result = await findGameByPhase(page, 'playing');
+  if (!result) {
+    console.log('⚠ No playing phase game found');
     test.skip();
     return;
   }
 
-  const gameId = gamesData.games[0].id;
-
-  // Check game state first
-  const gameResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
-  const gameData = await gameResponse.json();
-
-  if (gameData.game?.gameState?.phase !== 'playing') {
-    console.log('⚠ Not in playing phase');
-    test.skip();
-    return;
-  }
+  const { gameId, gameData } = result;
 
   if (!gameData.game?.isMyTurn) {
     console.log('⚠ Not my turn');
@@ -369,24 +383,15 @@ test('Game state includes playState', async ({ page }) => {
   const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
-  const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
-  const gamesData = await gamesResponse.json();
-
-  if (!gamesData.games || gamesData.games.length === 0) {
-    console.log('⚠ No games to test');
+  // Find a game in playing phase
+  const result = await findGameByPhase(page, 'playing');
+  if (!result) {
+    console.log('⚠ No playing phase game found');
     test.skip();
     return;
   }
 
-  const gameId = gamesData.games[0].id;
-  const response = await page.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
-  const data = await response.json();
-
-  if (data.game?.gameState?.phase !== 'playing') {
-    console.log('⚠ Not in playing phase - skipping playState test');
-    test.skip();
-    return;
-  }
+  const { gameId, gameData: data } = result;
 
   // Check playState structure
   const playState = data.game.gameState.playState;
@@ -417,25 +422,18 @@ test('Game state includes cutCard after cut', async ({ page }) => {
   const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
-  const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
-  const gamesData = await gamesResponse.json();
-
-  if (!gamesData.games || gamesData.games.length === 0) {
-    console.log('⚠ No games to test');
+  // Find a game in playing or counting phase (both have cut card)
+  let result = await findGameByPhase(page, 'playing');
+  if (!result) {
+    result = await findGameByPhase(page, 'counting');
+  }
+  if (!result) {
+    console.log('⚠ No game past cut phase found');
     test.skip();
     return;
   }
 
-  const gameId = gamesData.games[0].id;
-  const response = await page.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
-  const data = await response.json();
-
-  const phase = data.game?.gameState?.phase;
-  if (phase !== 'playing' && phase !== 'counting') {
-    console.log('⚠ Game not past cut phase yet');
-    test.skip();
-    return;
-  }
+  const { gameId, gameData: data } = result;
 
   // Should have cutCard
   const cutCard = data.game.gameState.cutCard;
@@ -456,18 +454,18 @@ test('Pegging points are tracked', async ({ page }) => {
   const token = await getAuthToken(page);
   expect(token).toBeTruthy();
 
-  const gamesResponse = await page.request.get(`${BASE_URL}/api/multiplayer/games`);
-  const gamesData = await gamesResponse.json();
-
-  if (!gamesData.games || gamesData.games.length === 0) {
-    console.log('⚠ No games to test');
+  // Find a game in playing or counting phase (both have pegging points)
+  let result = await findGameByPhase(page, 'playing');
+  if (!result) {
+    result = await findGameByPhase(page, 'counting');
+  }
+  if (!result) {
+    console.log('⚠ No game with pegging points found');
     test.skip();
     return;
   }
 
-  const gameId = gamesData.games[0].id;
-  const response = await page.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
-  const data = await response.json();
+  const { gameId, gameData: data } = result;
 
   if (!data.game?.gameState?.peggingPoints) {
     console.log('⚠ No pegging points in game state');

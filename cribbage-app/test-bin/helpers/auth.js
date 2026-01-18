@@ -16,7 +16,7 @@ function getBaseUrl() {
 /**
  * Login as a specific user
  * @param {Page} page - Playwright page
- * @param {'player1' | 'player2'} userKey - Which user to login as
+ * @param {'player1' | 'player2' | 'player3' | 'player4'} userKey - Which user to login as
  * @returns {Promise<Object>} The user config object
  */
 async function login(page, userKey) {
@@ -63,6 +63,18 @@ async function login(page, userKey) {
   // Fill login form
   await page.fill('input[type="email"]', user.email);
   await page.fill('input[type="password"]', user.password);
+
+  // Dismiss modal if it appeared during form filling
+  try {
+    const gotItButton = page.locator('button:has-text("Got It!")');
+    if (await gotItButton.isVisible({ timeout: 500 })) {
+      console.log(`[${userKey}] Dismissing modal before submit...`);
+      await gotItButton.click();
+      await page.waitForTimeout(300);
+    }
+  } catch {
+    // Modal not present, continue
+  }
 
   // Submit and wait for redirect
   await page.click('button[type="submit"]');

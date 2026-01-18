@@ -8,6 +8,7 @@
  */
 module.exports = {
   // Test accounts for multiplayer testing
+  // Note: These are dedicated test accounts - excluded from leaderboard
   users: {
     player1: {
       email: process.env.TEST_USER1_EMAIL || 'chris+one@chrisk.com',
@@ -18,8 +19,26 @@ module.exports = {
       email: process.env.TEST_USER2_EMAIL || 'chris+two@chrisk.com',
       password: process.env.TEST_USER2_PASSWORD || 'Hello123$',
       name: 'Player Two'
+    },
+    player3: {
+      email: process.env.TEST_USER3_EMAIL || 'chris+three@chrisk.com',
+      password: process.env.TEST_USER3_PASSWORD || 'Hello123$',
+      name: 'Player Three'
+    },
+    player4: {
+      email: process.env.TEST_USER4_EMAIL || 'chris+four@chrisk.com',
+      password: process.env.TEST_USER4_PASSWORD || 'Hello123$',
+      name: 'Player Four'
     }
   },
+
+  // Test email patterns to exclude from leaderboard
+  testEmailPatterns: [
+    'chris+one@chrisk.com',
+    'chris+two@chrisk.com',
+    'chris+three@chrisk.com',
+    'chris+four@chrisk.com'
+  ],
 
   // Legacy single-user config (for backwards compatibility)
   testUser: {

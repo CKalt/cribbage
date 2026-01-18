@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { login: authLogin, getBaseUrl } = require('./helpers/auth');
+const { findAndJoinGameAtPhase } = require('./helpers/test-games');
 const config = require('./test-config');
 
 const BASE_URL = getBaseUrl();
@@ -8,7 +9,7 @@ const BASE_URL = getBaseUrl();
 /**
  * Helper: Login to the app using shared auth helper
  * @param {Page} page - Playwright page
- * @param {'player1' | 'player2'} userKey - Which user to login as
+ * @param {'player1' | 'player2' | 'player3' | 'player4'} userKey - Which user to login as
  */
 async function login(page, userKey) {
   await authLogin(page, userKey);
@@ -26,7 +27,18 @@ async function openGameLobby(page) {
 }
 
 /**
- * Helper: Join an existing game from My Games tab
+ * Helper: Join a game at a specific phase
+ * @param {Page} page - Playwright page (must be logged in)
+ * @param {'discarding' | 'playing' | 'counting'} phase - Which phase game to join
+ * @returns {Promise<boolean>} true if joined successfully
+ */
+async function joinGameAtPhase(page, phase) {
+  const result = await findAndJoinGameAtPhase(page, phase, BASE_URL);
+  return result.success;
+}
+
+/**
+ * Helper: Join any existing game (for backwards compatibility)
  */
 async function joinExistingGame(page) {
   await openGameLobby(page);
@@ -49,9 +61,9 @@ async function joinExistingGame(page) {
 test('Game displays player cards in discarding phase', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No discarding phase game available');
     test.skip();
     return;
   }
@@ -63,20 +75,17 @@ test('Game displays player cards in discarding phase', async ({ page }) => {
   // Check for phase indicator
   await expect(page.locator('text=Phase:')).toBeVisible();
 
-  // If in discarding phase, we should see cards or "You've discarded" message
-  const discardingPhase = phase?.includes('discarding');
-  if (discardingPhase) {
-    const hasCards = await page.locator('.flex.justify-center.gap-2 > div').count() > 0;
-    const hasDiscarded = await page.locator('text=You\'ve discarded').isVisible();
+  // In discarding phase, we should see cards or "You've discarded" message
+  const hasCards = await page.locator('.flex.justify-center.gap-2 > div').count() > 0;
+  const hasDiscarded = await page.locator('text=You\'ve discarded').isVisible();
 
-    if (hasCards) {
-      console.log('✓ Cards are displayed');
-    } else if (hasDiscarded) {
-      console.log('✓ Player has already discarded');
-    }
-
-    expect(hasCards || hasDiscarded).toBeTruthy();
+  if (hasCards) {
+    console.log('✓ Cards are displayed');
+  } else if (hasDiscarded) {
+    console.log('✓ Player has already discarded');
   }
+
+  expect(hasCards || hasDiscarded).toBeTruthy();
 
   console.log('✓ Game display test completed');
 });
@@ -87,9 +96,9 @@ test('Game displays player cards in discarding phase', async ({ page }) => {
 test('Can select cards for discard', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No discarding phase game available');
     test.skip();
     return;
   }
@@ -143,9 +152,9 @@ test('Can select cards for discard', async ({ page }) => {
 test('Discard button shows selection count', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No discarding phase game available');
     test.skip();
     return;
   }
@@ -173,9 +182,9 @@ test('Discard button shows selection count', async ({ page }) => {
 test('Game shows dealer indicator', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No game available');
     test.skip();
     return;
   }
@@ -197,9 +206,9 @@ test('Game shows dealer indicator', async ({ page }) => {
 test('Game shows score display', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No game available');
     test.skip();
     return;
   }
@@ -219,9 +228,9 @@ test('Game shows score display', async ({ page }) => {
 test('Game shows turn indicator', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No game available');
     test.skip();
     return;
   }
@@ -250,9 +259,9 @@ test('Game shows turn indicator', async ({ page }) => {
 test('Game shows last move info', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No game available');
     test.skip();
     return;
   }
@@ -272,17 +281,9 @@ test('Game shows last move info', async ({ page }) => {
 test('Full discard flow', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'discarding');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  // Check phase
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('discarding')) {
-    console.log('⚠ Not in discarding phase - skipping discard flow test');
+    console.log('⚠ No discarding phase game available');
     test.skip();
     return;
   }
@@ -340,6 +341,7 @@ test('Full discard flow', async ({ page }) => {
 // TEST: Two players can both discard
 // ============================================================
 test('Two players can discard', async ({ browser }) => {
+  // Discarding game is between player1 and player2
   const context1 = await browser.newContext();
   const context2 = await browser.newContext();
 
@@ -347,19 +349,19 @@ test('Two players can discard', async ({ browser }) => {
   const page2 = await context2.newPage();
 
   try {
-    // Login both users
-    console.log('Logging in User 1...');
+    // Login both users (player1 vs player2 for discarding game)
+    console.log('Logging in Player 1...');
     await login(page1, 'player1');
 
-    console.log('Logging in User 2...');
+    console.log('Logging in Player 2...');
     await login(page2, 'player2');
 
-    // Both join their games
-    console.log('User 1 joining game...');
-    const joined1 = await joinExistingGame(page1);
+    // Both join the discarding game
+    console.log('Player 1 joining discarding game...');
+    const joined1 = await joinGameAtPhase(page1, 'discarding');
 
-    console.log('User 2 joining game...');
-    const joined2 = await joinExistingGame(page2);
+    console.log('Player 2 joining discarding game...');
+    const joined2 = await joinGameAtPhase(page2, 'discarding');
 
     if (!joined1 || !joined2) {
       console.log('⚠ Could not join games for both users');
@@ -397,16 +399,17 @@ test('Two players can discard', async ({ browser }) => {
 test('Cut phase shows cut button', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  // Cut phase is transitional - try any game
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
 
   const phase = await page.locator('text=Phase:').textContent();
   if (!phase?.includes('cut')) {
-    console.log('⚠ Not in cut phase - skipping');
+    console.log('⚠ Not in cut phase - skipping (game is past cut)');
     test.skip();
     return;
   }
@@ -433,9 +436,10 @@ test('Cut phase shows cut button', async ({ page }) => {
 test('Cut card displays after cutting', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  // Use playing game which has already been cut
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -464,16 +468,9 @@ test('Cut card displays after cutting', async ({ page }) => {
 test('Play phase shows count display', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -498,16 +495,9 @@ test('Play phase shows count display', async ({ page }) => {
 test('Play phase shows played cards area', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -525,16 +515,9 @@ test('Play phase shows played cards area', async ({ page }) => {
 test('Play phase shows remaining cards', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -558,16 +541,9 @@ test('Play phase shows remaining cards', async ({ page }) => {
 test('Play phase highlights playable cards', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -602,16 +578,9 @@ test('Play phase highlights playable cards', async ({ page }) => {
 test('Go button appears when no playable cards', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -648,16 +617,9 @@ test('Go button appears when no playable cards', async ({ page }) => {
 test('Opponent Go indicator displays', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -681,16 +643,9 @@ test('Opponent Go indicator displays', async ({ page }) => {
 test('Can play a card in play phase', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -749,6 +704,7 @@ test('Can play a card in play phase', async ({ page }) => {
 // TEST: Two players can play cards alternately
 // ============================================================
 test('Two players can play in play phase', async ({ browser }) => {
+  // Playing game is between player1 and player3
   const context1 = await browser.newContext();
   const context2 = await browser.newContext();
 
@@ -756,20 +712,20 @@ test('Two players can play in play phase', async ({ browser }) => {
   const page2 = await context2.newPage();
 
   try {
-    console.log('Logging in User 1...');
+    console.log('Logging in Player 1...');
     await login(page1, 'player1');
 
-    console.log('Logging in User 2...');
-    await login(page2, 'player2');
+    console.log('Logging in Player 3...');
+    await login(page2, 'player3');
 
-    console.log('User 1 joining game...');
-    const joined1 = await joinExistingGame(page1);
+    console.log('Player 1 joining playing game...');
+    const joined1 = await joinGameAtPhase(page1, 'playing');
 
-    console.log('User 2 joining game...');
-    const joined2 = await joinExistingGame(page2);
+    console.log('Player 3 joining playing game...');
+    const joined2 = await joinGameAtPhase(page2, 'playing');
 
     if (!joined1 || !joined2) {
-      console.log('⚠ Could not join games for both users');
+      console.log('⚠ Could not join playing game for both users');
       test.skip();
       return;
     }
@@ -777,14 +733,8 @@ test('Two players can play in play phase', async ({ browser }) => {
     const phase1 = await page1.locator('text=Phase:').textContent();
     const phase2 = await page2.locator('text=Phase:').textContent();
 
-    console.log('User 1 phase:', phase1);
-    console.log('User 2 phase:', phase2);
-
-    if (!phase1?.includes('playing') || !phase2?.includes('playing')) {
-      console.log('⚠ Not both in playing phase');
-      test.skip();
-      return;
-    }
+    console.log('Player 1 phase:', phase1);
+    console.log('Player 3 phase:', phase2);
 
     // Check whose turn it is
     const user1Turn = await page1.locator('text=Your Turn').isVisible();
@@ -810,16 +760,9 @@ test('Two players can play in play phase', async ({ browser }) => {
 test('Count highlights at special values', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('playing')) {
-    console.log('⚠ Not in playing phase - skipping');
+    console.log('⚠ No playing phase game available');
     test.skip();
     return;
   }
@@ -859,16 +802,9 @@ test('Count highlights at special values', async ({ page }) => {
 test('Counting phase displays correctly', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -893,16 +829,9 @@ test('Counting phase displays correctly', async ({ page }) => {
 test('Counting phase shows cut card', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -920,16 +849,9 @@ test('Counting phase shows cut card', async ({ page }) => {
 test('Counting phase shows hand being counted', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -950,16 +872,9 @@ test('Counting phase shows hand being counted', async ({ page }) => {
 test('Count button appears when it is your turn', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -985,16 +900,9 @@ test('Count button appears when it is your turn', async ({ page }) => {
 test('Waiting message displays when not your turn to count', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -1020,16 +928,9 @@ test('Waiting message displays when not your turn to count', async ({ page }) =>
 test('Scores display during counting phase', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -1058,16 +959,9 @@ test('Scores display during counting phase', async ({ page }) => {
 test('Can click Count Hand button to count', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
-    test.skip();
-    return;
-  }
-
-  const phase = await page.locator('text=Phase:').textContent();
-  if (!phase?.includes('counting')) {
-    console.log('⚠ Not in counting phase - skipping');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
@@ -1108,6 +1002,7 @@ test('Can click Count Hand button to count', async ({ page }) => {
 // TEST: Two players can both count
 // ============================================================
 test('Two players can count their hands', async ({ browser }) => {
+  // Counting game is between player1 and player4
   const context1 = await browser.newContext();
   const context2 = await browser.newContext();
 
@@ -1115,22 +1010,22 @@ test('Two players can count their hands', async ({ browser }) => {
   const page2 = await context2.newPage();
 
   try {
-    // Login both users
-    console.log('Logging in User 1...');
+    // Login both users (player1 vs player4 for counting game)
+    console.log('Logging in Player 1...');
     await login(page1, 'player1');
 
-    console.log('Logging in User 2...');
-    await login(page2, 'player2');
+    console.log('Logging in Player 4...');
+    await login(page2, 'player4');
 
-    // Both join their games
-    console.log('User 1 joining game...');
-    const joined1 = await joinExistingGame(page1);
+    // Both join the counting game
+    console.log('Player 1 joining counting game...');
+    const joined1 = await joinGameAtPhase(page1, 'counting');
 
-    console.log('User 2 joining game...');
-    const joined2 = await joinExistingGame(page2);
+    console.log('Player 4 joining counting game...');
+    const joined2 = await joinGameAtPhase(page2, 'counting');
 
     if (!joined1 || !joined2) {
-      console.log('⚠ Could not join games for both users');
+      console.log('⚠ Could not join counting game for both users');
       test.skip();
       return;
     }
@@ -1139,14 +1034,8 @@ test('Two players can count their hands', async ({ browser }) => {
     const phase1 = await page1.locator('text=Phase:').textContent();
     const phase2 = await page2.locator('text=Phase:').textContent();
 
-    console.log('User 1 phase:', phase1);
-    console.log('User 2 phase:', phase2);
-
-    if (!phase1?.includes('counting') || !phase2?.includes('counting')) {
-      console.log('⚠ Not both in counting phase - skipping');
-      test.skip();
-      return;
-    }
+    console.log('Player 1 phase:', phase1);
+    console.log('Player 4 phase:', phase2);
 
     // Check who has the Count button
     const user1HasCount = await page1.locator('button:has-text("Count Hand")').isVisible();
@@ -1172,9 +1061,9 @@ test('Two players can count their hands', async ({ browser }) => {
 test('New round starts after counting completes', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinExistingGame(page);
+  const joined = await joinGameAtPhase(page, 'counting');
   if (!joined) {
-    console.log('⚠ No games available to test');
+    console.log('⚠ No counting phase game available');
     test.skip();
     return;
   }
