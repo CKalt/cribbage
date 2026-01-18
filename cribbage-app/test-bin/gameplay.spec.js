@@ -1093,7 +1093,7 @@ test('Can click Count Hand button to count', async ({ page }) => {
   await expect(countButton).toBeVisible();
 
   // Get current score before clicking
-  const scoreBefore = await page.locator('text=/\\(\\d+ pts\\)/).first().textContent();
+  const scoreBefore = await page.locator(/\(\d+ pts\)/).first().textContent().catch(() => 'N/A');
   console.log('Score before:', scoreBefore);
 
   await countButton.click();

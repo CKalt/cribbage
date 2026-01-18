@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Fix Turbopack workspace root issue (multiple lockfiles detected)
+  turbopack: {
+    root: process.cwd(),
+  },
   // Disable static asset caching to ensure version updates are seen immediately
   generateBuildId: async () => {
     // Use timestamp as build ID to bust cache on every deploy

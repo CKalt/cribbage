@@ -7,7 +7,7 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
-  reporter: [['html'], ['list']],  // Show progress in console
+  reporter: [['html'], ['list']],
   timeout: 60000,
 
   use: {
@@ -15,7 +15,6 @@ module.exports = defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    headless: process.env.HEADED !== 'true',  // HEADED=true for visible browser
   },
 
   projects: [
@@ -25,13 +24,10 @@ module.exports = defineConfig({
     },
   ],
 
-  // Auto-start dev server when testing locally (not when TEST_URL is set)
-  webServer: process.env.TEST_URL ? undefined : {
+  webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
-    timeout: 120000,  // 2 minutes to start
-    stdout: 'pipe',   // Show server output
-    stderr: 'pipe',
+    timeout: 120 * 1000,
   },
 });

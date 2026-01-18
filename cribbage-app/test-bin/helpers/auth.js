@@ -27,12 +27,38 @@ async function login(page, userKey) {
 
   const baseUrl = getBaseUrl();
 
-  console.log(`[${userKey}] Logging in as ${user.email}...`);
+  console.log(`[${userKey}] Logging in as ${user.email} at ${baseUrl}...`);
 
-  await page.goto(`${baseUrl}/login`);
+  await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  console.log(`[${userKey}] Page loaded, current URL: ${page.url()}`);
 
-  // Wait for login form to be ready
+  // Dismiss "What's New" modal if it appears - wait a bit for it to potentially appear
+  // The modal might appear with a slight delay, so we give it time
+  await page.waitForTimeout(500);
+  try {
+    const gotItButton = page.locator('button:has-text("Got It!")');
+    const modalVisible = await gotItButton.isVisible();
+    if (modalVisible) {
+      console.log(`[${userKey}] Dismissing "What's New" modal...`);
+      await gotItButton.click();
+      // Wait for modal to close
+      await page.waitForTimeout(500);
+    }
+  } catch {
+    // Modal not present, continue with login
+  }
+
+  // Wait for login form to be ready and ensure no modal overlay is blocking
   await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+
+  // Double-check modal is gone before interacting with form
+  const modalOverlay = page.locator('.fixed.inset-0.bg-black');
+  const overlayStillVisible = await modalOverlay.isVisible().catch(() => false);
+  if (overlayStillVisible) {
+    console.log(`[${userKey}] Modal overlay still visible, waiting for it to close...`);
+    await page.locator('button:has-text("Got It!")').click({ force: true }).catch(() => {});
+    await page.waitForTimeout(500);
+  }
 
   // Fill login form
   await page.fill('input[type="email"]', user.email);
@@ -53,8 +79,21 @@ async function login(page, userKey) {
     throw new Error(`Login redirect timeout for ${user.email}`);
   }
 
-  // Verify logged in by checking for main app content
-  await expect(page.locator('text=Cribbage')).toBeVisible({ timeout: 10000 });
+  // Dismiss "What's New" modal if it appears after login
+  try {
+    const gotItButton = page.locator('button:has-text("Got It!")');
+    const modalVisible = await gotItButton.isVisible();
+    if (modalVisible) {
+      console.log(`[${userKey}] Dismissing "What's New" modal after login...`);
+      await gotItButton.click();
+      await page.waitForTimeout(300);
+    }
+  } catch {
+    // Modal not present, continue
+  }
+
+  // Verify logged in by checking for main app title (exact match to avoid modal text)
+  await expect(page.getByText('Cribbage', { exact: true })).toBeVisible({ timeout: 10000 });
 
   console.log(`[${userKey}] Logged in successfully as ${user.email}`);
   return user;
