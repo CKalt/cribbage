@@ -6,10 +6,13 @@ const path = require('path');
 /**
  * Reset Game Script - Creates games at multiple phases for comprehensive testing
  *
- * Creates 3 games using different player pairs (to avoid "already have active game" error):
+ * Creates 3 games where player1 has the turn (for testability):
  * 1. discardingGame: player1 vs player2 - Stops at discarding phase
- * 2. playingGame:    player1 vs player3 - Progresses to playing phase
- * 3. countingGame:   player1 vs player4 - Progresses to counting phase
+ * 2. playingGame:    player3 vs player1 - Playing phase, player1's turn to play
+ * 3. countingGame:   player4 vs player1 - Counting phase, player1's turn to count
+ *
+ * Note: Opponent invites player1 for playing/counting games so player1 is non-dealer
+ * (non-dealer plays and counts first in cribbage).
  *
  * Game IDs are saved to test-state.json for other tests to use.
  */
@@ -92,20 +95,31 @@ async function declineAllInvitations(page) {
 
 /**
  * Create a game and progress it to the specified phase
+ * @param {Page} inviterPage - Page of user who sends invitation (becomes dealer)
+ * @param {Page} accepterPage - Page of user who accepts (becomes non-dealer, plays/counts first)
+ * @param {string} accepterEmail - Email of the accepter
+ * @param {string} targetPhase - Target phase: 'discarding', 'cut', 'playing', 'counting'
+ * @param {string} gameName - Name for logging
+ * @param {Page} player1Page - Page for player1 (to return correct player order)
+ * @param {Page} player2Page - Page for player2 (opponent)
  */
-async function createGameAtPhase(page1, page2, inviteeEmail, targetPhase, gameName) {
+async function createGameAtPhase(inviterPage, accepterPage, accepterEmail, targetPhase, gameName, player1Page = null, player2Page = null) {
   console.log(`\n  Creating ${gameName} (target: ${targetPhase})...`);
 
+  // Use provided pages or default to inviter/accepter
+  const p1Page = player1Page || inviterPage;
+  const p2Page = player2Page || accepterPage;
+
   // Create invitation
-  const inviteResponse = await page1.request.post(`${BASE_URL}/api/multiplayer/invitations`, {
-    data: { toEmail: inviteeEmail }
+  const inviteResponse = await inviterPage.request.post(`${BASE_URL}/api/multiplayer/invitations`, {
+    data: { toEmail: accepterEmail }
   });
   const inviteData = await inviteResponse.json();
   if (!inviteData.success) throw new Error(`Invite failed: ${inviteData.error}`);
   const invitationId = inviteData.invitation.id;
 
   // Accept invitation with TEST DECK
-  const acceptResponse = await page2.request.post(`${BASE_URL}/api/multiplayer/invitations/${invitationId}`, {
+  const acceptResponse = await accepterPage.request.post(`${BASE_URL}/api/multiplayer/invitations/${invitationId}`, {
     data: {
       action: 'accept',
       useTestDeck: true,
@@ -122,23 +136,29 @@ async function createGameAtPhase(page1, page2, inviteeEmail, targetPhase, gameNa
     return gameId;
   }
 
-  // Progress to playing phase: both players discard, then cut
-  await page1.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
+  // Progress to cut phase: both players discard
+  // Inviter (dealer) discards first, then accepter (non-dealer)
+  await inviterPage.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
     data: {
       moveType: 'discard',
       data: { cards: [{ suit: '♥', rank: '4' }, { suit: '♥', rank: '6' }] }
     }
   });
 
-  await page2.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
+  await accepterPage.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
     data: {
       moveType: 'discard',
       data: { cards: [{ suit: '♠', rank: 'K' }, { suit: '♦', rank: 'Q' }] }
     }
   });
 
-  // Player 2 (non-dealer) cuts
-  await page2.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
+  if (targetPhase === 'cut') {
+    console.log(`    ✓ ${gameName} ready at cut phase`);
+    return gameId;
+  }
+
+  // Accepter (non-dealer) cuts
+  await accepterPage.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
     data: { moveType: 'cut', data: { cutIndex: 0 } }
   });
 
@@ -148,6 +168,7 @@ async function createGameAtPhase(page1, page2, inviteeEmail, targetPhase, gameNa
   }
 
   // Progress to counting phase: play through pegging
+  // Non-dealer (accepter) plays first
   async function playCard(page, card) {
     await page.request.post(`${BASE_URL}/api/multiplayer/games/${gameId}/move`, {
       data: { moveType: 'play', data: { card } }
@@ -160,19 +181,20 @@ async function createGameAtPhase(page1, page2, inviteeEmail, targetPhase, gameNa
     });
   }
 
-  // Round 1: P2→10♣, P1→5♥, P2→10♦, P1→5♦, both Go
-  await playCard(page2, { suit: '♣', rank: '10' });
-  await playCard(page1, { suit: '♥', rank: '5' });
-  await playCard(page2, { suit: '♦', rank: '10' });
-  await playCard(page1, { suit: '♦', rank: '5' });
-  await sayGo(page2);
-  await sayGo(page1);
+  // Round 1: Non-dealer (accepter) plays first
+  // Accepter→10♣, Inviter→5♥, Accepter→10♦, Inviter→5♦, both Go
+  await playCard(accepterPage, { suit: '♣', rank: '10' });
+  await playCard(inviterPage, { suit: '♥', rank: '5' });
+  await playCard(accepterPage, { suit: '♦', rank: '10' });
+  await playCard(inviterPage, { suit: '♦', rank: '5' });
+  await sayGo(accepterPage);
+  await sayGo(inviterPage);
 
-  // Round 2: P2→6♣, P1→5♠, P2→9♥, P1→J♥
-  await playCard(page2, { suit: '♣', rank: '6' });
-  await playCard(page1, { suit: '♠', rank: '5' });
-  await playCard(page2, { suit: '♥', rank: '9' });
-  await playCard(page1, { suit: '♥', rank: 'J' });
+  // Round 2: Accepter→6♣, Inviter→5♠, Accepter→9♥, Inviter→J♥
+  await playCard(accepterPage, { suit: '♣', rank: '6' });
+  await playCard(inviterPage, { suit: '♠', rank: '5' });
+  await playCard(accepterPage, { suit: '♥', rank: '9' });
+  await playCard(inviterPage, { suit: '♥', rank: 'J' });
 
   console.log(`    ✓ ${gameName} ready at counting phase`);
   return gameId;
@@ -238,18 +260,21 @@ test('Reset game state for test users', async ({ browser }) => {
     console.log('\n========== STEP 4: Creating games at each phase ==========');
 
     // Game 1: player1 vs player2 - discarding phase
+    // player1 invites player2, player1 is dealer (doesn't matter for discarding)
     const discardingGameId = await createGameAtPhase(
       page1, page2, config.users.player2.email, 'discarding', 'discardingGame'
     );
 
-    // Game 2: player1 vs player3 - playing phase
+    // Game 2: player3 vs player1 - playing phase
+    // player3 invites player1, so player1 is non-dealer and plays first!
     const playingGameId = await createGameAtPhase(
-      page1, page3, config.users.player3.email, 'playing', 'playingGame'
+      page3, page1, config.users.player1.email, 'playing', 'playingGame'
     );
 
-    // Game 3: player1 vs player4 - counting phase
+    // Game 3: player4 vs player1 - counting phase
+    // player4 invites player1, so player1 is non-dealer and counts first!
     const countingGameId = await createGameAtPhase(
-      page1, page4, config.users.player4.email, 'counting', 'countingGame'
+      page4, page1, config.users.player1.email, 'counting', 'countingGame'
     );
 
     // ========== STEP 5: Save game IDs ==========
@@ -273,7 +298,8 @@ test('Reset game state for test users', async ({ browser }) => {
       const resp = await page1.request.get(`${BASE_URL}/api/multiplayer/games/${gameId}`);
       const data = await resp.json();
       const actualPhase = data.game?.gameState?.phase;
-      console.log(`  ${phase}Game (${gameId}): phase=${actualPhase}`);
+      const isMyTurn = data.game?.isMyTurn;
+      console.log(`  ${phase}Game (${gameId}): phase=${actualPhase}, isMyTurn=${isMyTurn}`);
       expect(actualPhase).toBe(phase);
     }
 
@@ -281,8 +307,8 @@ test('Reset game state for test users', async ({ browser }) => {
     console.log('✓ RESET COMPLETE - 3 games ready!');
     console.log('========================================');
     console.log(`  discardingGame: ${discardingGameId} (player1 vs player2)`);
-    console.log(`  playingGame:    ${playingGameId} (player1 vs player3)`);
-    console.log(`  countingGame:   ${countingGameId} (player1 vs player4)`);
+    console.log(`  playingGame:    ${playingGameId} (player1 vs player3, player1's turn)`);
+    console.log(`  countingGame:   ${countingGameId} (player1 vs player4, player1 counts)`);
     console.log('========================================\n');
 
   } finally {

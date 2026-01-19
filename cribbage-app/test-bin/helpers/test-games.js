@@ -8,7 +8,7 @@ const TEST_STATE_PATH = path.join(__dirname, '..', 'test-state.json');
 
 /**
  * Get game IDs for each phase from test-state.json
- * @returns {{ discarding: string, playing: string, counting: string } | null}
+ * @returns {{ discarding: string, cut: string, playing: string, counting: string } | null}
  */
 function getTestGames() {
   try {
@@ -26,7 +26,7 @@ function getTestGames() {
 
 /**
  * Get the game ID for a specific phase
- * @param {'discarding' | 'playing' | 'counting'} phase
+ * @param {'discarding' | 'cut' | 'playing' | 'counting'} phase
  * @returns {string | null}
  */
 function getGameIdForPhase(phase) {
@@ -38,7 +38,7 @@ function getGameIdForPhase(phase) {
 /**
  * Find and join a game at a specific phase using API
  * @param {Page} page - Playwright page (must be logged in)
- * @param {'discarding' | 'playing' | 'counting'} targetPhase - Which phase to look for
+ * @param {'discarding' | 'cut' | 'playing' | 'counting'} targetPhase - Which phase to look for
  * @param {string} baseUrl - Base URL for the app
  * @returns {Promise<{success: boolean, gameId: string | null, phase: string | null}>}
  */

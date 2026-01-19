@@ -224,12 +224,25 @@ test('Can view My Games and join a game', async ({ page }) => {
 
   // Click My Games tab
   await page.click('text=My Games');
-  await page.waitForTimeout(1000);
 
-  // Check for games or no games message
-  const hasGames = await page.locator('button:has-text("Your Turn")').isVisible() ||
-                   await page.locator('button:has-text("View")').isVisible();
-  const noGames = await page.locator('text=No active games').isVisible();
+  // Wait for content to load - use proper visibility check with timeout
+  const yourTurnButton = page.locator('button:has-text("Your Turn")');
+  const viewButton = page.locator('button:has-text("View")');
+  const noGamesMessage = page.locator('text=No active games');
+
+  // Wait for any of these to appear
+  try {
+    await Promise.race([
+      yourTurnButton.waitFor({ state: 'visible', timeout: 5000 }),
+      viewButton.waitFor({ state: 'visible', timeout: 5000 }),
+      noGamesMessage.waitFor({ state: 'visible', timeout: 5000 })
+    ]);
+  } catch {
+    // Timeout - check current state
+  }
+
+  const hasGames = await yourTurnButton.isVisible() || await viewButton.isVisible();
+  const noGames = await noGamesMessage.isVisible();
 
   if (hasGames) {
     console.log('✓ Found active games');

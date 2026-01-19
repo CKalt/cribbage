@@ -399,7 +399,7 @@ test('Two players can discard', async ({ browser }) => {
 test('Cut phase shows cut button', async ({ page }) => {
   await login(page, 'player1');
 
-  // Cut phase is transitional - try any game
+  // Cut phase is transitional - try any game that might be at cut
   const joined = await joinGameAtPhase(page, 'playing');
   if (!joined) {
     console.log('⚠ No playing phase game available');

@@ -244,12 +244,25 @@ test.describe('Game Lobby Functions', () => {
 
     // Click My Games tab
     await page1.click('text=My Games');
-    await page1.waitForTimeout(1000);
 
-    // Should show either games or "no games" message
-    const hasGames = await page1.locator('button:has-text("Your Turn")').isVisible().catch(() => false) ||
-                     await page1.locator('button:has-text("View")').isVisible().catch(() => false);
-    const noGames = await page1.locator('text=No active').isVisible().catch(() => false);
+    // Wait for content to load - use proper visibility check with timeout
+    const yourTurnButton = page1.locator('button:has-text("Your Turn")');
+    const viewButton = page1.locator('button:has-text("View")');
+    const noGamesMessage = page1.locator('text=No active');
+
+    // Wait for any of these to appear
+    try {
+      await Promise.race([
+        yourTurnButton.waitFor({ state: 'visible', timeout: 5000 }),
+        viewButton.waitFor({ state: 'visible', timeout: 5000 }),
+        noGamesMessage.waitFor({ state: 'visible', timeout: 5000 })
+      ]);
+    } catch {
+      // Timeout - check current state
+    }
+
+    const hasGames = await yourTurnButton.isVisible() || await viewButton.isVisible();
+    const noGames = await noGamesMessage.isVisible();
 
     expect(hasGames || noGames).toBeTruthy();
 
