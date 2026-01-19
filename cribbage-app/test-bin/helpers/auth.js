@@ -16,7 +16,7 @@ function getBaseUrl() {
 /**
  * Login as a specific user
  * @param {Page} page - Playwright page
- * @param {'player1' | 'player2' | 'player3' | 'player4'} userKey - Which user to login as
+ * @param {'player1' | 'player2' | 'player3' | 'player4' | 'player5' | 'player6'} userKey - Which user to login as
  * @returns {Promise<Object>} The user config object
  */
 async function login(page, userKey) {

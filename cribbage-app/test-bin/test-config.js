@@ -29,6 +29,16 @@ module.exports = {
       email: process.env.TEST_USER4_EMAIL || 'chris+four@chrisk.com',
       password: process.env.TEST_USER4_PASSWORD || 'Hello123$',
       name: 'Player Four'
+    },
+    player5: {
+      email: process.env.TEST_USER5_EMAIL || 'chris+five@chrisk.com',
+      password: process.env.TEST_USER5_PASSWORD || 'Hello123$',
+      name: 'Player Five'
+    },
+    player6: {
+      email: process.env.TEST_USER6_EMAIL || 'chris+six@chrisk.com',
+      password: process.env.TEST_USER6_PASSWORD || 'Hello123$',
+      name: 'Player Six'
     }
   },
 
@@ -37,7 +47,9 @@ module.exports = {
     'chris+one@chrisk.com',
     'chris+two@chrisk.com',
     'chris+three@chrisk.com',
-    'chris+four@chrisk.com'
+    'chris+four@chrisk.com',
+    'chris+five@chrisk.com',
+    'chris+six@chrisk.com'
   ],
 
   // Legacy single-user config (for backwards compatibility)

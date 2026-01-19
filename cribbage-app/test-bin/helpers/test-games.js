@@ -26,7 +26,7 @@ function getTestGames() {
 
 /**
  * Get the game ID for a specific phase
- * @param {'discarding' | 'cut' | 'playing' | 'counting'} phase
+ * @param {'discarding' | 'cut' | 'playing' | 'counting' | 'waitingCounting'} phase
  * @returns {string | null}
  */
 function getGameIdForPhase(phase) {
@@ -38,7 +38,7 @@ function getGameIdForPhase(phase) {
 /**
  * Find and join a game at a specific phase using API
  * @param {Page} page - Playwright page (must be logged in)
- * @param {'discarding' | 'cut' | 'playing' | 'counting'} targetPhase - Which phase to look for
+ * @param {'discarding' | 'cut' | 'playing' | 'counting' | 'waitingCounting'} targetPhase - Which phase to look for
  * @param {string} baseUrl - Base URL for the app
  * @returns {Promise<{success: boolean, gameId: string | null, phase: string | null}>}
  */
@@ -53,14 +53,24 @@ async function findAndJoinGameAtPhase(page, targetPhase, baseUrl) {
       return { success: false, gameId: null, phase: null };
     }
 
+    // Handle special 'waitingCounting' phase - it's a counting game where it's NOT player's turn
+    const actualPhase = targetPhase === 'waitingCounting' ? 'counting' : targetPhase;
+    const requireWaiting = targetPhase === 'waitingCounting';
+
     // Find a game at the target phase
     for (const game of data.games) {
       // Get full game details to check phase
       const gameResponse = await page.request.get(`${baseUrl}/api/multiplayer/games/${game.id}`);
       const gameData = await gameResponse.json();
       const phase = gameData.game?.gameState?.phase;
+      const isMyTurn = gameData.game?.isMyTurn;
 
-      if (phase === targetPhase) {
+      // For waitingCounting, we need counting phase AND NOT my turn
+      if (requireWaiting && (phase !== 'counting' || isMyTurn)) {
+        continue;
+      }
+
+      if (phase === actualPhase) {
         console.log(`Found ${targetPhase} game: ${game.id}`);
 
         // Get opponent info for finding the correct game in UI

@@ -219,6 +219,16 @@ export function processPlay(gameState, playerKey, card) {
 
   // Handle "Go"
   if (card === null) {
+    // Check if player has any playable cards - they can only say Go if they don't
+    const playerHand = playState[playHandKey];
+    const playerCanPlay = playerHand.some(c =>
+      playState.currentCount + Math.min(c.value, 10) <= 31
+    );
+
+    if (playerCanPlay) {
+      return { success: false, error: 'You have playable cards - you must play one' };
+    }
+
     // Player says Go
     playState[saidKey] = 'go';
 

@@ -29,7 +29,7 @@ async function openGameLobby(page) {
 /**
  * Helper: Join a game at a specific phase
  * @param {Page} page - Playwright page (must be logged in)
- * @param {'discarding' | 'playing' | 'counting'} phase - Which phase game to join
+ * @param {'discarding' | 'cut' | 'playing' | 'counting' | 'waitingCounting'} phase - Which phase game to join
  * @returns {Promise<boolean>} true if joined successfully
  */
 async function joinGameAtPhase(page, phase) {
@@ -399,22 +399,24 @@ test('Two players can discard', async ({ browser }) => {
 test('Cut phase shows cut button', async ({ page }) => {
   await login(page, 'player1');
 
-  // Cut phase is transitional - try any game that might be at cut
-  const joined = await joinGameAtPhase(page, 'playing');
+  // Join the cut phase game (player1 vs player5, player1 is non-dealer who cuts)
+  const joined = await joinGameAtPhase(page, 'cut');
   if (!joined) {
-    console.log('⚠ No playing phase game available');
+    console.log('⚠ No cut phase game available');
     test.skip();
     return;
   }
 
   const phase = await page.locator('text=Phase:').textContent();
+  console.log('Current phase:', phase);
+
   if (!phase?.includes('cut')) {
-    console.log('⚠ Not in cut phase - skipping (game is past cut)');
+    console.log('⚠ Not in cut phase - game may have progressed');
     test.skip();
     return;
   }
 
-  // Check for cut deck button
+  // Check for cut deck button - player1 should have it since they're non-dealer
   const cutButton = page.locator('button:has-text("Cut Deck")');
   const waitingForCut = page.locator('text=Waiting for');
 
@@ -900,17 +902,18 @@ test('Count button appears when it is your turn', async ({ page }) => {
 test('Waiting message displays when not your turn to count', async ({ page }) => {
   await login(page, 'player1');
 
-  const joined = await joinGameAtPhase(page, 'counting');
+  // Join the waitingCounting game - player1 is dealer, so opponent counts first
+  const joined = await joinGameAtPhase(page, 'waitingCounting');
   if (!joined) {
-    console.log('⚠ No counting phase game available');
+    console.log('⚠ No waiting counting game available');
     test.skip();
     return;
   }
 
-  // Check if it's NOT our turn
+  // Verify it's NOT our turn
   const isMyTurn = await page.locator('text=Your Turn').first().isVisible();
   if (isMyTurn) {
-    console.log('⚠ It is my turn - skipping waiting test');
+    console.log('⚠ Unexpectedly got my turn - game may have progressed');
     test.skip();
     return;
   }

@@ -7,7 +7,9 @@ const TEST_ACCOUNTS = [
   'chris+one@chrisk.com',
   'chris+two@chrisk.com',
   'chris+three@chrisk.com',
-  'chris+four@chrisk.com'
+  'chris+four@chrisk.com',
+  'chris+five@chrisk.com',
+  'chris+six@chrisk.com'
 ];
 
 export async function GET() {
