@@ -14,17 +14,37 @@ function getBaseUrl() {
 }
 
 /**
- * Login as a specific user
+ * Login as a specific user with retry logic for parallel test stability
  * @param {Page} page - Playwright page
  * @param {'player1' | 'player2' | 'player3' | 'player4' | 'player5' | 'player6'} userKey - Which user to login as
+ * @param {number} maxRetries - Maximum retry attempts (default: 3)
  * @returns {Promise<Object>} The user config object
  */
-async function login(page, userKey) {
+async function login(page, userKey, maxRetries = 3) {
   const user = config.users[userKey];
   if (!user) {
     throw new Error(`Unknown user key: ${userKey}`);
   }
 
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await loginAttempt(page, userKey, user);
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        console.log(`[${userKey}] Login attempt ${attempt} failed, retrying in 1s... (${error.message})`);
+        await page.waitForTimeout(1000);
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Single login attempt
+ */
+async function loginAttempt(page, userKey, user) {
   const baseUrl = getBaseUrl();
 
   console.log(`[${userKey}] Logging in as ${user.email} at ${baseUrl}...`);

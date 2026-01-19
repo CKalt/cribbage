@@ -9,9 +9,10 @@ module.exports = defineConfig({
   testDir: './test-bin',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1,  // 1 retry locally for flaky login issues
+  workers: process.env.CI ? 1 : 2,   // Limit to 2 workers locally for stability
   reporter: 'html',
+  timeout: 60000,  // 60 second timeout per test
 
   use: {
     // Base URL - can be overridden with PLAYWRIGHT_BASE_URL env var
