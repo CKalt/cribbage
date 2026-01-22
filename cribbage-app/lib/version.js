@@ -4,7 +4,6 @@ export const RELEASE_NOTE = `Welcome to Cribbage Multiplayer! 🎴
 
 NEW: Challenge your friends to real-time cribbage games!
 - Invite players by email
-- In-game chat during matches
 - Full multiplayer gameplay with turn notifications
 
 To start a multiplayer game:
