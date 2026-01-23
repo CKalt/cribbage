@@ -1,10 +1,8 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.1.0-b91';
+export const APP_VERSION = 'v0.1.0-b92';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
-This update improves scoring notifications - you'll now see clearer indicators when points are scored during pegging.
-
-We fixed a bug where the game could get stuck when both players cut the same rank card.
+This update improves visibility during pegging - the card that was played now appears prominently in the action bar so you can see it without scrolling.
 
 Coming soon: Multiplayer mode! Challenge your friends to real-time cribbage games. Stay tuned!
 
