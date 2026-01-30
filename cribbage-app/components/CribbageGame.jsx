@@ -57,6 +57,8 @@ export default function CribbageGame({ onLogout }) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showGameLobby, setShowGameLobby] = useState(false);
   const [activeMultiplayerGameId, setActiveMultiplayerGameId] = useState(null);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [showInvitationBanner, setShowInvitationBanner] = useState(true);
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -294,6 +296,32 @@ export default function CribbageGame({ onLogout }) {
       setShowUnreadNotification(true);
     }
   }, [unreadBugReports]);
+
+  // Fetch pending multiplayer invitations periodically
+  useEffect(() => {
+    const fetchInvitations = async () => {
+      try {
+        const response = await fetch('/api/multiplayer/invitations');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.received) {
+            setPendingInvitations(data.received);
+            // Show banner again if new invitations arrive
+            if (data.received.length > 0) {
+              setShowInvitationBanner(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch invitations:', error);
+      }
+    };
+
+    // Fetch immediately and then every 30 seconds
+    fetchInvitations();
+    const interval = setInterval(fetchInvitations, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -1839,6 +1867,44 @@ export default function CribbageGame({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-green-900 p-4">
+      {/* Prominent Invitation Banner - shows when there are pending invitations */}
+      {pendingInvitations.length > 0 && showInvitationBanner && !activeMultiplayerGameId && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-yellow-500 to-orange-500 text-black p-4 shadow-lg">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🎮</span>
+              <div>
+                <div className="font-bold text-lg">
+                  {pendingInvitations.length === 1
+                    ? `${pendingInvitations[0].from} wants to play!`
+                    : `You have ${pendingInvitations.length} game invitations!`}
+                </div>
+                <div className="text-sm opacity-80">
+                  Click to accept and start playing
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowInvitationBanner(false);
+                  setShowGameLobby(true);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg shadow transition-colors"
+              >
+                View
+              </button>
+              <button
+                onClick={() => setShowInvitationBanner(false)}
+                className="text-black/60 hover:text-black text-2xl leading-none px-2"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Three-dot menu in top right */}
       <div className="fixed top-4 right-4 z-50">
         <button
@@ -1900,6 +1966,11 @@ export default function CribbageGame({ onLogout }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 Play vs Friend
+                {pendingInvitations.length > 0 && (
+                  <span className="ml-auto bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                    {pendingInvitations.length}
+                  </span>
+                )}
               </button>
 
               {/* Leaderboard - available to all users */}
