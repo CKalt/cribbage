@@ -8,6 +8,12 @@
 ## Git Permissions
 For this project, Claude may perform git push and pull operations for deployment. This overrides the global rule requiring user to push/pull.
 
+**SSH Key:** The repo uses `github-ckalt.com` as the remote host (configured in ~/.ssh/config). If push fails with permission denied, run:
+```bash
+ssh-add ~/.ssh/id_ed25519
+```
+to load the correct CKalt GitHub SSH key before pushing.
+
 ## Deployment
 - EC2 IP: 3.132.10.219
 - Domain: cribbage.chrisk.com
