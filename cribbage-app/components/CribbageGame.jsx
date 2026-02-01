@@ -2654,12 +2654,14 @@ export default function CribbageGame({ onLogout }) {
           userEmail={user?.attributes?.email || user?.username}
         />
 
-        {/* Multiplayer Game - renders full-screen when active */}
+        {/* Multiplayer Game - renders full-screen overlay when active */}
         {activeMultiplayerGameId && (
-          <MultiplayerGame
-            gameId={activeMultiplayerGameId}
-            onExit={() => setActiveMultiplayerGameId(null)}
-          />
+          <div className="fixed inset-0 z-50">
+            <MultiplayerGame
+              gameId={activeMultiplayerGameId}
+              onExit={() => setActiveMultiplayerGameId(null)}
+            />
+          </div>
         )}
 
         {/* Bug Report Modal - always available even at menu screen */}
