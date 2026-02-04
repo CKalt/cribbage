@@ -927,9 +927,13 @@ export default function CribbageGame({ onLogout }) {
               setCurrentPlayer('player');
               setMessage('Your turn');
             } else if (otherPlayerHand.length > 0 && nextPlayer === 'computer') {
-              // Player has cards - let them play or say Go
+              // Computer's turn but can't play - computer says Go first
+              setLastGoPlayer('computer');
+              logGameEvent('COMPUTER_GO', { player: 'computer', currentCount: currentCount, remainingCards: nextPlayerHand.length });
+              setPeggingHistory(prev => [...prev, { type: 'go', player: 'computer', count: currentCount }]);
+              // Now player's turn - they also can't play, so they'll need to say Go too
               setCurrentPlayer('player');
-              setMessage('Your turn');
+              setMessage('Computer says "Go" - Your turn');
             } else if (lastPlayedBy) {
               // One or both players out of cards and neither can play - award last card directly
               // But first log the Go from whoever couldn't play
@@ -2337,7 +2341,8 @@ export default function CribbageGame({ onLogout }) {
 
                 {/* Pending score indicator (button in sticky bar) */}
 
-                {/* Player hand */}
+                {/* Player hand - hide during crib counting to avoid confusion */}
+                {!(gameState === 'counting' && handsCountedThisRound >= 2) && (
                 <div className={`mb-6 p-2 rounded ${
                   (gameState === 'cribSelect') ||
                   (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
@@ -2372,6 +2377,7 @@ export default function CribbageGame({ onLogout }) {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Crib display during counting */}
                 {gameState === 'counting' && ((countingTurn === 'crib' && handsCountedThisRound === 2) ||
