@@ -108,6 +108,64 @@ export async function GET(request, { params }) {
   }
 }
 
+const ADMIN_EMAIL = 'chris@chrisk.com';
+
+/**
+ * POST /api/multiplayer/games/[gameId]
+ * Admin actions on a game
+ *
+ * Body: { action: 'admin-cancel' }
+ */
+export async function POST(request, { params }) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    const userInfo = getUserInfoFromToken(token);
+
+    if (!userInfo?.email || userInfo.email.toLowerCase() !== ADMIN_EMAIL) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const { gameId } = await params;
+    const body = await request.json();
+    const { action } = body;
+
+    if (action !== 'admin-cancel') {
+      return NextResponse.json(
+        { success: false, error: 'Unknown action' },
+        { status: 400 }
+      );
+    }
+
+    const gamesDir = path.join(process.cwd(), 'data', 'games');
+    const gameFilepath = path.join(gamesDir, `${gameId}.json`);
+
+    if (!fs.existsSync(gameFilepath)) {
+      return NextResponse.json(
+        { success: false, error: 'Game not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete the game file entirely so both players can start fresh
+    fs.unlinkSync(gameFilepath);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Game cancelled by admin'
+    });
+  } catch (error) {
+    console.error('Error in admin game action:', error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
 /**
  * DELETE /api/multiplayer/games/[gameId]
  * Abandon/forfeit a game

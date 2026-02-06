@@ -13,6 +13,7 @@ import { GAME_PHASE } from '@/lib/multiplayer-game';
  */
 export default function MultiplayerGame({ gameId, onExit }) {
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
+  const [showAdminCancel, setShowAdminCancel] = useState(false);
   const [selectedCards, setSelectedCards] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [lastPlayAnnouncement, setLastPlayAnnouncement] = useState(null);
@@ -43,6 +44,26 @@ export default function MultiplayerGame({ gameId, onExit }) {
     }
     setShowForfeitConfirm(false);
   };
+
+  // Handle admin cancel - deletes game entirely
+  const handleAdminCancel = async () => {
+    try {
+      const response = await fetch(`/api/multiplayer/games/${gameId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'admin-cancel' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        onExit();
+      }
+    } catch (err) {
+      console.error('Admin cancel error:', err);
+    }
+    setShowAdminCancel(false);
+  };
+
+  const isAdmin = userEmail.toLowerCase() === 'chris@chrisk.com';
 
   // Get player's hand from game state
   const getMyHand = () => {
@@ -256,6 +277,14 @@ export default function MultiplayerGame({ gameId, onExit }) {
         </div>
         <div className="flex items-center gap-4">
           <span className="text-gray-400 text-sm">{userEmail}</span>
+          {isAdmin && (
+            <button
+              onClick={() => setShowAdminCancel(true)}
+              className="text-yellow-400 hover:text-yellow-300 text-sm font-bold"
+            >
+              Cancel Game
+            </button>
+          )}
           <button
             onClick={() => setShowForfeitConfirm(true)}
             className="text-red-400 hover:text-red-300 text-sm"
@@ -700,13 +729,39 @@ export default function MultiplayerGame({ gameId, onExit }) {
                 onClick={() => setShowForfeitConfirm(false)}
                 className="bg-gray-600 hover:bg-gray-700"
               >
-                Cancel
+                No
               </Button>
               <Button
                 onClick={handleForfeit}
                 className="bg-red-600 hover:bg-red-700"
               >
                 Forfeit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin cancel confirmation modal */}
+      {showAdminCancel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 border border-yellow-500">
+            <h3 className="text-xl font-bold text-yellow-400 mb-4">Cancel Game (Admin)</h3>
+            <p className="text-gray-300 mb-6">
+              This will permanently delete this game. Both players will be returned to the menu and can start a new game.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => setShowAdminCancel(false)}
+                className="bg-gray-600 hover:bg-gray-700"
+              >
+                No
+              </Button>
+              <Button
+                onClick={handleAdminCancel}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                Cancel Game
               </Button>
             </div>
           </div>
