@@ -468,16 +468,31 @@ export default function MultiplayerGame({ gameId, onExit }) {
                       Counting: {phaseLabel}
                     </div>
                     <div className="text-gray-400 mb-4">
-                      {isMyTurn ? 'Click "Count" to score your hand' : `Waiting for ${opponent?.username}...`}
+                      {isMyTurn
+                        ? (countPhase === 'crib' ? 'Count the crib' : 'Count your hand')
+                        : `Waiting for ${opponent?.username}...`}
                     </div>
 
-                    {/* Cut card display */}
-                    {gameState?.gameState?.cutCard && (
+                    {/* Count button - placed prominently before hand display */}
+                    {isMyTurn && (
                       <div className="mb-4">
-                        <div className="text-gray-400 text-sm mb-1">Cut Card:</div>
-                        <div className="flex justify-center">
-                          <CutCard card={gameState.gameState.cutCard} />
-                        </div>
+                        <Button
+                          onClick={async () => {
+                            setSubmitting(true);
+                            try {
+                              const result = await submitMove('count', {});
+                              if (!result.success) {
+                                console.error('Count failed:', result.error);
+                              }
+                            } finally {
+                              setSubmitting(false);
+                            }
+                          }}
+                          disabled={submitting}
+                          className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
+                        >
+                          {submitting ? 'Counting...' : (countPhase === 'crib' ? 'Count Crib' : 'Count Hand')}
+                        </Button>
                       </div>
                     )}
 
@@ -511,27 +526,6 @@ export default function MultiplayerGame({ gameId, onExit }) {
                         )}
                       </div>
                     </div>
-
-                    {/* Count button */}
-                    {isMyTurn && (
-                      <Button
-                        onClick={async () => {
-                          setSubmitting(true);
-                          try {
-                            const result = await submitMove('count', {});
-                            if (!result.success) {
-                              console.error('Count failed:', result.error);
-                            }
-                          } finally {
-                            setSubmitting(false);
-                          }
-                        }}
-                        disabled={submitting}
-                        className="bg-blue-600 hover:bg-blue-700 text-lg px-6 py-2"
-                      >
-                        {submitting ? 'Counting...' : 'Count Hand'}
-                      </Button>
-                    )}
 
                     {/* Show previously counted hands */}
                     {handsScored.length > 0 && (
