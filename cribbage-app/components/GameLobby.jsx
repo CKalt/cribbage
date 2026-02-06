@@ -145,6 +145,27 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
     }
   };
 
+  const handleDeleteInvite = async (inviteId) => {
+    setInviteLoading(inviteId);
+    setActionMessage(null);
+    try {
+      const response = await fetch(`/api/multiplayer/invitations/${inviteId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setActionMessage({ type: 'success', text: 'Invitation deleted' });
+        fetchInvitations();
+      } else {
+        setActionMessage({ type: 'error', text: data.error });
+      }
+    } catch (err) {
+      setActionMessage({ type: 'error', text: 'Failed to delete invitation' });
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
   const handleJoinGame = (gameId) => {
     onStartGame(gameId);
   };
@@ -342,7 +363,16 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
                           <div className="text-white">To: {invite.to}</div>
                           <div className="text-gray-400 text-xs">{formatTimeAgo(invite.createdAt)}</div>
                         </div>
-                        <span className="text-yellow-500 text-sm">Pending</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-yellow-500 text-sm">Pending</span>
+                          <Button
+                            onClick={() => handleDeleteInvite(invite.id)}
+                            disabled={inviteLoading === invite.id}
+                            className="bg-red-600 hover:bg-red-700 text-sm px-3 py-1"
+                          >
+                            {inviteLoading === invite.id ? '...' : 'Delete'}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -210,3 +210,67 @@ export async function POST(request, { params }) {
     );
   }
 }
+
+/**
+ * DELETE /api/multiplayer/invitations/[id]
+ * Delete/cancel a pending invitation (only the sender can delete)
+ */
+export async function DELETE(request, { params }) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    const userInfo = getUserInfoFromToken(token);
+
+    if (!userInfo?.userId || !userInfo?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+
+    // Find and load invitation
+    const invitesDir = path.join(process.cwd(), 'data', 'invitations');
+    const inviteFilepath = path.join(invitesDir, `${id}.json`);
+
+    if (!fs.existsSync(inviteFilepath)) {
+      return NextResponse.json(
+        { success: false, error: 'Invitation not found' },
+        { status: 404 }
+      );
+    }
+
+    const invitation = JSON.parse(fs.readFileSync(inviteFilepath, 'utf8'));
+
+    // Only the sender can delete their invitation
+    if (invitation.from.email.toLowerCase() !== userInfo.email.toLowerCase()) {
+      return NextResponse.json(
+        { success: false, error: 'Only the sender can delete an invitation' },
+        { status: 403 }
+      );
+    }
+
+    // Can only delete pending invitations
+    if (invitation.status !== INVITE_STATUS.PENDING) {
+      return NextResponse.json(
+        { success: false, error: `Cannot delete invitation with status: ${invitation.status}` },
+        { status: 400 }
+      );
+    }
+
+    // Delete the invitation file
+    fs.unlinkSync(inviteFilepath);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Invitation deleted'
+    });
+  } catch (error) {
+    console.error('Error deleting invitation:', error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}

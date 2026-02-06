@@ -1880,20 +1880,54 @@ export default function CribbageGame({ onLogout }) {
                     : `You have ${pendingInvitations.length} game invitations!`}
                 </div>
                 <div className="text-sm opacity-80">
-                  Click to accept and start playing
+                  {pendingInvitations.length === 1
+                    ? 'Accept to start playing now'
+                    : 'View invitations to accept'}
                 </div>
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowInvitationBanner(false);
-                  setShowGameLobby(true);
-                }}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg shadow transition-colors"
-              >
-                View
-              </button>
+              {pendingInvitations.length === 1 ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      const invite = pendingInvitations[0];
+                      const response = await fetch(`/api/multiplayer/invitations/${invite.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'accept' })
+                      });
+                      const data = await response.json();
+                      if (data.success && data.gameId) {
+                        setShowInvitationBanner(false);
+                        setPendingInvitations([]);
+                        setActiveMultiplayerGameId(data.gameId);
+                      } else {
+                        console.error('Accept failed:', data.error);
+                        setShowInvitationBanner(false);
+                        setShowGameLobby(true);
+                      }
+                    } catch (err) {
+                      console.error('Accept error:', err);
+                      setShowInvitationBanner(false);
+                      setShowGameLobby(true);
+                    }
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg shadow transition-colors"
+                >
+                  Accept
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowInvitationBanner(false);
+                    setShowGameLobby(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg shadow transition-colors"
+                >
+                  View
+                </button>
+              )}
               <button
                 onClick={() => setShowInvitationBanner(false)}
                 className="text-black/60 hover:text-black text-2xl leading-none px-2"
