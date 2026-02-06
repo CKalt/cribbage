@@ -4,91 +4,69 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
- * Game Lobby - Find players, send invitations, view active games
+ * My Games - Unified view of all games (computer + friends)
+ * The Computer is always at the top, then friend games, then invite section
  */
-export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
-  const [activeTab, setActiveTab] = useState('players');
-  const [players, setPlayers] = useState([]);
-  const [invitations, setInvitations] = useState({ received: [], sent: [] });
+export default function GameLobby({
+  isOpen,
+  onClose,
+  onStartGame,
+  userEmail,
+  savedGameExists,
+  onResumeComputerGame,
+  onNewComputerGame,
+}) {
   const [games, setGames] = useState([]);
+  const [invitations, setInvitations] = useState({ received: [], sent: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showFindPlayers, setShowFindPlayers] = useState(false);
+  const [players, setPlayers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
-      if (activeTab === 'players') {
-        fetchPlayers();
-      } else if (activeTab === 'invitations') {
-        fetchInvitations();
-      } else if (activeTab === 'games') {
-        fetchGames();
-      }
+      fetchAll();
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen]);
 
-  const fetchPlayers = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     setError(null);
+    try {
+      const [gamesRes, invitesRes] = await Promise.all([
+        fetch('/api/multiplayer/games'),
+        fetch('/api/multiplayer/invitations'),
+      ]);
+      const gamesData = await gamesRes.json();
+      const invitesData = await invitesRes.json();
+
+      if (gamesData.success) setGames(gamesData.games);
+      if (invitesData.success) setInvitations({ received: invitesData.received, sent: invitesData.sent });
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPlayers = async () => {
+    setSearchLoading(true);
     try {
       const url = searchTerm
         ? `/api/multiplayer/players?search=${encodeURIComponent(searchTerm)}`
         : '/api/multiplayer/players';
       const response = await fetch(url);
       const data = await response.json();
-      if (data.success) {
-        setPlayers(data.players);
-      } else {
-        setError(data.error || 'Failed to load players');
-      }
+      if (data.success) setPlayers(data.players);
     } catch (err) {
-      setError('Network error: ' + err.message);
+      // ignore
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
-  };
-
-  const fetchInvitations = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/multiplayer/invitations');
-      const data = await response.json();
-      if (data.success) {
-        setInvitations({ received: data.received, sent: data.sent });
-      } else {
-        setError(data.error || 'Failed to load invitations');
-      }
-    } catch (err) {
-      setError('Network error: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchGames = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/multiplayer/games');
-      const data = await response.json();
-      if (data.success) {
-        setGames(data.games);
-      } else {
-        setError(data.error || 'Failed to load games');
-      }
-    } catch (err) {
-      setError('Network error: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchPlayers();
   };
 
   const handleInvite = async (playerEmail) => {
@@ -103,7 +81,8 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
       const data = await response.json();
       if (data.success) {
         setActionMessage({ type: 'success', text: `Invitation sent to ${playerEmail}` });
-        fetchPlayers(); // Refresh to update hasActiveGame status
+        setShowFindPlayers(false);
+        fetchAll();
       } else {
         setActionMessage({ type: 'error', text: data.error });
       }
@@ -114,32 +93,39 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
     }
   };
 
-  const handleInviteAction = async (inviteId, action) => {
+  const handleAcceptInvite = async (inviteId) => {
     setInviteLoading(inviteId);
     setActionMessage(null);
     try {
       const response = await fetch(`/api/multiplayer/invitations/${inviteId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action: 'accept' })
       });
       const data = await response.json();
-      if (data.success) {
-        if (action === 'accept' && data.gameId) {
-          setActionMessage({ type: 'success', text: 'Game started!' });
-          // Give user a moment to see the message, then start game
-          setTimeout(() => {
-            onStartGame(data.gameId);
-          }, 1000);
-        } else {
-          setActionMessage({ type: 'success', text: `Invitation ${action}ed` });
-          fetchInvitations();
-        }
+      if (data.success && data.gameId) {
+        onStartGame(data.gameId);
       } else {
         setActionMessage({ type: 'error', text: data.error });
       }
     } catch (err) {
-      setActionMessage({ type: 'error', text: `Failed to ${action} invitation` });
+      setActionMessage({ type: 'error', text: 'Failed to accept invitation' });
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId) => {
+    setInviteLoading(inviteId);
+    try {
+      await fetch(`/api/multiplayer/invitations/${inviteId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decline' })
+      });
+      fetchAll();
+    } catch (err) {
+      // ignore
     } finally {
       setInviteLoading(null);
     }
@@ -147,39 +133,15 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
 
   const handleDeleteInvite = async (inviteId) => {
     setInviteLoading(inviteId);
-    setActionMessage(null);
     try {
-      const response = await fetch(`/api/multiplayer/invitations/${inviteId}`, {
-        method: 'DELETE'
-      });
-      const data = await response.json();
-      if (data.success) {
-        setActionMessage({ type: 'success', text: 'Invitation deleted' });
-        fetchInvitations();
-      } else {
-        setActionMessage({ type: 'error', text: data.error });
-      }
+      await fetch(`/api/multiplayer/invitations/${inviteId}`, { method: 'DELETE' });
+      setActionMessage({ type: 'success', text: 'Invitation deleted' });
+      fetchAll();
     } catch (err) {
       setActionMessage({ type: 'error', text: 'Failed to delete invitation' });
     } finally {
       setInviteLoading(null);
     }
-  };
-
-  const handleJoinGame = (gameId) => {
-    onStartGame(gameId);
-  };
-
-  const formatTimeAgo = (timestamp) => {
-    if (!timestamp) return 'Never';
-    const diff = Date.now() - new Date(timestamp).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
   };
 
   if (!isOpen) return null;
@@ -188,52 +150,13 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg p-4 max-w-lg w-full mx-4 shadow-xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-bold text-white">Play vs Friend</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">My Games</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white text-2xl leading-none"
           >
             &times;
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setActiveTab('players')}
-            className={`px-3 py-1 text-sm rounded ${
-              activeTab === 'players'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Find Players
-          </button>
-          <button
-            onClick={() => setActiveTab('invitations')}
-            className={`px-3 py-1 text-sm rounded relative ${
-              activeTab === 'invitations'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Invitations
-            {invitations.received.length > 0 && activeTab !== 'invitations' && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                {invitations.received.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('games')}
-            className={`px-3 py-1 text-sm rounded ${
-              activeTab === 'games'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            My Games
           </button>
         </div>
 
@@ -247,202 +170,213 @@ export default function GameLobby({ isOpen, onClose, onStartGame, userEmail }) {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto space-y-2">
           {loading ? (
             <div className="text-gray-400 text-center py-8">Loading...</div>
           ) : error ? (
             <div className="text-red-400 text-center py-8">{error}</div>
-          ) : activeTab === 'players' ? (
-            /* Players Tab */
-            <div>
-              <form onSubmit={handleSearch} className="mb-4">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by email or username..."
-                    className="flex-1 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
-                  />
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                    Search
-                  </Button>
+          ) : (
+            <>
+              {/* The Computer - always first */}
+              <div className={`p-3 rounded border ${
+                savedGameExists ? 'bg-blue-900/30 border-blue-600' : 'border-gray-700'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                      AI
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">The Computer</div>
+                      <div className="text-gray-400 text-xs">
+                        {savedGameExists ? 'Game in progress' : 'Always ready to play'}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    {savedGameExists ? (
+                      <Button
+                        onClick={() => { onClose(); onResumeComputerGame(); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-sm"
+                      >
+                        Resume
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => { onClose(); onNewComputerGame(); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-sm"
+                      >
+                        New Game
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </form>
+              </div>
 
-              {players.length === 0 ? (
-                <div className="text-gray-400 text-center py-8">
-                  {searchTerm ? 'No players found' : 'No other players yet'}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {players.map((player) => (
-                    <div
-                      key={player.id}
-                      className="flex items-center justify-between p-3 bg-gray-750 rounded border border-gray-700"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${player.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
-                        <div>
-                          <div className="text-white font-medium">{player.username}</div>
-                          <div className="text-gray-400 text-xs">{player.email}</div>
-                        </div>
+              {/* Active multiplayer games */}
+              {games.map((game) => (
+                <div
+                  key={game.id}
+                  className={`p-3 rounded border ${
+                    game.isMyTurn
+                      ? 'bg-green-900/30 border-green-600'
+                      : 'border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold">
+                        {(game.opponent?.username || '?')[0].toUpperCase()}
                       </div>
                       <div>
-                        {player.hasActiveGame ? (
-                          <span className="text-gray-500 text-sm">Playing</span>
-                        ) : (
-                          <Button
-                            onClick={() => handleInvite(player.email)}
-                            disabled={inviteLoading === player.email}
-                            className="bg-green-600 hover:bg-green-700 text-sm px-3 py-1"
-                          >
-                            {inviteLoading === player.email ? '...' : 'Invite'}
-                          </Button>
-                        )}
+                        <div className="text-white font-medium">{game.opponent?.username || 'Waiting...'}</div>
+                        <div className="text-gray-400 text-xs">
+                          Score: {game.myScore} - {game.opponentScore}
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : activeTab === 'invitations' ? (
-            /* Invitations Tab */
-            <div className="space-y-4">
-              {/* Received */}
-              <div>
-                <h3 className="text-gray-400 text-sm font-medium mb-2">Received</h3>
-                {invitations.received.length === 0 ? (
-                  <div className="text-gray-500 text-sm py-2">No pending invitations</div>
-                ) : (
-                  <div className="space-y-2">
-                    {invitations.received.map((invite) => (
-                      <div
-                        key={invite.id}
-                        className="flex items-center justify-between p-3 bg-gray-750 rounded border border-green-700"
-                      >
-                        <div>
-                          <div className="text-white">From: {invite.from}</div>
-                          <div className="text-gray-400 text-xs">{formatTimeAgo(invite.createdAt)}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleInviteAction(invite.id, 'accept')}
-                            disabled={inviteLoading === invite.id}
-                            className="bg-green-600 hover:bg-green-700 text-sm px-3 py-1"
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            onClick={() => handleInviteAction(invite.id, 'decline')}
-                            disabled={inviteLoading === invite.id}
-                            className="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-1"
-                          >
-                            Decline
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    <div>
+                      {game.isMyTurn ? (
+                        <Button
+                          onClick={() => onStartGame(game.id)}
+                          className="bg-green-600 hover:bg-green-700 text-sm"
+                        >
+                          Your Turn
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => onStartGame(game.id)}
+                          className="bg-gray-600 hover:bg-gray-700 text-sm"
+                        >
+                          View
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
 
-              {/* Sent */}
-              <div>
-                <h3 className="text-gray-400 text-sm font-medium mb-2">Sent</h3>
-                {invitations.sent.length === 0 ? (
-                  <div className="text-gray-500 text-sm py-2">No sent invitations</div>
-                ) : (
-                  <div className="space-y-2">
-                    {invitations.sent.map((invite) => (
-                      <div
-                        key={invite.id}
-                        className="flex items-center justify-between p-3 bg-gray-750 rounded border border-gray-700"
-                      >
-                        <div>
-                          <div className="text-white">To: {invite.to}</div>
-                          <div className="text-gray-400 text-xs">{formatTimeAgo(invite.createdAt)}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-yellow-500 text-sm">Pending</span>
-                          <Button
-                            onClick={() => handleDeleteInvite(invite.id)}
-                            disabled={inviteLoading === invite.id}
-                            className="bg-red-600 hover:bg-red-700 text-sm px-3 py-1"
-                          >
-                            {inviteLoading === invite.id ? '...' : 'Delete'}
-                          </Button>
-                        </div>
+              {/* Received invitations */}
+              {invitations.received.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="p-3 rounded border border-yellow-600 bg-yellow-900/20"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-600 flex items-center justify-center text-white text-xs font-bold">
+                        {invite.from[0].toUpperCase()}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Games Tab */
-            <div>
-              {games.length === 0 ? (
-                <div className="text-gray-400 text-center py-8">No active games</div>
-              ) : (
-                <div className="space-y-2">
-                  {games.map((game) => (
-                    <div
-                      key={game.id}
-                      className={`p-3 rounded border ${
-                        game.isMyTurn
-                          ? 'bg-green-900/30 border-green-600'
-                          : 'bg-gray-750 border-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-white font-medium">
-                            vs {game.opponent?.username || 'Waiting...'}
-                          </div>
-                          <div className="text-gray-400 text-sm">
-                            Score: {game.myScore} - {game.opponentScore}
-                          </div>
-                          {game.lastMove?.description && (
-                            <div className="text-gray-500 text-xs mt-1">
-                              Last: {game.lastMove.description}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {game.isMyTurn ? (
-                            <Button
-                              onClick={() => handleJoinGame(game.id)}
-                              className="bg-green-600 hover:bg-green-700 text-sm"
-                            >
-                              Your Turn
-                            </Button>
-                          ) : (
-                            <div>
-                              <div className="text-yellow-500 text-sm">Waiting</div>
-                              <Button
-                                onClick={() => handleJoinGame(game.id)}
-                                className="bg-gray-600 hover:bg-gray-700 text-sm mt-1"
-                              >
-                                View
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                      <div>
+                        <div className="text-white font-medium">{invite.from.split('@')[0]}</div>
+                        <div className="text-yellow-400 text-xs">Wants to play!</div>
                       </div>
                     </div>
-                  ))}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleAcceptInvite(invite.id)}
+                        disabled={inviteLoading === invite.id}
+                        className="bg-green-600 hover:bg-green-700 text-sm px-3 py-1"
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() => handleDeclineInvite(invite.id)}
+                        disabled={inviteLoading === invite.id}
+                        className="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-1"
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Sent invitations (pending) */}
+              {invitations.sent.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="p-3 rounded border border-gray-700"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-bold">
+                        {invite.to[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-white font-medium">{invite.to.split('@')[0]}</div>
+                        <div className="text-gray-400 text-xs">Invitation pending...</div>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => handleDeleteInvite(invite.id)}
+                      disabled={inviteLoading === invite.id}
+                      className="bg-red-600 hover:bg-red-700 text-sm px-3 py-1"
+                    >
+                      {inviteLoading === invite.id ? '...' : 'Cancel'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              {/* No friend games message */}
+              {games.length === 0 && invitations.received.length === 0 && invitations.sent.length === 0 && (
+                <div className="text-gray-500 text-center text-sm py-2">
+                  No friend games yet
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
+        {/* Find Players section */}
+        {showFindPlayers && (
+          <div className="mt-3 pt-3 border-t border-gray-700">
+            <form onSubmit={(e) => { e.preventDefault(); fetchPlayers(); }} className="mb-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by email..."
+                  className="flex-1 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
+                  autoFocus
+                />
+                <Button type="submit" disabled={searchLoading} className="bg-blue-600 hover:bg-blue-700 text-sm">
+                  {searchLoading ? '...' : 'Search'}
+                </Button>
+              </div>
+            </form>
+            {players.length > 0 && (
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {players.map((player) => (
+                  <div key={player.id} className="flex items-center justify-between p-2 rounded bg-gray-750">
+                    <div className="text-white text-sm">{player.email}</div>
+                    <Button
+                      onClick={() => handleInvite(player.email)}
+                      disabled={inviteLoading === player.email}
+                      className="bg-green-600 hover:bg-green-700 text-xs px-2 py-1"
+                    >
+                      {inviteLoading === player.email ? '...' : 'Invite'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-gray-700">
+        <div className="mt-4 pt-3 border-t border-gray-700 flex gap-2">
+          <Button
+            onClick={() => { setShowFindPlayers(!showFindPlayers); if (!showFindPlayers) fetchPlayers(); }}
+            className="flex-1 bg-green-600 hover:bg-green-700"
+          >
+            {showFindPlayers ? 'Hide' : 'Invite Friend'}
+          </Button>
           <Button
             onClick={onClose}
-            className="w-full bg-gray-600 hover:bg-gray-700"
+            className="flex-1 bg-gray-600 hover:bg-gray-700"
           >
             Close
           </Button>

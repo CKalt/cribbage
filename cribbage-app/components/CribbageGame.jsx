@@ -1988,7 +1988,7 @@ export default function CribbageGame({ onLogout }) {
                 )}
               </button>
 
-              {/* Play vs Friend - multiplayer */}
+              {/* My Games - multiplayer */}
               <button
                 onClick={() => {
                   setShowMenu(false);
@@ -1999,7 +1999,7 @@ export default function CribbageGame({ onLogout }) {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                Play vs Friend
+                My Games
                 {pendingInvitations.length > 0 && (
                   <span className="ml-auto bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
                     {pendingInvitations.length}
@@ -2113,30 +2113,33 @@ export default function CribbageGame({ onLogout }) {
                       </div>
                     )}
 
-                    {/* Resume game button */}
-                    {savedGameExists && (
-                      <div className="mb-4">
-                        <Button
-                          onClick={resumeGame}
-                          className="text-lg px-8 py-4 bg-green-600 hover:bg-green-700"
-                        >
-                          Resume Game
-                        </Button>
-                        <div className="text-xs text-gray-400 mt-2">
-                          Game in progress saved
-                        </div>
-                      </div>
-                    )}
-
-                    {/* New game button - only shown when no saved game exists */}
-                    {!savedGameExists && (
+                    {/* My Games button */}
+                    <div className="mb-6">
                       <Button
-                        onClick={startNewGame}
-                        className="text-lg px-8 py-4"
+                        onClick={() => setShowGameLobby(true)}
+                        className="text-lg px-8 py-4 bg-green-600 hover:bg-green-700 relative"
                       >
-                        Start New Game
+                        My Games
+                        {pendingInvitations.length > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center animate-pulse">
+                            {pendingInvitations.length}
+                          </span>
+                        )}
                       </Button>
-                    )}
+                    </div>
+
+                    {/* Quick start new game */}
+                    <div className="flex flex-col gap-3 items-center">
+                      <div className="text-gray-400 text-sm mb-1">Quick Start</div>
+                      <div className="flex gap-4">
+                        <Button
+                          onClick={startNewGame}
+                          className="px-6 py-3 bg-blue-600 hover:bg-blue-700"
+                        >
+                          New vs Computer
+                        </Button>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
@@ -2677,7 +2680,7 @@ export default function CribbageGame({ onLogout }) {
           onClose={() => setShowLeaderboard(false)}
         />
 
-        {/* Game Lobby Modal - multiplayer */}
+        {/* My Games Modal */}
         <GameLobby
           isOpen={showGameLobby}
           onClose={() => setShowGameLobby(false)}
@@ -2686,6 +2689,9 @@ export default function CribbageGame({ onLogout }) {
             setActiveMultiplayerGameId(gameId);
           }}
           userEmail={user?.attributes?.email || user?.username}
+          savedGameExists={savedGameExists}
+          onResumeComputerGame={resumeGame}
+          onNewComputerGame={startNewGame}
         />
 
         {/* Multiplayer Game - renders full-screen overlay when active */}
