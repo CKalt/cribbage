@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMultiplayerSync } from '@/hooks/useMultiplayerSync';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,9 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
   const [selectedCards, setSelectedCards] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [lastPlayAnnouncement, setLastPlayAnnouncement] = useState(null);
+  const [newCardIndex, setNewCardIndex] = useState(-1);
+  const prevPlayedCountRef = useRef(0);
 
   // Get current user for email display
   const { user } = useAuth();
@@ -170,6 +173,32 @@ export default function MultiplayerGame({ gameId, onExit }) {
   useEffect(() => {
     setSelectedCards([]);
   }, [getCurrentPhase()]);
+
+  // Detect new cards played for animation and announcements
+  useEffect(() => {
+    const playedCards = gameState?.gameState?.playState?.playedCards || [];
+    const prevCount = prevPlayedCountRef.current;
+
+    if (playedCards.length > prevCount && prevCount > 0) {
+      const newestCard = playedCards[playedCards.length - 1];
+      const isOpponentCard = newestCard.playedBy !== gameState?.myPlayerKey;
+
+      // Animate the newest card
+      setNewCardIndex(playedCards.length - 1);
+      setTimeout(() => setNewCardIndex(-1), 800);
+
+      // Show announcement for opponent plays
+      if (isOpponentCard) {
+        setLastPlayAnnouncement({
+          card: newestCard,
+          player: opponent?.username || 'Opponent',
+        });
+        setTimeout(() => setLastPlayAnnouncement(null), 2500);
+      }
+    }
+
+    prevPlayedCountRef.current = playedCards.length;
+  }, [gameState?.gameState?.playState?.playedCards?.length]);
 
   if (loading) {
     return (
@@ -355,87 +384,162 @@ export default function MultiplayerGame({ gameId, onExit }) {
           )}
 
           {/* Playing Phase */}
-          {getCurrentPhase() === GAME_PHASE.PLAYING && (
-            <div className="mb-4">
-              {/* Current count */}
-              <div className="text-center mb-3">
-                <span className="text-gray-400">Count: </span>
-                <span className={`text-2xl font-bold ${
-                  (gameState?.gameState?.playState?.currentCount || 0) === 15 ||
-                  (gameState?.gameState?.playState?.currentCount || 0) === 31
-                    ? 'text-yellow-400'
-                    : 'text-white'
-                }`}>
-                  {gameState?.gameState?.playState?.currentCount || 0}
-                </span>
-                <span className="text-gray-400"> / 31</span>
-              </div>
+          {getCurrentPhase() === GAME_PHASE.PLAYING && (() => {
+            const playState = gameState?.gameState?.playState;
+            const roundCards = playState?.roundCards || [];
+            const allPlayedCards = playState?.playedCards || [];
+            const currentCount = playState?.currentCount || 0;
+            const myKey = gameState?.myPlayerKey;
+            const opponentKey = myKey === 'player1' ? 'player2' : 'player1';
+            const myPlayHand = playState?.[`${myKey}PlayHand`] || [];
+            const opponentSaidGo = playState?.[`${opponentKey}Said`] === 'go';
 
-              {/* Played cards this round */}
-              <div className="bg-gray-700 rounded p-3 mb-4 min-h-[60px]">
-                <div className="text-gray-400 text-xs text-center mb-2">Cards played this round:</div>
-                {gameState?.gameState?.playState?.roundCards?.length > 0 ? (
-                  <div className="flex justify-center gap-1 flex-wrap">
-                    {gameState.gameState.playState.roundCards.map((card, idx) => (
-                      <PlayedCard key={idx} card={card} />
-                    ))}
+            return (
+              <div className="mb-4">
+                {/* Opponent play announcement overlay */}
+                {lastPlayAnnouncement && (
+                  <div className="mb-3 text-center animate-bounce">
+                    <div className="inline-block bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                      {lastPlayAnnouncement.player} played {lastPlayAnnouncement.card.rank}{lastPlayAnnouncement.card.suit}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-gray-500 text-center text-sm">No cards played yet</div>
                 )}
-              </div>
 
-              {/* Player's hand (remaining cards) */}
-              <div className="text-gray-400 text-sm text-center mb-2">
-                Your cards ({(gameState?.gameState?.playState?.[`${gameState?.myPlayerKey}PlayHand`] || []).length} remaining):
-              </div>
-              <div className="flex justify-center gap-2 flex-wrap mb-4">
-                {(gameState?.gameState?.playState?.[`${gameState?.myPlayerKey}PlayHand`] || []).map((card, idx) => {
-                  const playable = isCardPlayable(card);
-                  return (
-                    <PlayingCard
-                      key={`${card.rank}${card.suit}`}
-                      card={card}
-                      onClick={() => handlePlayCard(card)}
-                      disabled={!isMyTurn || submitting || !playable}
-                      highlighted={isMyTurn && playable}
-                    />
-                  );
-                })}
-              </div>
+                {/* Current count - large and prominent */}
+                <div className="text-center mb-4">
+                  <div className={`inline-block px-6 py-2 rounded-full ${
+                    currentCount === 15 || currentCount === 31
+                      ? 'bg-yellow-600 text-white'
+                      : 'bg-gray-700 text-white'
+                  }`}>
+                    <span className="text-gray-300 text-sm">Count </span>
+                    <span className="text-3xl font-bold">{currentCount}</span>
+                    <span className="text-gray-300 text-sm"> / 31</span>
+                  </div>
+                </div>
 
-              {/* Action buttons */}
-              {isMyTurn && (
-                <div className="text-center">
-                  {canPlayAnyCard() ? (
-                    <div className="text-yellow-400 mb-2">
-                      Tap a highlighted card to play it
+                {/* Card pile - overlapping face-up cards */}
+                <div className="bg-gray-700/50 rounded-lg p-4 mb-4 min-h-[90px]">
+                  {roundCards.length > 0 ? (
+                    <div className="flex justify-center items-end">
+                      {roundCards.map((card, idx) => {
+                        const isMyCard = card.playedBy === myKey;
+                        const isNewest = idx === roundCards.length - 1;
+                        const isRed = card.suit === '♥' || card.suit === '♦';
+                        // Find this card's position in the allPlayedCards array for animation detection
+                        const globalIdx = allPlayedCards.length - roundCards.length + idx;
+                        const isAnimating = globalIdx === newCardIndex;
+
+                        return (
+                          <div
+                            key={`${card.rank}${card.suit}-${idx}`}
+                            className={`
+                              relative transition-all duration-300
+                              ${idx > 0 ? '-ml-6' : ''}
+                              ${isAnimating ? 'animate-[slideUp_0.5s_ease-out]' : ''}
+                              ${isNewest ? 'z-10 scale-110' : ''}
+                            `}
+                            style={{
+                              zIndex: idx,
+                              ...(isAnimating ? {} : {}),
+                            }}
+                          >
+                            {/* Player indicator dot */}
+                            <div className={`absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full ${
+                              isMyCard ? 'bg-green-400' : 'bg-blue-400'
+                            }`} />
+                            {/* Card */}
+                            <div className={`
+                              bg-white rounded-lg px-2.5 py-1.5 font-bold text-lg shadow-md
+                              border-2 ${isMyCard ? 'border-green-500' : 'border-blue-500'}
+                              ${isRed ? 'text-red-600' : 'text-black'}
+                              ${isNewest ? 'shadow-lg ring-2 ring-white/30' : ''}
+                            `}>
+                              {card.rank}{card.suit}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <div className="text-red-400 mb-2">
-                        No playable cards (would exceed 31)
-                      </div>
-                      <Button
-                        onClick={handleGo}
-                        disabled={submitting}
-                        className="bg-orange-600 hover:bg-orange-700 text-lg px-6 py-3"
-                      >
-                        {submitting ? 'Saying Go...' : 'Say "Go"'}
-                      </Button>
+                    <div className="text-gray-500 text-center text-sm py-3">No cards played yet</div>
+                  )}
+                  {/* Legend */}
+                  {roundCards.length > 0 && (
+                    <div className="flex justify-center gap-4 mt-3 text-xs">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> You
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> {opponent?.username}
+                      </span>
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Opponent said Go indicator */}
-              {gameState?.gameState?.playState?.[`${gameState?.myPlayerKey === 'player1' ? 'player2' : 'player1'}Said`] === 'go' && (
-                <div className="text-center text-orange-400 mt-2">
-                  {opponent?.username} said "Go" - play if you can!
+                {/* All played cards (previous rounds) */}
+                {allPlayedCards.length > roundCards.length && (
+                  <div className="text-center mb-3">
+                    <div className="text-gray-500 text-xs">
+                      Previous rounds: {allPlayedCards.length - roundCards.length} cards played
+                    </div>
+                  </div>
+                )}
+
+                {/* Opponent said Go indicator */}
+                {opponentSaidGo && (
+                  <div className="text-center mb-3">
+                    <div className="inline-block bg-orange-600/80 text-white px-4 py-2 rounded-full text-sm font-bold">
+                      {opponent?.username} said "Go" — play if you can!
+                    </div>
+                  </div>
+                )}
+
+                {/* Player's hand */}
+                <div className="text-gray-400 text-sm text-center mb-2">
+                  Your cards ({myPlayHand.length} remaining):
                 </div>
-              )}
-            </div>
-          )}
+                <div className="flex justify-center gap-2 flex-wrap mb-4">
+                  {myPlayHand.map((card, idx) => {
+                    const playable = isCardPlayable(card);
+                    return (
+                      <PlayingCard
+                        key={`${card.rank}${card.suit}`}
+                        card={card}
+                        onClick={() => handlePlayCard(card)}
+                        disabled={!isMyTurn || submitting || !playable}
+                        highlighted={isMyTurn && playable}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Action buttons */}
+                {isMyTurn && (
+                  <div className="text-center">
+                    {canPlayAnyCard() ? (
+                      <div className="text-yellow-400 mb-2">
+                        Tap a highlighted card to play it
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-red-400 mb-2">
+                          No playable cards (would exceed 31)
+                        </div>
+                        <Button
+                          onClick={handleGo}
+                          disabled={submitting}
+                          className="bg-orange-600 hover:bg-orange-700 text-lg px-6 py-3"
+                        >
+                          {submitting ? 'Saying Go...' : 'Say "Go"'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Counting Phase */}
           {getCurrentPhase() === GAME_PHASE.COUNTING && (

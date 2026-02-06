@@ -308,7 +308,7 @@ export function processPlay(gameState, playerKey, card) {
   playState[playHandKey] = newHand;
 
   playState.playedCards = [...playState.playedCards, { ...card, playedBy: playerKey }];
-  playState.roundCards = [...playState.roundCards, card];
+  playState.roundCards = [...playState.roundCards, { ...card, playedBy: playerKey }];
   playState.currentCount += cardValue;
   playState.lastPlayedBy = playerKey;
 
