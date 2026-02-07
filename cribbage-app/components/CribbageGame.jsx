@@ -610,21 +610,9 @@ export default function CribbageGame({ onLogout }) {
     setCribRevealedCards([]);
     setMessage('Turning over the crib...');
 
-    // Wait for re-render to complete so layout is fully stable,
-    // THEN capture all positions from the same DOM state
+    // Wait for re-render so layout is stable, then start flying cards
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        // Hand cards are invisible but still in the DOM - getBoundingClientRect works
-        const handContainer = dealer === 'computer' ? computerHandRef.current : playerHandContainerRef.current;
-        if (handContainer) {
-          const cards = handContainer.children;
-          handCardRectsRef.current = Array.from(cards).map(el => el.getBoundingClientRect());
-        }
-        // Capture fresh crib pile position from the same layout state
-        if (cribPileRef.current) {
-          cribPileLastRect.current = cribPileRef.current.getBoundingClientRect();
-        }
-
         // Brief pause so user sees the empty box before cards fly in
         setTimeout(() => revealNextCribCard(0), 300);
       });
@@ -640,8 +628,11 @@ export default function CribbageGame({ onLogout }) {
       return;
     }
 
-    const pileRect = cribPileLastRect.current;
-    const targetCardRect = handCardRectsRef.current[index];
+    // Capture positions FRESH from live DOM right before each card flies.
+    // This prevents stale positions as the grid cell changes with each added card.
+    const handContainer = dealer === 'computer' ? computerHandRef.current : playerHandContainerRef.current;
+    const pileRect = cribPileRef.current ? cribPileRef.current.getBoundingClientRect() : cribPileLastRect.current;
+    const targetCardRect = handContainer ? handContainer.children[index]?.getBoundingClientRect() : null;
 
     if (pileRect && targetCardRect) {
       setFlyingCard({
@@ -660,7 +651,12 @@ export default function CribbageGame({ onLogout }) {
         onComplete: () => {
           setFlyingCard(null);
           setCribRevealedCards(prev => [...prev, crib[index]]);
-          setTimeout(() => revealNextCribCard(index + 1), 200);
+          // Wait for re-render after adding the card, then fly next
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setTimeout(() => revealNextCribCard(index + 1), 150);
+            });
+          });
         }
       });
     } else {
