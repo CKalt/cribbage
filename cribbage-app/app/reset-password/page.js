@@ -40,10 +40,12 @@ function ResetPasswordForm() {
     }
   };
 
+  const inputClassName = "mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500";
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="w-96 p-10 bg-white rounded shadow-md">
-        <h1 className="text-xl text-center mb-5 text-gray-800">Reset Password</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-green-900">
+      <div className="w-96 p-10 bg-green-800 rounded-lg shadow-xl border border-green-700">
+        <h1 className="text-2xl font-bold text-center mb-6 text-white">Reset Password</h1>
         <form onSubmit={resetPassword} className="flex flex-col">
           <input
             type="text"
@@ -51,27 +53,29 @@ function ResetPasswordForm() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             required
-            className="mb-2 p-2.5 border border-gray-300 rounded text-base text-gray-800"
+            className={inputClassName}
           />
           <PasswordInput
             value={newPassword}
             placeholder="New Password"
             onChange={(e) => setNewPassword(e.target.value)}
+            className="p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          <div className="mt-2">
+          <div className="mt-3">
             <PasswordInput
               value={confirmPassword}
               placeholder="Confirm Password"
               onChange={(e) => setConfirmPassword(e.target.value)}
+              className="p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <button type="submit" className="mt-4 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600 cursor-pointer">
+          <button type="submit" className="mt-5 p-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-500 cursor-pointer transition-colors">
             Reset Password
           </button>
         </form>
-        {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
+        {error && <p className="text-red-400 mt-4 text-sm bg-red-900/30 p-2 rounded">{error}</p>}
       </div>
-      <div className="text-gray-400 text-sm mt-5">
+      <div className="text-green-400 text-sm mt-5">
         Cribbage Game
       </div>
     </div>
@@ -80,7 +84,7 @@ function ResetPasswordForm() {
 
 export default function ResetPassword() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-green-900 text-white">Loading...</div>}>
       <ResetPasswordForm />
     </Suspense>
   );
