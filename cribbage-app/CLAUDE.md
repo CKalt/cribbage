@@ -32,6 +32,12 @@ Claude Code handles the entire deployment stack on EC2, including git push, pull
   ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage-beta && git pull && cd cribbage-app && npm run build && pm2 restart cribbage-beta"
   ```
 
+### Version Bumping
+- **IMPORTANT:** Bump the version in `lib/version.js` with every deploy
+- **Format:** `vX.Y.Z-bNN-YYYYMMDD` (e.g., `v0.2.1-b95-20260207`)
+- Increment the build number (`bNN`) and set the date to today's date
+- Update `RELEASE_NOTE` with what changed in this deploy
+
 ### Common
 - **EC2 IP:** 3.132.10.219
 - **SSH:** `ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@3.132.10.219`
