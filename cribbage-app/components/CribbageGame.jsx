@@ -61,6 +61,7 @@ export default function CribbageGame({ onLogout }) {
   const [activeMultiplayerGameId, setActiveMultiplayerGameId] = useState(null);
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [showInvitationBanner, setShowInvitationBanner] = useState(true);
+  const [acceptedGame, setAcceptedGame] = useState(null);
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -300,17 +301,26 @@ export default function CribbageGame({ onLogout }) {
   }, [unreadBugReports]);
 
   // Fetch pending multiplayer invitations periodically
+  // Also detect when a sent invitation has been accepted
+  const hasSentInviteRef = useRef(false);
   useEffect(() => {
     const fetchInvitations = async () => {
       try {
         const response = await fetch('/api/multiplayer/invitations');
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.received) {
-            setPendingInvitations(data.received);
-            // Show banner again if new invitations arrive
-            if (data.received.length > 0) {
-              setShowInvitationBanner(true);
+          if (data.success) {
+            if (data.received) {
+              setPendingInvitations(data.received);
+              if (data.received.length > 0) {
+                setShowInvitationBanner(true);
+              }
+            }
+            // Track if we have sent invitations (to poll faster)
+            hasSentInviteRef.current = (data.sent?.length || 0) > 0;
+            // Check for accepted games - show popup
+            if (data.acceptedGames?.length > 0 && !activeMultiplayerGameId) {
+              setAcceptedGame(data.acceptedGames[0]);
             }
           }
         }
@@ -319,11 +329,12 @@ export default function CribbageGame({ onLogout }) {
       }
     };
 
-    // Fetch immediately and then every 30 seconds
+    // Fetch immediately
     fetchInvitations();
-    const interval = setInterval(fetchInvitations, 30000);
+    // Poll every 5 seconds (fast enough to catch accepts quickly)
+    const interval = setInterval(fetchInvitations, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeMultiplayerGameId]);
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -1936,6 +1947,38 @@ export default function CribbageGame({ onLogout }) {
               >
                 ×
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accepted Game Popup - shows when a sent invitation was accepted */}
+      {acceptedGame && !activeMultiplayerGameId && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl border border-green-500 text-center">
+            <div className="text-4xl mb-3">🎉</div>
+            <h3 className="text-xl font-bold text-white mb-2">Game On!</h3>
+            <p className="text-green-400 mb-4">
+              {acceptedGame.to.split('@')[0]} accepted your invitation!
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button
+                onClick={() => {
+                  const gameId = acceptedGame.gameId;
+                  setAcceptedGame(null);
+                  setShowInviteFriend(false);
+                  setActiveMultiplayerGameId(gameId);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3"
+              >
+                Play Now
+              </Button>
+              <Button
+                onClick={() => setAcceptedGame(null)}
+                className="bg-gray-600 hover:bg-gray-700 px-4 py-3"
+              >
+                Later
+              </Button>
             </div>
           </div>
         </div>
