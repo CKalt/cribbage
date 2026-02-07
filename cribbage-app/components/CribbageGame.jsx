@@ -2115,15 +2115,24 @@ export default function CribbageGame({ onLogout }) {
                       </div>
                     )}
 
-                    {/* New Game buttons */}
+                    {/* Game buttons */}
                     <div className="flex flex-col gap-3 items-center">
                       <div className="flex gap-4">
-                        <Button
-                          onClick={startNewGame}
-                          className="text-lg px-6 py-4 bg-blue-600 hover:bg-blue-700"
-                        >
-                          New vs Computer
-                        </Button>
+                        {savedGameExists ? (
+                          <Button
+                            onClick={resumeGame}
+                            className="text-lg px-6 py-4 bg-blue-600 hover:bg-blue-700"
+                          >
+                            Resume vs Computer
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={startNewGame}
+                            className="text-lg px-6 py-4 bg-blue-600 hover:bg-blue-700"
+                          >
+                            New vs Computer
+                          </Button>
+                        )}
                         <Button
                           onClick={() => setShowInviteFriend(true)}
                           className="text-lg px-6 py-4 bg-green-600 hover:bg-green-700"
