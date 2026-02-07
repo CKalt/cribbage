@@ -35,6 +35,7 @@ import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
 import GameLobby from './GameLobby';
+import InviteFriend from './InviteFriend';
 import MultiplayerGame from './MultiplayerGame';
 import { APP_VERSION } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
@@ -56,6 +57,7 @@ export default function CribbageGame({ onLogout }) {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showGameLobby, setShowGameLobby] = useState(false);
+  const [showInviteFriend, setShowInviteFriend] = useState(false);
   const [activeMultiplayerGameId, setActiveMultiplayerGameId] = useState(null);
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [showInvitationBanner, setShowInvitationBanner] = useState(true);
@@ -2113,30 +2115,20 @@ export default function CribbageGame({ onLogout }) {
                       </div>
                     )}
 
-                    {/* My Games button */}
-                    <div className="mb-6">
-                      <Button
-                        onClick={() => setShowGameLobby(true)}
-                        className="text-lg px-8 py-4 bg-green-600 hover:bg-green-700 relative"
-                      >
-                        My Games
-                        {pendingInvitations.length > 0 && (
-                          <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center animate-pulse">
-                            {pendingInvitations.length}
-                          </span>
-                        )}
-                      </Button>
-                    </div>
-
-                    {/* Quick start new game */}
+                    {/* New Game buttons */}
                     <div className="flex flex-col gap-3 items-center">
-                      <div className="text-gray-400 text-sm mb-1">Quick Start</div>
                       <div className="flex gap-4">
                         <Button
                           onClick={startNewGame}
-                          className="px-6 py-3 bg-blue-600 hover:bg-blue-700"
+                          className="text-lg px-6 py-4 bg-blue-600 hover:bg-blue-700"
                         >
                           New vs Computer
+                        </Button>
+                        <Button
+                          onClick={() => setShowInviteFriend(true)}
+                          className="text-lg px-6 py-4 bg-green-600 hover:bg-green-700"
+                        >
+                          New vs Friend
                         </Button>
                       </div>
                     </div>
@@ -2692,6 +2684,12 @@ export default function CribbageGame({ onLogout }) {
           savedGameExists={savedGameExists}
           onResumeComputerGame={resumeGame}
           onNewComputerGame={startNewGame}
+        />
+
+        {/* Invite Friend Modal */}
+        <InviteFriend
+          isOpen={showInviteFriend}
+          onClose={() => setShowInviteFriend(false)}
         />
 
         {/* Multiplayer Game - renders full-screen overlay when active */}

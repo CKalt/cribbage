@@ -20,10 +20,6 @@ export default function GameLobby({
   const [invitations, setInvitations] = useState({ received: [], sent: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showFindPlayers, setShowFindPlayers] = useState(false);
-  const [players, setPlayers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchLoading, setSearchLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
 
@@ -50,46 +46,6 @@ export default function GameLobby({
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPlayers = async () => {
-    setSearchLoading(true);
-    try {
-      const url = searchTerm
-        ? `/api/multiplayer/players?search=${encodeURIComponent(searchTerm)}`
-        : '/api/multiplayer/players';
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.success) setPlayers(data.players);
-    } catch (err) {
-      // ignore
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const handleInvite = async (playerEmail) => {
-    setInviteLoading(playerEmail);
-    setActionMessage(null);
-    try {
-      const response = await fetch('/api/multiplayer/invitations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toEmail: playerEmail })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setActionMessage({ type: 'success', text: `Invitation sent to ${playerEmail}` });
-        setShowFindPlayers(false);
-        fetchAll();
-      } else {
-        setActionMessage({ type: 'error', text: data.error });
-      }
-    } catch (err) {
-      setActionMessage({ type: 'error', text: 'Failed to send invitation' });
-    } finally {
-      setInviteLoading(null);
     }
   };
 
@@ -329,54 +285,11 @@ export default function GameLobby({
           )}
         </div>
 
-        {/* Find Players section */}
-        {showFindPlayers && (
-          <div className="mt-3 pt-3 border-t border-gray-700">
-            <form onSubmit={(e) => { e.preventDefault(); fetchPlayers(); }} className="mb-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by email..."
-                  className="flex-1 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
-                  autoFocus
-                />
-                <Button type="submit" disabled={searchLoading} className="bg-blue-600 hover:bg-blue-700 text-sm">
-                  {searchLoading ? '...' : 'Search'}
-                </Button>
-              </div>
-            </form>
-            {players.length > 0 && (
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {players.map((player) => (
-                  <div key={player.id} className="flex items-center justify-between p-2 rounded bg-gray-750">
-                    <div className="text-white text-sm">{player.email}</div>
-                    <Button
-                      onClick={() => handleInvite(player.email)}
-                      disabled={inviteLoading === player.email}
-                      className="bg-green-600 hover:bg-green-700 text-xs px-2 py-1"
-                    >
-                      {inviteLoading === player.email ? '...' : 'Invite'}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-gray-700 flex gap-2">
-          <Button
-            onClick={() => { setShowFindPlayers(!showFindPlayers); if (!showFindPlayers) fetchPlayers(); }}
-            className="flex-1 bg-green-600 hover:bg-green-700"
-          >
-            {showFindPlayers ? 'Hide' : 'Invite Friend'}
-          </Button>
+        <div className="mt-4 pt-3 border-t border-gray-700">
           <Button
             onClick={onClose}
-            className="flex-1 bg-gray-600 hover:bg-gray-700"
+            className="w-full bg-gray-600 hover:bg-gray-700"
           >
             Close
           </Button>
