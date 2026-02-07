@@ -19,7 +19,7 @@ Claude Code handles the entire deployment stack on EC2, including git push, pull
 - **PM2 process:** `cribbage`
 - **Deploy command:**
   ```bash
-  ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage && git pull && cd cribbage-app && npm run build && pm2 restart cribbage"
+  ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage && git pull && cd cribbage-app && rm -rf .next && npm run build && pm2 restart cribbage"
   ```
 
 ### Beta
@@ -29,7 +29,7 @@ Claude Code handles the entire deployment stack on EC2, including git push, pull
 - **PM2 process:** `cribbage-beta`
 - **Deploy command:**
   ```bash
-  ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage-beta && git pull && cd cribbage-app && npm run build && pm2 restart cribbage-beta"
+  ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage-beta && git pull && cd cribbage-app && rm -rf .next && npm run build && pm2 restart cribbage-beta"
   ```
 
 ### Version Bumping
