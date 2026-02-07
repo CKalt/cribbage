@@ -44,7 +44,7 @@ export default function PlayingCard({
   // Revealed card (computer's cards during counting - white bg like player cards)
   if (revealed) {
     return (
-      <div className={`bg-white rounded ${sizeClasses[size]} font-bold ${
+      <div className={`bg-white rounded border border-gray-300 shadow-sm ${sizeClasses[size]} font-bold ${
         isRed ? 'text-red-600' : 'text-black'
       } ${highlighted ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''}`}>
         {card.rank}{card.suit}
@@ -57,7 +57,7 @@ export default function PlayingCard({
     <div
       onClick={disabled ? undefined : onClick}
       className={`
-        bg-white rounded ${sizeClasses[size]} font-bold cursor-pointer transition-all
+        bg-white rounded border border-gray-300 shadow-sm ${sizeClasses[size]} font-bold cursor-pointer transition-all
         ${selected ? 'ring-4 ring-cyan-400 shadow-lg shadow-cyan-400/50 -translate-y-2 scale-110' : ''}
         ${highlighted && !selected ? 'ring-2 ring-yellow-400/50' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
@@ -78,7 +78,7 @@ export function PlayedCard({ card }) {
   const isRed = card.suit === '♥' || card.suit === '♦';
 
   return (
-    <div className={`bg-white rounded p-1 text-sm font-bold ${
+    <div className={`bg-white rounded border border-gray-300 shadow-sm p-1 text-sm font-bold ${
       isRed ? 'text-red-600' : 'text-black'
     }`}>
       {card.rank}{card.suit}

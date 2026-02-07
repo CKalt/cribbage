@@ -2357,7 +2357,7 @@ export default function CribbageGame({ onLogout }) {
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
                   <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
-                  <div ref={computerHandRef} className="flex flex-wrap gap-2">
+                  <div ref={computerHandRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
                     {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                       gameState === 'play' ? computerPlayHand :
                       computerHand).map((card, idx) => (
@@ -2383,7 +2383,7 @@ export default function CribbageGame({ onLogout }) {
                       {/* Computer's played cards */}
                       <div className="mb-3">
                         <div className="text-xs mb-1">Computer's plays:</div>
-                        <div ref={computerPlayAreaRef} className="flex flex-wrap gap-1 min-h-[40px]">
+                        <div ref={computerPlayAreaRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-2 min-h-[40px]">
                           {computerPlayedCards.map((card, idx) => (
                             <div key={idx} className={idx === landingCardIndex && landingIsComputer ? 'animate-[cardLand_0.3s_ease-out]' : ''}>
                               <PlayedCard card={card} />
@@ -2394,7 +2394,7 @@ export default function CribbageGame({ onLogout }) {
                       {/* Player's played cards */}
                       <div>
                         <div className="text-xs mb-1">Your plays:</div>
-                        <div ref={playerPlayAreaRef} className="flex flex-wrap gap-1 min-h-[40px]">
+                        <div ref={playerPlayAreaRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-2 min-h-[40px]">
                           {playerPlayedCards.map((card, idx) => (
                             <div
                               key={idx}
@@ -2432,7 +2432,7 @@ export default function CribbageGame({ onLogout }) {
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
                   <div className="text-sm mb-2">Your Hand: ({gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
                     {(gameState === 'cribSelect' ? playerHand :
                       gameState === 'play' ? playerPlayHand :
                       playerHand).map((card, idx) => (
@@ -2471,7 +2471,7 @@ export default function CribbageGame({ onLogout }) {
                       ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
                       {crib.map((card, idx) => (
                         <div key={idx} className={`bg-white rounded p-2 text-xl font-bold ${
                           card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
