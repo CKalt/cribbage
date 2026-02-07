@@ -346,7 +346,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
   }
 
   return (
-    <div className="min-h-screen bg-green-800 flex flex-col">
+    <div className="h-screen bg-green-800 flex flex-col">
       {/* Top bar - Opponent info */}
       <div className="bg-gray-900 p-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -382,7 +382,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
       </div>
 
       {/* Main game area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="flex-1 flex flex-col items-center justify-start overflow-y-auto p-4">
         {/* Turn indicator */}
         {getCurrentPhase() !== GAME_PHASE.CUTTING_FOR_DEALER && (
           <div className={`mb-6 px-6 py-3 rounded-full text-lg font-bold ${
