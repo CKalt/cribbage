@@ -125,6 +125,12 @@ export default function CribbageGame({ onLogout }) {
   const computerPlayAreaRef = useRef(null);
   const computerHandRef = useRef(null);
   const cribPileRef = useRef(null);
+  const cribDisplayRef = useRef(null);
+  const cribPileLastRect = useRef(null);
+
+  // Crib reveal animation state
+  const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
+  const [cribRevealedCards, setCribRevealedCards] = useState([]);
 
   // Debug state
   const [debugLog, setDebugLog] = useState([]);
@@ -563,6 +569,8 @@ export default function CribbageGame({ onLogout }) {
     setPlayerMadeCountDecision(false);
     setShowMugginsPreferenceDialog(false);
     setPendingWrongMugginsResult(null);
+    setCribRevealPhase('idle');
+    setCribRevealedCards([]);
 
     const firstCounter = dealer === 'player' ? 'computer' : 'player';
     const isComputerFirst = firstCounter === 'computer';
@@ -572,6 +580,71 @@ export default function CribbageGame({ onLogout }) {
 
     addDebugLog(`First counter: ${firstCounter} (non-dealer), counterIsComputer: ${isComputerFirst}, dealer: ${dealer}`);
     setMessage(isComputerFirst ? 'Computer counts first (non-dealer)' : 'Count your hand (non-dealer first)');
+  };
+
+  // Track crib pile position while it's visible
+  useEffect(() => {
+    if (cribPileRef.current) {
+      cribPileLastRect.current = cribPileRef.current.getBoundingClientRect();
+    }
+  });
+
+  // Crib reveal animation - flies cards one at a time from pile to display
+  const startCribReveal = () => {
+    setCribRevealPhase('revealing');
+    setCribRevealedCards([]);
+    setMessage('Turning over the crib...');
+
+    // Small delay for the crib display area to render
+    setTimeout(() => revealNextCribCard(0), 200);
+  };
+
+  const revealNextCribCard = (index) => {
+    if (index >= crib.length) {
+      setCribRevealPhase('done');
+      setCountingTurn('crib');
+      setCounterIsComputer(dealer === 'computer');
+      setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+      return;
+    }
+
+    const startRect = cribPileLastRect.current;
+    const destRect = cribDisplayRef.current?.getBoundingClientRect();
+
+    if (startRect && destRect) {
+      // Calculate center-aligned landing position matching the overlapping layout
+      const cardWidth = 48; // approximate card width
+      const overlap = -12; // -ml-3 = -12px overlap
+      const totalWidth = cardWidth + (crib.length - 1) * (cardWidth + overlap);
+      const startX = destRect.left + (destRect.width - totalWidth) / 2;
+      const cardLeft = startX + index * (cardWidth + overlap);
+
+      setFlyingCard({
+        card: crib[index],
+        startRect: {
+          top: startRect.top,
+          left: startRect.left,
+          width: cardWidth,
+          height: startRect.height || 64,
+        },
+        endRect: {
+          top: destRect.top + (index % 2 === 1 ? 4 : 0),
+          left: cardLeft,
+        },
+        onComplete: () => {
+          setFlyingCard(null);
+          setCribRevealedCards(prev => [...prev, crib[index]]);
+          setTimeout(() => revealNextCribCard(index + 1), 150);
+        }
+      });
+    } else {
+      // Fallback: reveal all instantly
+      setCribRevealedCards([...crib]);
+      setCribRevealPhase('done');
+      setCountingTurn('crib');
+      setCounterIsComputer(dealer === 'computer');
+      setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+    }
   };
 
   // Start new game
@@ -1478,10 +1551,8 @@ export default function CribbageGame({ onLogout }) {
       setCounterIsComputer(dealer === 'computer');
       setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
     } else if (newHandsCountedThisRound === 2) {
-      addDebugLog(`Second count done by player, dealer (${dealer}) counts crib next`);
-      setCountingTurn('crib');
-      setCounterIsComputer(dealer === 'computer');
-      setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+      addDebugLog(`Second count done by player, dealer (${dealer}) counts crib next - starting reveal animation`);
+      startCribReveal();
     }
   };
 
@@ -1613,10 +1684,8 @@ export default function CribbageGame({ onLogout }) {
       setCounterIsComputer(dealer === 'computer');
       setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
     } else if (newHandsCountedThisRound === 2) {
-      addDebugLog(`Second count done, dealer (${dealer}) counts crib next`);
-      setCountingTurn('crib');
-      setCounterIsComputer(dealer === 'computer');
-      setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+      addDebugLog(`Second count done, dealer (${dealer}) counts crib next - starting reveal animation`);
+      startCribReveal();
     }
   };
 
@@ -1724,10 +1793,8 @@ export default function CribbageGame({ onLogout }) {
           setCounterIsComputer(dealer === 'computer');
           setMessage(dealer === 'computer' ? 'Computer counts their hand (dealer)' : 'Count your hand (dealer)');
         } else if (newHandsCountedThisRound === 2) {
-          addDebugLog(`Second count done (muggins), dealer (${dealer}) counts crib next`);
-          setCountingTurn('crib');
-          setCounterIsComputer(dealer === 'computer');
-          setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+          addDebugLog(`Second count done (muggins), dealer (${dealer}) counts crib next - starting reveal animation`);
+          startCribReveal();
         }
       }, 5000);
     } else if (computerClaimedScore === score) {
@@ -2411,8 +2478,8 @@ export default function CribbageGame({ onLogout }) {
                 }`}>
                   <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
                   <div className="flex items-center justify-center gap-8">
-                    {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (
-                      <div ref={cribPileRef} className="flex flex-col items-center">
+                    {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (
+                      <div ref={cribPileRef} className={`flex flex-col items-center transition-opacity duration-300 ${cribRevealPhase === 'revealing' ? 'opacity-60' : ''}`}>
                         <div className="relative w-12 h-16">
                           <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />
                           <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />
@@ -2542,8 +2609,9 @@ export default function CribbageGame({ onLogout }) {
                 </div>
                 )}
 
-                {/* Crib display during counting */}
-                {gameState === 'counting' && ((countingTurn === 'crib' && handsCountedThisRound === 2) ||
+                {/* Crib display during counting - includes reveal animation */}
+                {gameState === 'counting' && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done' ||
+                 (countingTurn === 'crib' && handsCountedThisRound === 2) ||
                  (actualScore && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
                  (actualScore && !counterIsComputer && handsCountedThisRound === 2 && dealer === 'player') ||
                  (pendingCountContinue && handsCountedThisRound === 3)) && (
@@ -2553,14 +2621,15 @@ export default function CribbageGame({ onLogout }) {
                       ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
-                    <div className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
-                      {crib.map((card, idx) => (
+                    <div ref={cribDisplayRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 min-h-[40px]">
+                      {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                         <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }} className={`bg-white rounded border border-gray-300 shadow-sm p-2 text-xl font-bold ${
                           card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
                         } ${
-                          (counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
-                          (!counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2 && dealer === 'player')
-                            ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''
+                          cribRevealPhase !== 'revealing' && (
+                            (counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
+                            (!counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2 && dealer === 'player')
+                          ) ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''
                         }`}>
                           {card.rank}{card.suit}
                         </div>
