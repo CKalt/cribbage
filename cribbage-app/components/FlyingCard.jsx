@@ -10,10 +10,9 @@ import { createPortal } from 'react-dom';
  * @param {object} card - Card object { rank, suit, value }
  * @param {object} startRect - Source getBoundingClientRect() { top, left, width, height }
  * @param {object} endRect - Target getBoundingClientRect() { top, left }
- * @param {boolean} isComputerCard - If true, render face-down (blue ?) during flight
  * @param {function} onComplete - Called when animation finishes
  */
-export default function FlyingCard({ card, startRect, endRect, isComputerCard = false, onComplete }) {
+export default function FlyingCard({ card, startRect, endRect, onComplete }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -47,17 +46,11 @@ export default function FlyingCard({ card, startRect, endRect, isComputerCard = 
         if (onComplete) onComplete();
       }}
     >
-      {isComputerCard ? (
-        <div className="bg-blue-900 border-2 border-blue-700 text-blue-300 rounded p-2 w-full h-full flex items-center justify-center font-bold text-lg">
-          ?
-        </div>
-      ) : (
-        <div className={`bg-white rounded p-2 text-xl font-bold w-full h-full flex items-center justify-center ${
-          isRed ? 'text-red-600' : 'text-black'
-        }`}>
-          {card.rank}{card.suit}
-        </div>
-      )}
+      <div className={`bg-white rounded p-2 text-xl font-bold w-full h-full flex items-center justify-center ${
+        isRed ? 'text-red-600' : 'text-black'
+      }`}>
+        {card.rank}{card.suit}
+      </div>
     </div>
   );
 

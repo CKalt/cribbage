@@ -1050,8 +1050,9 @@ export default function CribbageGame({ onLogout }) {
         const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount);
 
         if (card) {
-          // Animate computer card from hand area to play area
-          const startRect = computerHandRef.current?.getBoundingClientRect();
+          // Animate computer card from a single card in the hand to play area
+          const firstCard = computerHandRef.current?.querySelector(':scope > *');
+          const startRect = firstCard?.getBoundingClientRect();
           const endRect = computerPlayAreaRef.current?.getBoundingClientRect();
 
           if (startRect && endRect) {
@@ -1907,7 +1908,7 @@ export default function CribbageGame({ onLogout }) {
         card={flyingCard.card}
         startRect={flyingCard.startRect}
         endRect={flyingCard.endRect}
-        isComputerCard={flyingCard.isComputer}
+
         onComplete={flyingCard.onComplete}
       />
     )}
