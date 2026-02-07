@@ -606,19 +606,29 @@ export default function CribbageGame({ onLogout }) {
 
   // Crib reveal animation - flies cards one at a time from pile to display
   const startCribReveal = () => {
-    // Capture actual hand card positions BEFORE the phase change makes them invisible
-    const handContainer = dealer === 'computer' ? computerHandRef.current : playerHandContainerRef.current;
-    if (handContainer) {
-      const cards = handContainer.children;
-      handCardRectsRef.current = Array.from(cards).map(el => el.getBoundingClientRect());
-    }
-
     setCribRevealPhase('revealing');
     setCribRevealedCards([]);
     setMessage('Turning over the crib...');
 
-    // Wait for layout to stabilize with the box visible and hand invisible
-    setTimeout(() => revealNextCribCard(0), 500);
+    // Wait for re-render to complete so layout is fully stable,
+    // THEN capture all positions from the same DOM state
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Hand cards are invisible but still in the DOM - getBoundingClientRect works
+        const handContainer = dealer === 'computer' ? computerHandRef.current : playerHandContainerRef.current;
+        if (handContainer) {
+          const cards = handContainer.children;
+          handCardRectsRef.current = Array.from(cards).map(el => el.getBoundingClientRect());
+        }
+        // Capture fresh crib pile position from the same layout state
+        if (cribPileRef.current) {
+          cribPileLastRect.current = cribPileRef.current.getBoundingClientRect();
+        }
+
+        // Brief pause so user sees the empty box before cards fly in
+        setTimeout(() => revealNextCribCard(0), 300);
+      });
+    });
   };
 
   const revealNextCribCard = (index) => {
@@ -630,16 +640,16 @@ export default function CribbageGame({ onLogout }) {
       return;
     }
 
-    const startRect = cribPileLastRect.current;
+    const pileRect = cribPileLastRect.current;
     const targetCardRect = handCardRectsRef.current[index];
 
-    if (startRect && targetCardRect) {
-      // Fly from crib pile to the exact position where the hand card was
+    if (pileRect && targetCardRect) {
       setFlyingCard({
         card: crib[index],
+        className: 'flying-card-crib',
         startRect: {
-          top: startRect.top,
-          left: startRect.left,
+          top: pileRect.top,
+          left: pileRect.left,
           width: targetCardRect.width,
           height: targetCardRect.height,
         },
@@ -2164,12 +2174,13 @@ export default function CribbageGame({ onLogout }) {
     <>
     {flyingCard && (
       <FlyingCard
-        key={`${flyingCard.card.rank}${flyingCard.card.suit}${flyingCard.faceDown ? '-fd' : ''}`}
+        key={`${flyingCard.card.rank}${flyingCard.card.suit}${flyingCard.faceDown ? '-fd' : ''}${flyingCard.className || ''}`}
         card={flyingCard.card}
         startRect={flyingCard.startRect}
         endRect={flyingCard.endRect}
         onComplete={flyingCard.onComplete}
         faceDown={flyingCard.faceDown || false}
+        className={flyingCard.className || 'flying-card'}
       />
     )}
     <div className="min-h-screen bg-green-900 p-4">

@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom';
  * @param {function} onComplete - Called when animation finishes
  * @param {boolean} faceDown - Show card back instead of face
  */
-export default function FlyingCard({ card, startRect, endRect, onComplete, faceDown = false }) {
+export default function FlyingCard({ card, startRect, endRect, onComplete, faceDown = false, className = 'flying-card' }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
   const overlay = (
     <div
       ref={ref}
-      className="flying-card"
+      className={className}
       style={{
         top: startRect.top,
         left: startRect.left,

@@ -150,3 +150,22 @@
   pointer-events: none;
   animation: cardFly 400ms ease-out forwards;
 }
+
+/* Crib reveal: full-size straight flight, no shrink or rotation */
+@keyframes cribCardFly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fly-x), var(--fly-y)) scale(1);
+    opacity: 1;
+  }
+}
+
+.flying-card-crib {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  animation: cribCardFly 350ms ease-out forwards;
+}
