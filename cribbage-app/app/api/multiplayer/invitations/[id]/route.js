@@ -157,13 +157,10 @@ export async function POST(request, { params }) {
     // Game is now active
     game.status = GAME_STATUS.ACTIVE;
 
-    // Randomly pick dealer for first hand (or use player1 for deterministic testing)
-    const dealer = testDeck ? 'player1' : (Math.random() < 0.5 ? 'player1' : 'player2');
+    // Initialize game state - starts in cut-for-dealer phase (no dealer yet)
+    game.gameState = initializeGameState(null, testDeck || null);
 
-    // Initialize game state with dealt cards (use testDeck if provided for testing)
-    game.gameState = initializeGameState(dealer, testDeck || null);
-
-    // Both players need to discard - start with player1
+    // Both players can cut - player1 goes first
     game.currentTurn = 'player1';
     game.turnStartedAt = new Date().toISOString();
 
@@ -171,7 +168,7 @@ export async function POST(request, { params }) {
     game.lastMove = {
       by: null,
       type: 'game_start',
-      description: `Game started! ${dealer === 'player1' ? invitation.from.email.split('@')[0] : userInfo.email.split('@')[0]} is dealer. Discard 2 cards to the crib.`,
+      description: `Game started! Cut the deck to determine dealer.`,
       timestamp: new Date().toISOString()
     };
 

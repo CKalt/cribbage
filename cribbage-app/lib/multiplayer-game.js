@@ -5,11 +5,13 @@
 
 import { createDeck, shuffleDeck } from './deck';
 import { calculateHandScore } from './scoring';
+import { rankOrder } from './constants';
 
 /**
  * Game phases
  */
 export const GAME_PHASE = {
+  CUTTING_FOR_DEALER: 'cuttingForDealer',
   DEALING: 'dealing',
   DISCARDING: 'discarding',
   CUT: 'cut',
@@ -19,17 +21,74 @@ export const GAME_PHASE = {
 };
 
 /**
- * Initialize a new multiplayer game state
+ * Initialize a new multiplayer game state for cut-for-dealer phase
  * Called when an invitation is accepted and game begins
- * @param {string} dealer - 'player1' or 'player2'
- * @param {array} testDeck - Optional pre-defined deck for testing (52 cards in specific order)
- * @returns {object} Initial game state
+ * @param {array} testDeck - Optional pre-defined deck for testing
+ * @returns {object} Initial game state in cuttingForDealer phase
  */
-export function initializeGameState(dealer = 'player1', testDeck = null) {
-  // Use test deck if provided, otherwise create and shuffle
+export function initializeGameState(dealer = null, testDeck = null) {
+  // If dealer is specified, skip cut-for-dealer (used for subsequent rounds or testing)
+  if (dealer) {
+    return initializeRoundState(dealer, testDeck);
+  }
+
+  // First game: start with cut-for-dealer phase
+  const cutDeck = testDeck || shuffleDeck(createDeck());
+
+  return {
+    phase: GAME_PHASE.CUTTING_FOR_DEALER,
+    round: 1,
+    dealer: null,
+
+    // Cut for dealer state
+    cutForDealer: {
+      player1Card: null,
+      player2Card: null,
+      deck: cutDeck
+    },
+
+    // Empty hands until dealer is determined and cards are dealt
+    player1Hand: [],
+    player2Hand: [],
+    player1Discards: [],
+    player2Discards: [],
+    crib: [],
+    cutCard: null,
+    remainingDeck: [],
+
+    playState: {
+      player1PlayHand: [],
+      player2PlayHand: [],
+      playedCards: [],
+      currentCount: 0,
+      lastPlayedBy: null,
+      player1Said: null,
+      player2Said: null,
+      roundCards: []
+    },
+
+    countingState: {
+      phase: null,
+      currentCounter: null,
+      handsScored: []
+    },
+
+    peggingPoints: {
+      player1: 0,
+      player2: 0
+    }
+  };
+}
+
+/**
+ * Initialize round state with dealt cards (used after dealer is determined)
+ * @param {string} dealer - 'player1' or 'player2'
+ * @param {array} testDeck - Optional pre-defined deck for testing
+ * @returns {object} Game state in discarding phase
+ */
+export function initializeRoundState(dealer, testDeck = null) {
   const deck = testDeck || shuffleDeck(createDeck());
 
-  // Deal 6 cards to each player
   const player1Hand = deck.slice(0, 6);
   const player2Hand = deck.slice(6, 12);
   const remainingDeck = deck.slice(12);
@@ -39,43 +98,123 @@ export function initializeGameState(dealer = 'player1', testDeck = null) {
     round: 1,
     dealer: dealer,
 
-    // Hands - each player sees only their own
     player1Hand: player1Hand,
     player2Hand: player2Hand,
-
-    // Cards discarded to crib (hidden until counting)
     player1Discards: [],
     player2Discards: [],
     crib: [],
-
-    // Cut card (revealed after discards)
     cutCard: null,
     remainingDeck: remainingDeck,
 
-    // Play phase state
     playState: {
-      player1PlayHand: [],  // Cards available to play
+      player1PlayHand: [],
       player2PlayHand: [],
-      playedCards: [],      // Cards played this round
+      playedCards: [],
       currentCount: 0,
       lastPlayedBy: null,
-      player1Said: null,    // 'go' or null
+      player1Said: null,
       player2Said: null,
-      roundCards: []        // Cards in current 31-count round
+      roundCards: []
     },
 
-    // Counting phase state
     countingState: {
-      phase: null,          // 'nonDealer', 'dealer', 'crib'
+      phase: null,
       currentCounter: null,
       handsScored: []
     },
 
-    // Pegging points scored this round
     peggingPoints: {
       player1: 0,
       player2: 0
     }
+  };
+}
+
+/**
+ * Process a cut-for-dealer move
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - 'player1' or 'player2'
+ * @param {number} cutPosition - 0-1 representing where player tapped
+ * @returns {object} { success, newState, error, description, nextTurn, dealerDetermined, dealer }
+ */
+export function processCutForDealer(gameState, playerKey, cutPosition) {
+  if (gameState.phase !== GAME_PHASE.CUTTING_FOR_DEALER) {
+    return { success: false, error: 'Not in cut-for-dealer phase' };
+  }
+
+  const cutForDealer = { ...gameState.cutForDealer };
+  const cardKey = `${playerKey}Card`;
+
+  // Check if player already cut
+  if (cutForDealer[cardKey] !== null) {
+    return { success: false, error: 'You have already cut' };
+  }
+
+  // Convert position to deck index
+  const deck = cutForDealer.deck;
+  const index = Math.floor(cutPosition * deck.length);
+  const clampedIndex = Math.max(0, Math.min(deck.length - 1, index));
+  const card = deck[clampedIndex];
+
+  cutForDealer[cardKey] = card;
+
+  const opponentKey = playerKey === 'player1' ? 'player2' : 'player1';
+  const opponentCardKey = `${opponentKey}Card`;
+  const bothCut = cutForDealer[opponentCardKey] !== null;
+
+  if (!bothCut) {
+    // Waiting for opponent to cut
+    return {
+      success: true,
+      newState: {
+        ...gameState,
+        cutForDealer
+      },
+      description: `Cut ${card.rank}${card.suit}. Waiting for opponent to cut.`,
+      nextTurn: opponentKey
+    };
+  }
+
+  // Both have cut - compare cards
+  const myRank = rankOrder[card.rank];
+  const opponentRank = rankOrder[cutForDealer[opponentCardKey].rank];
+
+  if (myRank === opponentRank) {
+    // Tie - reset for re-cut with a fresh shuffled deck
+    const newDeck = shuffleDeck(createDeck());
+    return {
+      success: true,
+      newState: {
+        ...gameState,
+        cutForDealer: {
+          player1Card: null,
+          player2Card: null,
+          deck: newDeck,
+          tied: true
+        }
+      },
+      description: `Both cut ${card.rank} - tied! Cut again.`,
+      nextTurn: 'player1',
+      tied: true
+    };
+  }
+
+  // Lower card deals (Ace is lowest/best)
+  const dealer = myRank < opponentRank ? playerKey : opponentKey;
+
+  // Deal cards for the first round
+  const roundState = initializeRoundState(dealer);
+
+  return {
+    success: true,
+    newState: {
+      ...roundState,
+      cutForDealer: cutForDealer
+    },
+    description: `Dealer determined! Cards are being dealt.`,
+    nextTurn: 'player1', // Both need to discard
+    dealerDetermined: true,
+    dealer: dealer
   };
 }
 

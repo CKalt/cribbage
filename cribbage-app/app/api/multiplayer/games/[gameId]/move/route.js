@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
 import { getPlayerKey, GAME_STATUS } from '@/lib/multiplayer-schema';
-import { processDiscard, processCut, processPlay, processCount, startNewRound, GAME_PHASE } from '@/lib/multiplayer-game';
+import { processDiscard, processCut, processPlay, processCount, startNewRound, processCutForDealer, GAME_PHASE } from '@/lib/multiplayer-game';
 
 /**
  * Decode JWT token to extract user ID and email
@@ -91,9 +91,18 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Special handling for discard phase - both players can discard
+    // Special handling for phases where both players can act
     const gamePhase = game.gameState?.phase;
-    if (gamePhase === GAME_PHASE.DISCARDING && moveType === 'discard') {
+    if (gamePhase === GAME_PHASE.CUTTING_FOR_DEALER && moveType === 'cut-for-dealer') {
+      // Allow cut if player hasn't cut yet
+      const cardKey = `${playerKey}Card`;
+      if (game.gameState.cutForDealer?.[cardKey] !== null) {
+        return NextResponse.json(
+          { success: false, error: 'You have already cut' },
+          { status: 400 }
+        );
+      }
+    } else if (gamePhase === GAME_PHASE.DISCARDING && moveType === 'discard') {
       // Allow discard if player hasn't discarded yet
       const discardsKey = `${playerKey}Discards`;
       if (game.gameState[discardsKey]?.length > 0) {
@@ -213,6 +222,24 @@ function processMove(game, playerKey, moveType, data) {
         nextTurn: data.nextTurn || opponentKey,
         description: data.description || 'Game state synchronized'
       };
+
+    case 'cut-for-dealer': {
+      const cutPosition = data.cutPosition ?? 0.5;
+      const result = processCutForDealer(state, playerKey, cutPosition);
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        description: `${username} ${result.description}`,
+        dealerDetermined: result.dealerDetermined,
+        dealer: result.dealer,
+        tied: result.tied
+      };
+    }
 
     case 'discard': {
       // Player discarding cards to crib
