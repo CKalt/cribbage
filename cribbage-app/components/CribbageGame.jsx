@@ -37,6 +37,7 @@ import Leaderboard from './Leaderboard';
 import GameLobby from './GameLobby';
 import InviteFriend from './InviteFriend';
 import MultiplayerGame from './MultiplayerGame';
+import ProfileModal from './ProfileModal';
 import { APP_VERSION } from '@/lib/version';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
@@ -56,6 +57,7 @@ export default function CribbageGame({ onLogout }) {
   const [showUnreadNotification, setShowUnreadNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [showGameLobby, setShowGameLobby] = useState(false);
   const [showInviteFriend, setShowInviteFriend] = useState(false);
   const [activeMultiplayerGameId, setActiveMultiplayerGameId] = useState(null);
@@ -2033,6 +2035,20 @@ export default function CribbageGame({ onLogout }) {
                 )}
               </button>
 
+              {/* Profile */}
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowProfile(true);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Profile
+              </button>
+
               {/* My Games - multiplayer */}
               <button
                 onClick={() => {
@@ -2136,6 +2152,15 @@ export default function CribbageGame({ onLogout }) {
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
             <div className="text-center text-green-600 text-xs">{APP_VERSION}</div>
+            <div
+              className="text-center text-green-500 text-xs cursor-pointer hover:text-green-400 mt-1"
+              onClick={() => setShowProfile(true)}
+              title="Edit profile"
+            >
+              {user?.attributes?.preferred_username
+                ? `@${user.attributes.preferred_username}`
+                : user?.attributes?.email?.split('@')[0] || ''}
+            </div>
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -2716,6 +2741,12 @@ export default function CribbageGame({ onLogout }) {
           isOpen={showAdminPanel}
           onClose={() => setShowAdminPanel(false)}
           userEmail={user?.attributes?.email || user?.username}
+        />
+
+        {/* Profile Modal */}
+        <ProfileModal
+          isOpen={showProfile}
+          onClose={() => setShowProfile(false)}
         />
 
         {/* Leaderboard Modal - available to all users */}

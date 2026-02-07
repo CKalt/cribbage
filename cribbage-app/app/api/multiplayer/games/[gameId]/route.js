@@ -5,6 +5,20 @@ import path from 'path';
 import { getPlayerKey, GAME_STATUS } from '@/lib/multiplayer-schema';
 
 /**
+ * Get display name for a user (handle or email prefix)
+ */
+function getDisplayName(userId, email) {
+  try {
+    const filepath = path.join(process.cwd(), 'data', `${userId}-dml-ast.json`);
+    if (fs.existsSync(filepath)) {
+      const userData = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+      if (userData.handle) return userData.handle;
+    }
+  } catch (e) { /* fall through */ }
+  return email ? email.split('@')[0] : 'Unknown';
+}
+
+/**
  * Decode JWT token to extract user ID and email
  */
 function getUserInfoFromToken(token) {
@@ -84,7 +98,7 @@ export async function GET(request, { params }) {
         myPlayerKey: playerKey,
         opponent: opponent ? {
           email: opponent.email,
-          username: opponent.email.split('@')[0],
+          username: getDisplayName(opponent.id, opponent.email),
           lastSeen: opponent.lastSeen,
           connected: opponent.connected
         } : null,

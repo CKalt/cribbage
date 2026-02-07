@@ -111,7 +111,8 @@ export async function GET(request) {
 
           const email = userData.email;
           if (!email) continue;  // Skip users without email
-          const username = email.split('@')[0];
+          const handle = userData.handle || null;
+          const username = handle || email.split('@')[0];
           const lastSeen = userData.lastSeen || null;
           const isOnline = lastSeen ? new Date(lastSeen) > fiveMinutesAgo : false;
 

@@ -36,6 +36,36 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const refreshAttributes = () => {
+    return new Promise((resolve) => {
+      const currentUser = userPool.getCurrentUser();
+      if (!currentUser) {
+        resolve();
+        return;
+      }
+
+      currentUser.getSession((err, session) => {
+        if (err || !session || !session.isValid()) {
+          resolve();
+          return;
+        }
+
+        currentUser.getUserAttributes((attrErr, attributes) => {
+          if (!attrErr && attributes) {
+            const userAttributes = {};
+            attributes.forEach((attr) => {
+              userAttributes[attr.Name] = attr.Value;
+            });
+            currentUser.attributes = userAttributes;
+          }
+          // Create new reference to trigger re-render
+          setUser(Object.assign(Object.create(Object.getPrototypeOf(currentUser)), currentUser));
+          resolve();
+        });
+      });
+    });
+  };
+
   const signOut = () => {
     const currentUser = userPool.getCurrentUser();
     if (currentUser) {
@@ -50,7 +80,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, signOut }}>
+    <AuthContext.Provider value={{ user, loading, setUser, signOut, refreshAttributes }}>
       {children}
     </AuthContext.Provider>
   );

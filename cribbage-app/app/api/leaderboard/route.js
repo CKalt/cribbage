@@ -36,9 +36,12 @@ export async function GET() {
             continue;
           }
 
+          const handle = userData.handle || null;
+
           if (gameStats) {
             stats.push({
               email: userEmail,
+              handle,
               wins: gameStats[1] || 0,
               losses: gameStats[2] || 0,
               forfeits: gameStats[3] || 0,
@@ -48,6 +51,7 @@ export async function GET() {
             // User has data file but no games played
             stats.push({
               email: userEmail,
+              handle,
               wins: 0,
               losses: 0,
               forfeits: 0,

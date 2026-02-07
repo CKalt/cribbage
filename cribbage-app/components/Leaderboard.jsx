@@ -92,7 +92,7 @@ export default function Leaderboard({ isOpen, onClose }) {
                   <tr key={idx} className="border-b border-gray-700">
                     <td className="py-2 text-gray-500">{idx + 1}</td>
                     <td className="py-2 text-white truncate max-w-[150px]" title={user.email}>
-                      {user.email.split('@')[0]}
+                      {user.handle || user.email.split('@')[0]}
                     </td>
                     <td className="py-2 text-center text-green-400">{user.wins}</td>
                     <td className="py-2 text-center text-red-400">{user.losses}</td>
