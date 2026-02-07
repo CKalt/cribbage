@@ -6,6 +6,8 @@ import { useMultiplayerSync } from '@/hooks/useMultiplayerSync';
 import { useAuth } from '@/contexts/AuthContext';
 import PlayingCard, { CutCard, PlayedCard } from '@/components/PlayingCard';
 import DeckCut from '@/components/DeckCut';
+import CribbageBoard from '@/components/CribbageBoard';
+import ScoreSelector from '@/components/ScoreSelector';
 import { GAME_PHASE } from '@/lib/multiplayer-game';
 
 /**
@@ -20,6 +22,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [lastPlayAnnouncement, setLastPlayAnnouncement] = useState(null);
   const [newCardIndex, setNewCardIndex] = useState(-1);
   const [cutForDealerState, setCutForDealerState] = useState({ myCut: null, opponentCut: null, result: null });
+  const [showPeggingSummary, setShowPeggingSummary] = useState(false);
   const prevPlayedCountRef = useRef(0);
 
   // Get current user for email display
@@ -271,6 +274,62 @@ export default function MultiplayerGame({ gameId, onExit }) {
     }
   };
 
+  // Handle accepting a pending pegging score
+  const handleAcceptPeggingScore = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const result = await submitMove('accept-pegging-score', {});
+      if (!result.success) {
+        console.error('Accept pegging score failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle claiming a count score
+  const handleClaimCount = async (claimedScore) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const result = await submitMove('claim-count', { claimedScore });
+      if (!result.success) {
+        console.error('Claim count failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle verifying opponent's count
+  const handleVerifyCount = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const result = await submitMove('verify-count', {});
+      if (!result.success) {
+        console.error('Verify count failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle calling muggins
+  const handleCallMuggins = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const result = await submitMove('call-muggins', {});
+      if (!result.success) {
+        console.error('Call muggins failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Clear selected cards when phase changes
   useEffect(() => {
     setSelectedCards([]);
@@ -385,12 +444,24 @@ export default function MultiplayerGame({ gameId, onExit }) {
       <div className="flex-1 flex flex-col items-center justify-start overflow-y-auto p-4">
         {/* Turn indicator */}
         {getCurrentPhase() !== GAME_PHASE.CUTTING_FOR_DEALER && (
-          <div className={`mb-6 px-6 py-3 rounded-full text-lg font-bold ${
+          <div className={`mb-4 px-6 py-3 rounded-full text-lg font-bold ${
             isMyTurn
               ? 'bg-green-600 text-white animate-pulse'
               : 'bg-gray-700 text-gray-300'
           }`}>
             {isMyTurn ? "Your Turn" : `Waiting for ${opponent?.username || 'opponent'}...`}
+          </div>
+        )}
+
+        {/* Cribbage Board */}
+        {getCurrentPhase() !== GAME_PHASE.CUTTING_FOR_DEALER && (
+          <div className="w-full max-w-2xl mb-4">
+            <CribbageBoard
+              playerScore={gameState?.myScore || 0}
+              computerScore={gameState?.opponentScore || 0}
+              playerLabel="You"
+              opponentLabel={opponent?.username || 'Opp'}
+            />
           </div>
         )}
 
@@ -423,6 +494,50 @@ export default function MultiplayerGame({ gameId, onExit }) {
               <CutCard card={gameState.gameState.cutCard} />
             </div>
           )}
+
+          {/* Pending Pegging Score Banner */}
+          {gameState?.gameState?.pendingPeggingScore && (() => {
+            const pending = gameState.gameState.pendingPeggingScore;
+            const isMyScore = pending.player === gameState?.myPlayerKey;
+
+            return (
+              <div className="mb-4">
+                <div className={`
+                  w-full py-3 px-4 rounded-lg text-center
+                  ${isMyScore ? 'bg-green-600/30 border-2 border-green-500' : 'bg-blue-600/30 border-2 border-blue-500'}
+                  animate-pulse
+                `}>
+                  <div className="text-xl font-bold text-white">
+                    {isMyScore ? 'You scored!' : `${opponent?.username} scored!`}
+                  </div>
+                  <div className={`text-lg font-semibold ${isMyScore ? 'text-green-300' : 'text-blue-300'}`}>
+                    +{pending.points} points - {pending.reason}
+                  </div>
+                </div>
+
+                {isMyScore ? (
+                  <div className="text-center mt-3">
+                    <Button
+                      onClick={handleAcceptPeggingScore}
+                      disabled={submitting}
+                      className={`
+                        px-8 py-4 text-xl font-bold rounded-lg
+                        bg-green-600 hover:bg-green-700
+                        shadow-lg transform hover:scale-105 transition-all
+                        border-2 border-white/30
+                      `}
+                    >
+                      {submitting ? 'Accepting...' : `Accept ${pending.points} Points`}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center mt-3 text-gray-400">
+                    Waiting for {opponent?.username} to accept...
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Cut for Dealer Phase */}
           {getCurrentPhase() === GAME_PHASE.CUTTING_FOR_DEALER && (() => {
@@ -778,20 +893,21 @@ export default function MultiplayerGame({ gameId, onExit }) {
                 <div className="flex justify-center gap-2 flex-wrap mb-4">
                   {myPlayHand.map((card, idx) => {
                     const playable = isCardPlayable(card);
+                    const hasPending = !!gameState?.gameState?.pendingPeggingScore;
                     return (
                       <PlayingCard
                         key={`${card.rank}${card.suit}`}
                         card={card}
                         onClick={() => handlePlayCard(card)}
-                        disabled={!isMyTurn || submitting || !playable}
-                        highlighted={isMyTurn && playable}
+                        disabled={!isMyTurn || submitting || !playable || hasPending}
+                        highlighted={isMyTurn && playable && !hasPending}
                       />
                     );
                   })}
                 </div>
 
                 {/* Action buttons */}
-                {isMyTurn && (
+                {isMyTurn && !gameState?.gameState?.pendingPeggingScore && (
                   <div className="text-center">
                     {canPlayAnyCard() ? (
                       <div className="text-yellow-400 mb-2">
@@ -822,94 +938,126 @@ export default function MultiplayerGame({ gameId, onExit }) {
             <div className="text-center mb-4">
               <div className="text-white text-xl font-bold mb-2">Counting Phase</div>
 
-              {/* Show counting sub-phase */}
               {(() => {
-                const countPhase = gameState?.gameState?.countingState?.phase || 'nonDealer';
+                const countingState = gameState?.gameState?.countingState || {};
+                const countPhase = countingState.phase || 'nonDealer';
                 const dealer = gameState?.gameState?.dealer;
                 const isDealer = gameState?.myPlayerKey === dealer;
-                const handsScored = gameState?.gameState?.countingState?.handsScored || [];
+                const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
+                const handsScored = countingState.handsScored || [];
+                const waitingForVerification = countingState.waitingForVerification;
+                const claimedScore = countingState.claimedScore;
+                const actualScore = countingState.actualScore;
+                const countedHand = countingState.countedHand;
 
                 let phaseLabel;
-                let whoseTurn;
                 if (countPhase === 'nonDealer') {
                   phaseLabel = isDealer ? `${opponent?.username}'s Hand` : 'Your Hand';
-                  whoseTurn = !isDealer;
                 } else if (countPhase === 'dealer') {
                   phaseLabel = isDealer ? 'Your Hand' : `${opponent?.username}'s Hand`;
-                  whoseTurn = isDealer;
                 } else if (countPhase === 'crib') {
                   phaseLabel = 'Crib';
-                  whoseTurn = isDealer;
                 }
+
+                // Am I the counter for this sub-phase?
+                const iAmCounter = (countPhase === 'nonDealer' && !isDealer) ||
+                                   (countPhase === 'dealer' && isDealer) ||
+                                   (countPhase === 'crib' && isDealer);
 
                 return (
                   <>
                     <div className="text-yellow-400 mb-2">
                       Counting: {phaseLabel}
                     </div>
-                    <div className="text-gray-400 mb-4">
-                      {isMyTurn
-                        ? (countPhase === 'crib' ? 'Count the crib' : 'Count your hand')
-                        : `Waiting for ${opponent?.username}...`}
-                    </div>
 
-                    {/* Count button - placed prominently before hand display */}
-                    {isMyTurn && (
+                    {/* Verification UI: opponent verifies the counter's claim */}
+                    {waitingForVerification && !iAmCounter && isMyTurn ? (
                       <div className="mb-4">
-                        <Button
-                          onClick={async () => {
-                            setSubmitting(true);
-                            try {
-                              const result = await submitMove('count', {});
-                              if (!result.success) {
-                                console.error('Count failed:', result.error);
-                              }
-                            } finally {
-                              setSubmitting(false);
-                            }
-                          }}
+                        <div className="text-white mb-2">
+                          {opponent?.username} claims <span className="text-yellow-400 font-bold text-xl">{claimedScore}</span> points
+                        </div>
+
+                        {/* Show the hand being counted so verifier can check */}
+                        {countedHand && (
+                          <div className="mb-3">
+                            <div className="text-gray-400 text-sm mb-1">Their hand:</div>
+                            <div className="flex justify-center gap-2 flex-wrap">
+                              {countedHand.map((card, idx) => (
+                                <PlayingCard
+                                  key={`verify-${card.rank}${card.suit}`}
+                                  card={card}
+                                  disabled={true}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-center gap-3 mt-3">
+                          <Button
+                            onClick={handleVerifyCount}
+                            disabled={submitting}
+                            className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3"
+                          >
+                            {submitting ? 'Accepting...' : `Accept ${claimedScore}`}
+                          </Button>
+                          <Button
+                            onClick={handleCallMuggins}
+                            disabled={submitting}
+                            className="bg-red-600 hover:bg-red-700 text-lg px-6 py-3"
+                          >
+                            {submitting ? 'Calling...' : 'Muggins!'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : waitingForVerification && iAmCounter ? (
+                      <div className="text-gray-400 mb-4">
+                        You claimed {claimedScore} points. Waiting for {opponent?.username} to verify...
+                      </div>
+                    ) : iAmCounter && isMyTurn ? (
+                      /* ScoreSelector for the counter */
+                      <div className="mb-4">
+                        <div className="text-gray-400 mb-3">
+                          {countPhase === 'crib' ? 'Count the crib' : 'Count your hand'}
+                        </div>
+
+                        {/* Show hand being counted */}
+                        <div className="mb-3">
+                          <div className="flex justify-center gap-2 flex-wrap">
+                            {countPhase === 'crib' ? (
+                              gameState?.gameState?.crib?.map((card, idx) => (
+                                <PlayingCard
+                                  key={`crib-${card.rank}${card.suit}`}
+                                  card={card}
+                                  disabled={true}
+                                />
+                              ))
+                            ) : (
+                              getMyHand().map((card, idx) => (
+                                <PlayingCard
+                                  key={`${card.rank}${card.suit}`}
+                                  card={card}
+                                  disabled={true}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        <ScoreSelector
+                          onSelect={handleClaimCount}
                           disabled={submitting}
-                          className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
-                        >
-                          {submitting ? 'Counting...' : (countPhase === 'crib' ? 'Count Crib' : 'Count Hand')}
-                        </Button>
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 mb-4">
+                        Waiting for {opponent?.username} to count...
                       </div>
                     )}
 
-                    {/* Show hand being counted */}
-                    <div className="mb-4">
-                      <div className="text-gray-400 text-sm mb-1">
-                        {countPhase === 'crib' ? 'Crib:' : 'Hand:'}
-                      </div>
-                      <div className="flex justify-center gap-2 flex-wrap">
-                        {countPhase === 'crib' ? (
-                          // Show crib (dealer counts it)
-                          isDealer && gameState?.gameState?.crib?.map((card, idx) => (
-                            <PlayingCard
-                              key={`crib-${card.rank}${card.suit}`}
-                              card={card}
-                              disabled={true}
-                            />
-                          ))
-                        ) : (
-                          // Show the current player's hand being counted
-                          getMyHand().map((card, idx) => (
-                            <PlayingCard
-                              key={`${card.rank}${card.suit}`}
-                              card={card}
-                              disabled={true}
-                            />
-                          ))
-                        )}
-                        {countPhase === 'crib' && !isDealer && (
-                          <div className="text-gray-500 italic">Dealer is counting the crib...</div>
-                        )}
-                      </div>
-                    </div>
-
                     {/* Show previously counted hands */}
                     {handsScored.length > 0 && (
-                      <div className="mt-6 bg-gray-700 rounded-lg p-4 text-left">
+                      <div className="mt-4 bg-gray-700 rounded-lg p-4 text-left">
                         <div className="text-white font-bold mb-2">Scores This Round:</div>
                         {handsScored.map((scored, idx) => {
                           const isMyHand = scored.player === gameState?.myPlayerKey;
@@ -918,7 +1066,10 @@ export default function MultiplayerGame({ gameId, onExit }) {
                           return (
                             <div key={idx} className="mb-2">
                               <div className={`font-medium ${isMyHand ? 'text-green-400' : 'text-gray-300'}`}>
-                                {label}: {scored.score} points
+                                {label}: {scored.claimedScore !== undefined ? scored.claimedScore : scored.score} points
+                                {scored.claimedScore !== undefined && scored.actualScore !== undefined && scored.claimedScore !== scored.actualScore && (
+                                  <span className="text-yellow-400 text-sm ml-2">(actual: {scored.actualScore})</span>
+                                )}
                               </div>
                               {scored.breakdown && scored.breakdown.length > 0 && (
                                 <div className="text-gray-400 text-sm ml-4">
@@ -930,6 +1081,55 @@ export default function MultiplayerGame({ gameId, onExit }) {
                             </div>
                           );
                         })}
+                      </div>
+                    )}
+
+                    {/* Pegging Summary Toggle */}
+                    {(gameState?.gameState?.peggingHistory || []).length > 0 && (
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowPeggingSummary(!showPeggingSummary)}
+                          className="text-sm text-blue-400 hover:text-blue-300 underline"
+                        >
+                          {showPeggingSummary ? 'Hide' : 'Show'} Pegging Summary
+                        </button>
+
+                        {showPeggingSummary && (
+                          <div className="mt-2 bg-gray-700 rounded-lg p-4 text-left max-h-48 overflow-y-auto">
+                            <div className="text-white font-bold mb-2">Pegging History:</div>
+                            {gameState.gameState.peggingHistory.map((event, idx) => {
+                              const isMe = event.player === gameState?.myPlayerKey;
+                              const name = isMe ? 'You' : (opponent?.username || 'Opp');
+
+                              if (event.type === 'play') {
+                                return (
+                                  <div key={idx} className={`text-sm ${isMe ? 'text-green-400' : 'text-blue-400'}`}>
+                                    {name} played {event.card} (count: {event.count})
+                                    {event.points > 0 && <span className="text-yellow-400"> +{event.points} ({event.reason})</span>}
+                                  </div>
+                                );
+                              } else if (event.type === 'go') {
+                                return (
+                                  <div key={idx} className={`text-sm ${isMe ? 'text-green-400' : 'text-blue-400'}`}>
+                                    {name} said "Go" (count: {event.count})
+                                  </div>
+                                );
+                              } else if (event.type === 'points') {
+                                return (
+                                  <div key={idx} className={`text-sm ${isMe ? 'text-green-400' : 'text-blue-400'}`}>
+                                    {name}: +{event.points} ({event.reason})
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })}
+                            <div className="mt-2 pt-2 border-t border-gray-600 text-sm">
+                              <span className="text-green-400">Your pegging: {gameState?.gameState?.peggingPoints?.[gameState?.myPlayerKey] || 0}</span>
+                              {' | '}
+                              <span className="text-blue-400">{opponent?.username}: {gameState?.gameState?.peggingPoints?.[gameState?.myPlayerKey === 'player1' ? 'player2' : 'player1'] || 0}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </>

@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from 'react';
  * @param {number} playerScore - Player's current score (0-121)
  * @param {number} computerScore - Computer's current score (0-121)
  */
-export default function CribbageBoard({ playerScore, computerScore }) {
+export default function CribbageBoard({ playerScore, computerScore, playerLabel = 'You', opponentLabel = 'CPU' }) {
   // Track back peg positions (the previous score before last move)
   // This emulates real cribbage where you leapfrog two pegs
   // Initialize to a position slightly behind current score for restored games
@@ -304,9 +304,9 @@ export default function CribbageBoard({ playerScore, computerScore }) {
       {/* Score legend */}
       <g transform={`translate(${boardWidth / 2 - 80}, ${boardHeight - 18})`}>
         <circle cx="8" cy="0" r="5" fill="#2266ff" stroke="#fff" strokeWidth="1" />
-        <text x="18" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">You: {playerScore}</text>
+        <text x="18" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">{playerLabel}: {playerScore}</text>
         <circle cx="100" cy="0" r="5" fill="#ff2222" stroke="#fff" strokeWidth="1" />
-        <text x="110" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">CPU: {computerScore}</text>
+        <text x="110" y="4" fontSize="11" fill="#ffd700" fontWeight="bold">{opponentLabel}: {computerScore}</text>
       </g>
     </svg>
   );

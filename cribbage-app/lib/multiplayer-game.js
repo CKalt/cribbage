@@ -70,8 +70,16 @@ export function initializeGameState(dealer = null, testDeck = null) {
     countingState: {
       phase: null,
       currentCounter: null,
-      handsScored: []
+      handsScored: [],
+      claimedScore: null,
+      actualScore: null,
+      actualBreakdown: null,
+      countedHand: null,
+      waitingForVerification: false
     },
+
+    pendingPeggingScore: null,
+    peggingHistory: [],
 
     peggingPoints: {
       player1: 0,
@@ -120,8 +128,16 @@ export function initializeRoundState(dealer, testDeck = null) {
     countingState: {
       phase: null,
       currentCounter: null,
-      handsScored: []
+      handsScored: [],
+      claimedScore: null,
+      actualScore: null,
+      actualBreakdown: null,
+      countedHand: null,
+      waitingForVerification: false
     },
+
+    pendingPeggingScore: null,
+    peggingHistory: [],
 
     peggingPoints: {
       player1: 0,
@@ -386,17 +402,30 @@ export function processCut(gameState, playerKey, cutIndex = null) {
   const index = cutIndex ?? Math.floor(Math.random() * gameState.remainingDeck.length);
   const cutCard = gameState.remainingDeck[index];
 
-  let scoreChange = 0;
-  let heelsMessage = '';
-
-  // His Heels - Jack as starter gives dealer 2 points
-  if (cutCard.rank === 'J') {
-    scoreChange = 2;
-    heelsMessage = ' - His Heels! Dealer scores 2.';
-  }
-
-  // Non-dealer plays first
+  // Non-dealer plays first (unless His Heels requires acceptance)
   const nonDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
+
+  // His Heels - Jack as starter gives dealer 2 points (pending acceptance)
+  if (cutCard.rank === 'J') {
+    const newState = {
+      ...gameState,
+      phase: GAME_PHASE.CUT,  // Stay in cut phase until accepted
+      cutCard: cutCard,
+      pendingPeggingScore: {
+        player: gameState.dealer,
+        points: 2,
+        reason: 'His Heels',
+        isHisHeels: true
+      }
+    };
+
+    return {
+      success: true,
+      newState,
+      description: `Cut ${cutCard.rank}${cutCard.suit} - His Heels! Dealer scores 2.`,
+      nextTurn: gameState.dealer  // Dealer must accept
+    };
+  }
 
   const newState = {
     ...gameState,
@@ -407,15 +436,14 @@ export function processCut(gameState, playerKey, cutIndex = null) {
   return {
     success: true,
     newState,
-    description: `Cut ${cutCard.rank}${cutCard.suit}${heelsMessage}`,
-    nextTurn: nonDealer,  // Non-dealer plays first
-    scoreChange: scoreChange,
-    scorePlayer: gameState.dealer  // Dealer gets His Heels
+    description: `Cut ${cutCard.rank}${cutCard.suit}`,
+    nextTurn: nonDealer
   };
 }
 
 /**
  * Process a play (pegging) move
+ * Scores are stored as pendingPeggingScore and require acceptance before being applied.
  * @param {object} gameState - Current game state
  * @param {string} playerKey - Player making the play
  * @param {object} card - Card being played, or null for "Go"
@@ -426,16 +454,21 @@ export function processPlay(gameState, playerKey, card) {
     return { success: false, error: 'Not in play phase' };
   }
 
+  // Block play if there's a pending score waiting to be accepted
+  if (gameState.pendingPeggingScore) {
+    return { success: false, error: 'A pending score must be accepted first' };
+  }
+
   const playState = { ...gameState.playState };
   const playHandKey = `${playerKey}PlayHand`;
   const saidKey = `${playerKey}Said`;
   const opponentKey = playerKey === 'player1' ? 'player2' : 'player1';
   const opponentPlayHandKey = `${opponentKey}PlayHand`;
   const opponentSaidKey = `${opponentKey}Said`;
+  const peggingHistory = [...(gameState.peggingHistory || [])];
 
   // Handle "Go"
   if (card === null) {
-    // Check if player has any playable cards - they can only say Go if they don't
     const playerHand = playState[playHandKey];
     const playerCanPlay = playerHand.some(c =>
       playState.currentCount + Math.min(c.value, 10) <= 31
@@ -445,8 +478,8 @@ export function processPlay(gameState, playerKey, card) {
       return { success: false, error: 'You have playable cards - you must play one' };
     }
 
-    // Player says Go
     playState[saidKey] = 'go';
+    peggingHistory.push({ type: 'go', player: playerKey, count: playState.currentCount });
 
     // Check if opponent also said Go or has no playable cards
     const opponentHand = playState[opponentPlayHandKey];
@@ -456,50 +489,39 @@ export function processPlay(gameState, playerKey, card) {
 
     if (playState[opponentSaidKey] === 'go' || !opponentCanPlay) {
       // Both said Go - last player to play gets 1 point (or 2 for 31)
-      let points = playState.currentCount === 31 ? 2 : 1;
+      const points = playState.currentCount === 31 ? 2 : 1;
       const scoringPlayer = playState.lastPlayedBy;
+      const reason = playState.currentCount === 31 ? '31 for 2' : 'Go for 1';
 
-      // Reset for new round
-      playState.currentCount = 0;
-      playState.roundCards = [];
-      playState[saidKey] = null;
-      playState[opponentSaidKey] = null;
+      peggingHistory.push({ type: 'points', player: scoringPlayer, points, reason });
 
-      // Check if play phase is over (both hands empty)
+      // Check if both hands empty
       const player1Done = playState.player1PlayHand.length === 0;
       const player2Done = playState.player2PlayHand.length === 0;
 
-      let newPhase = gameState.phase;
-      let nextTurn = opponentKey;
-
-      if (player1Done && player2Done) {
-        // Move to counting phase
-        newPhase = GAME_PHASE.COUNTING;
-        const nonDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
-        nextTurn = nonDealer;  // Non-dealer counts first
-      }
-
+      // Store pending score - don't reset round yet, accept handler will do it
       return {
         success: true,
         newState: {
           ...gameState,
-          phase: newPhase,
           playState,
-          peggingPoints: {
-            ...gameState.peggingPoints,
-            [scoringPlayer]: gameState.peggingPoints[scoringPlayer] + points
+          peggingHistory,
+          pendingPeggingScore: {
+            player: scoringPlayer,
+            points,
+            reason,
+            resetRound: true,
+            bothDone: player1Done && player2Done
           }
         },
-        description: `Go! ${scoringPlayer === playerKey ? 'You' : 'Opponent'} scores ${points} for ${playState.currentCount === 31 ? '31' : 'last card'}`,
-        nextTurn,
-        scoreChange: points,
-        scorePlayer: scoringPlayer
+        description: `Go! ${reason}`,
+        nextTurn: scoringPlayer  // Scoring player must accept
       };
     }
 
     return {
       success: true,
-      newState: { ...gameState, playState },
+      newState: { ...gameState, playState, peggingHistory },
       description: `Said "Go"`,
       nextTurn: opponentKey
     };
@@ -547,7 +569,7 @@ export function processPlay(gameState, playerKey, card) {
     pointsDesc.push('31 for 2');
   }
 
-  // Pairs (simplified - just check immediate pairs)
+  // Pairs
   const roundCards = playState.roundCards;
   if (roundCards.length >= 2) {
     const lastCards = roundCards.slice(-4).reverse();
@@ -571,6 +593,86 @@ export function processPlay(gameState, playerKey, card) {
     }
   }
 
+  // Record card play in history
+  peggingHistory.push({
+    type: 'play', player: playerKey,
+    card: `${card.rank}${card.suit}`,
+    count: playState.currentCount,
+    points, reason: pointsDesc.join(', ') || null
+  });
+
+  // Check if both hands empty after this play
+  const player1Done = playState.player1PlayHand.length === 0;
+  const player2Done = playState.player2PlayHand.length === 0;
+
+  // If count is 31, note the reset (will happen now or on accept)
+  const hit31 = playState.currentCount === 31;
+
+  // Last card point check (both done, not 31)
+  let needsLastCard = false;
+  if (player1Done && player2Done && !hit31 && playState.currentCount > 0) {
+    needsLastCard = true;
+  }
+
+  const description = `Played ${card.rank}${card.suit} (count: ${playState.currentCount})${pointsDesc.length > 0 ? ' - ' + pointsDesc.join(', ') : ''}`;
+
+  if (points > 0) {
+    // Store pending score
+    const reason = pointsDesc.join(', ');
+
+    // If hit 31, reset round immediately (it's automatic)
+    if (hit31) {
+      playState.currentCount = 0;
+      playState.roundCards = [];
+      playState[saidKey] = null;
+      playState[opponentSaidKey] = null;
+    }
+
+    return {
+      success: true,
+      newState: {
+        ...gameState,
+        playState,
+        peggingHistory,
+        pendingPeggingScore: {
+          player: playerKey,
+          points,
+          reason,
+          needsLastCard,
+          bothDone: player1Done && player2Done
+        }
+      },
+      description,
+      nextTurn: playerKey  // Scoring player must accept
+    };
+  }
+
+  // No points scored
+  // If hit 31 with no extra points (shouldn't happen since 31=2pts, but safety)
+  if (hit31) {
+    playState.currentCount = 0;
+    playState.roundCards = [];
+    playState[saidKey] = null;
+    playState[opponentSaidKey] = null;
+  }
+
+  // If both done with no points and no last card needed
+  if (player1Done && player2Done) {
+    // No last card point either (count was 0 or was 31)
+    const nonDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
+    return {
+      success: true,
+      newState: {
+        ...gameState,
+        phase: GAME_PHASE.COUNTING,
+        playState,
+        peggingHistory
+      },
+      description,
+      nextTurn: nonDealer
+    };
+  }
+
   // Determine next turn
   let nextTurn = opponentKey;
   const opponentHand = playState[opponentPlayHandKey];
@@ -578,31 +680,128 @@ export function processPlay(gameState, playerKey, card) {
     playState.currentCount + Math.min(c.value, 10) <= 31
   );
 
-  // If count is 31, reset for new round
-  if (playState.currentCount === 31) {
-    playState.currentCount = 0;
-    playState.roundCards = [];
-    playState[saidKey] = null;
-    playState[opponentSaidKey] = null;
+  // If opponent can't play, check if current player can
+  if (!opponentCanPlay) {
+    const myCanPlay = playState[playHandKey].some(c =>
+      playState.currentCount + Math.min(c.value, 10) <= 31
+    );
+    if (myCanPlay) {
+      nextTurn = playerKey;
+    }
   }
 
-  // Check if play phase is over
-  const player1Done = playState.player1PlayHand.length === 0;
-  const player2Done = playState.player2PlayHand.length === 0;
-  let newPhase = gameState.phase;
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      playState,
+      peggingHistory
+    },
+    description,
+    nextTurn
+  };
+}
 
-  if (player1Done && player2Done) {
-    // Last card point if not already 31
-    if (playState.currentCount > 0 && playState.currentCount < 31) {
-      points += 1;
-      pointsDesc.push('last card for 1');
-    }
+/**
+ * Process acceptance of a pending pegging score
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - Player accepting the score
+ * @returns {object} { success, newState, error, description, nextTurn, scoreChange, scorePlayer }
+ */
+export function processAcceptPeggingScore(gameState, playerKey) {
+  const pending = gameState.pendingPeggingScore;
+  if (!pending) {
+    return { success: false, error: 'No pending score to accept' };
+  }
+  if (pending.player !== playerKey) {
+    return { success: false, error: 'Not your score to accept' };
+  }
+
+  const playState = { ...gameState.playState };
+  const opponentKey = playerKey === 'player1' ? 'player2' : 'player1';
+  const peggingHistory = [...(gameState.peggingHistory || [])];
+
+  // Apply points to pegging tracker
+  const newPeggingPoints = {
+    ...gameState.peggingPoints,
+    [playerKey]: gameState.peggingPoints[playerKey] + pending.points
+  };
+
+  // Handle last card chaining: if needsLastCard, create a new pending for 1 point
+  if (pending.needsLastCard) {
+    peggingHistory.push({ type: 'points', player: playerKey, points: 1, reason: 'last card for 1' });
+    return {
+      success: true,
+      newState: {
+        ...gameState,
+        playState,
+        peggingPoints: newPeggingPoints,
+        peggingHistory,
+        pendingPeggingScore: {
+          player: playerKey,
+          points: 1,
+          reason: 'last card for 1',
+          needsLastCard: false,
+          bothDone: true
+        }
+      },
+      description: `Accepted ${pending.points} points (${pending.reason}). Last card!`,
+      nextTurn: playerKey,
+      scoreChange: pending.points,
+      scorePlayer: playerKey
+    };
+  }
+
+  // Handle round reset (from Go)
+  if (pending.resetRound) {
+    playState.currentCount = 0;
+    playState.roundCards = [];
+    playState.player1Said = null;
+    playState.player2Said = null;
+  }
+
+  // Determine phase and next turn
+  let newPhase = gameState.phase;
+  let nextTurn;
+
+  if (pending.bothDone) {
+    // Both hands empty -> counting
     newPhase = GAME_PHASE.COUNTING;
     const nonDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
     nextTurn = nonDealer;
+  } else if (pending.resetRound) {
+    // Round reset after Go - determine who plays next
+    // The non-scoring player leads next (opponent of last-played)
+    nextTurn = opponentKey;
+    // But check if opponent has cards
+    const oppHand = playState[`${opponentKey}PlayHand`] || [];
+    const myHand = playState[`${playerKey}PlayHand`] || [];
+    if (oppHand.length === 0 && myHand.length > 0) {
+      nextTurn = playerKey;
+    }
+  } else {
+    // Normal card play - opponent's turn
+    nextTurn = opponentKey;
+    // Check if opponent can play
+    const oppHand = playState[`${opponentKey}PlayHand`] || [];
+    const oppCanPlay = oppHand.some(c =>
+      playState.currentCount + Math.min(c.value, 10) <= 31
+    );
+    if (!oppCanPlay) {
+      const myHand = playState[`${playerKey}PlayHand`] || [];
+      const myCanPlay = myHand.some(c =>
+        playState.currentCount + Math.min(c.value, 10) <= 31
+      );
+      if (myCanPlay) nextTurn = playerKey;
+    }
   }
 
-  const description = `Played ${card.rank}${card.suit} (count: ${playState.currentCount})${pointsDesc.length > 0 ? ' - ' + pointsDesc.join(', ') : ''}`;
+  // His Heels acceptance: transition to playing phase, non-dealer starts
+  if (pending.isHisHeels) {
+    newPhase = GAME_PHASE.PLAYING;
+    const nonDealer = gameState.dealer === 'player1' ? 'player2' : 'player1';
+    nextTurn = nonDealer;
+  }
 
   return {
     success: true,
@@ -610,14 +809,13 @@ export function processPlay(gameState, playerKey, card) {
       ...gameState,
       phase: newPhase,
       playState,
-      peggingPoints: {
-        ...gameState.peggingPoints,
-        [playerKey]: gameState.peggingPoints[playerKey] + points
-      }
+      peggingPoints: newPeggingPoints,
+      peggingHistory,
+      pendingPeggingScore: null
     },
-    description,
+    description: `Accepted ${pending.points} points (${pending.reason})`,
     nextTurn,
-    scoreChange: points,
+    scoreChange: pending.points,
     scorePlayer: playerKey
   };
 }
@@ -753,6 +951,277 @@ export function processCount(gameState, playerKey) {
 }
 
 /**
+ * Process a claim-count move (player declares their score)
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - Player claiming the score
+ * @param {number} claimedScore - Score the player declares
+ * @returns {object} { success, newState, error, description, nextTurn }
+ */
+export function processClaimCount(gameState, playerKey, claimedScore) {
+  if (gameState.phase !== GAME_PHASE.COUNTING) {
+    return { success: false, error: 'Not in counting phase' };
+  }
+
+  const countingState = { ...gameState.countingState };
+  const dealer = gameState.dealer;
+  const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
+
+  let countPhase = countingState.phase || 'nonDealer';
+
+  // Validate it's the correct player
+  let expectedPlayer;
+  if (countPhase === 'nonDealer') expectedPlayer = nonDealer;
+  else if (countPhase === 'dealer') expectedPlayer = dealer;
+  else if (countPhase === 'crib') expectedPlayer = dealer;
+
+  if (playerKey !== expectedPlayer) {
+    return { success: false, error: 'Not your turn to count' };
+  }
+
+  if (countingState.waitingForVerification) {
+    return { success: false, error: 'Already waiting for verification' };
+  }
+
+  // Get the hand to count
+  let handToCount;
+  let isCrib = false;
+  if (countPhase === 'nonDealer') {
+    handToCount = gameState[`${nonDealer}Hand`];
+  } else if (countPhase === 'dealer') {
+    handToCount = gameState[`${dealer}Hand`];
+  } else if (countPhase === 'crib') {
+    handToCount = gameState.crib;
+    isCrib = true;
+  }
+
+  // Server calculates actual score
+  const { score: actualScore, breakdown: actualBreakdown } = calculateHandScore(handToCount, gameState.cutCard, isCrib);
+
+  const opponentKey = playerKey === 'player1' ? 'player2' : 'player1';
+
+  countingState.claimedScore = claimedScore;
+  countingState.actualScore = actualScore;
+  countingState.actualBreakdown = actualBreakdown;
+  countingState.countedHand = handToCount;
+  countingState.waitingForVerification = true;
+
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      countingState
+    },
+    description: `Claimed ${claimedScore} points for ${countPhase === 'crib' ? 'crib' : 'hand'}`,
+    nextTurn: opponentKey
+  };
+}
+
+/**
+ * Process a verify-count move (opponent accepts the claimed score)
+ * Counter gets their claimedScore (not actual - undercounting is your loss)
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - Player verifying (the opponent)
+ * @returns {object} { success, newState, error, description, nextTurn, scoreChange, scorePlayer }
+ */
+export function processVerifyCount(gameState, playerKey) {
+  if (gameState.phase !== GAME_PHASE.COUNTING) {
+    return { success: false, error: 'Not in counting phase' };
+  }
+
+  const countingState = { ...gameState.countingState };
+  if (!countingState.waitingForVerification) {
+    return { success: false, error: 'No count waiting for verification' };
+  }
+
+  const dealer = gameState.dealer;
+  const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
+  let countPhase = countingState.phase || 'nonDealer';
+
+  // The counter is the other player (not the verifier)
+  const counterKey = playerKey === 'player1' ? 'player2' : 'player1';
+  const scoreToAward = countingState.claimedScore;
+
+  // Record in handsScored
+  countingState.handsScored = [
+    ...countingState.handsScored,
+    {
+      phase: countPhase,
+      player: counterKey,
+      hand: countingState.countedHand,
+      score: scoreToAward,
+      claimedScore: countingState.claimedScore,
+      actualScore: countingState.actualScore,
+      breakdown: countingState.actualBreakdown
+    }
+  ];
+
+  // Clear verification state
+  countingState.claimedScore = null;
+  countingState.actualScore = null;
+  countingState.actualBreakdown = null;
+  countingState.countedHand = null;
+  countingState.waitingForVerification = false;
+
+  // Advance to next counting sub-phase
+  let nextPhase;
+  let nextTurn;
+  let newGamePhase = GAME_PHASE.COUNTING;
+
+  if (countPhase === 'nonDealer') {
+    nextPhase = 'dealer';
+    nextTurn = dealer;
+  } else if (countPhase === 'dealer') {
+    nextPhase = 'crib';
+    nextTurn = dealer;
+  } else if (countPhase === 'crib') {
+    nextPhase = null;
+    newGamePhase = GAME_PHASE.DEALING;
+    nextTurn = dealer === 'player1' ? 'player2' : 'player1';
+  }
+
+  countingState.phase = nextPhase;
+  countingState.currentCounter = nextTurn;
+
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      phase: newGamePhase,
+      countingState
+    },
+    description: `Accepted count of ${scoreToAward} points`,
+    nextTurn,
+    scoreChange: scoreToAward,
+    scorePlayer: counterKey
+  };
+}
+
+/**
+ * Process a call-muggins move
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - Player calling muggins (the verifier/opponent)
+ * @returns {object} { success, newState, error, description, nextTurn, scoreChanges, mugginsResult }
+ */
+export function processCallMuggins(gameState, playerKey) {
+  if (gameState.phase !== GAME_PHASE.COUNTING) {
+    return { success: false, error: 'Not in counting phase' };
+  }
+
+  const countingState = { ...gameState.countingState };
+  if (!countingState.waitingForVerification) {
+    return { success: false, error: 'No count waiting for verification' };
+  }
+
+  const dealer = gameState.dealer;
+  const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
+  let countPhase = countingState.phase || 'nonDealer';
+
+  const counterKey = playerKey === 'player1' ? 'player2' : 'player1';
+  const claimed = countingState.claimedScore;
+  const actual = countingState.actualScore;
+
+  let scoreChanges = [];
+  let mugginsResult;
+
+  if (claimed > actual) {
+    // Correct muggins: counter overcounted
+    // Counter gets 0, caller steals the difference
+    scoreChanges = [
+      { player: counterKey, change: 0 },
+      { player: playerKey, change: claimed - actual }
+    ];
+    mugginsResult = {
+      correct: true,
+      claimed,
+      actual,
+      stolen: claimed - actual,
+      message: `Correct Muggins! ${claimed} claimed but only ${actual} actual. You steal ${claimed - actual} points.`
+    };
+  } else if (claimed === actual) {
+    // Wrong muggins: count was correct
+    // Counter gets their points, no penalty (penalty is optional in rules)
+    scoreChanges = [
+      { player: counterKey, change: claimed }
+    ];
+    mugginsResult = {
+      correct: false,
+      claimed,
+      actual,
+      stolen: 0,
+      message: `Wrong Muggins! Count of ${claimed} was correct.`
+    };
+  } else {
+    // Wrong muggins: counter undercounted (claimed < actual)
+    // Counter keeps their claimed score (undercounting is their loss)
+    scoreChanges = [
+      { player: counterKey, change: claimed }
+    ];
+    mugginsResult = {
+      correct: false,
+      claimed,
+      actual,
+      stolen: 0,
+      message: `Wrong Muggins! ${claimed} claimed, actual was ${actual}. Undercount stands.`
+    };
+  }
+
+  // Record in handsScored
+  countingState.handsScored = [
+    ...countingState.handsScored,
+    {
+      phase: countPhase,
+      player: counterKey,
+      hand: countingState.countedHand,
+      score: claimed > actual ? 0 : claimed,
+      claimedScore: claimed,
+      actualScore: actual,
+      breakdown: countingState.actualBreakdown,
+      muggins: mugginsResult.correct
+    }
+  ];
+
+  // Clear verification state
+  countingState.claimedScore = null;
+  countingState.actualScore = null;
+  countingState.actualBreakdown = null;
+  countingState.countedHand = null;
+  countingState.waitingForVerification = false;
+
+  // Advance counting phase
+  let nextPhase;
+  let nextTurn;
+  let newGamePhase = GAME_PHASE.COUNTING;
+
+  if (countPhase === 'nonDealer') {
+    nextPhase = 'dealer';
+    nextTurn = dealer;
+  } else if (countPhase === 'dealer') {
+    nextPhase = 'crib';
+    nextTurn = dealer;
+  } else if (countPhase === 'crib') {
+    nextPhase = null;
+    newGamePhase = GAME_PHASE.DEALING;
+    nextTurn = dealer === 'player1' ? 'player2' : 'player1';
+  }
+
+  countingState.phase = nextPhase;
+  countingState.currentCounter = nextTurn;
+
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      phase: newGamePhase,
+      countingState
+    },
+    description: mugginsResult.correct ? `Called Muggins! Stole ${claimed - actual} points` : `Called Muggins incorrectly`,
+    nextTurn,
+    scoreChanges,
+    mugginsResult
+  };
+}
+
+/**
  * Start a new round after counting is complete
  * @param {object} gameState - Current game state after counting
  * @param {number} player1Score - Player 1's total score
@@ -807,8 +1276,16 @@ export function startNewRound(gameState, player1Score, player2Score, testDeck = 
     countingState: {
       phase: null,
       currentCounter: null,
-      handsScored: []
+      handsScored: [],
+      claimedScore: null,
+      actualScore: null,
+      actualBreakdown: null,
+      countedHand: null,
+      waitingForVerification: false
     },
+
+    pendingPeggingScore: null,
+    peggingHistory: [],
 
     peggingPoints: {
       player1: 0,

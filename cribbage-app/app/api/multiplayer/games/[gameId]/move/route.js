@@ -17,7 +17,7 @@ function getDisplayName(userId, email) {
   } catch (e) { /* fall through */ }
   return email ? email.split('@')[0] : 'Unknown';
 }
-import { processDiscard, processCut, processPlay, processCount, startNewRound, processCutForDealer, processAcknowledgeDealer, processDeal, GAME_PHASE } from '@/lib/multiplayer-game';
+import { processDiscard, processCut, processPlay, processCount, startNewRound, processCutForDealer, processAcknowledgeDealer, processDeal, processAcceptPeggingScore, processClaimCount, processVerifyCount, processCallMuggins, GAME_PHASE } from '@/lib/multiplayer-game';
 
 /**
  * Decode JWT token to extract user ID and email
@@ -88,6 +88,20 @@ export async function POST(request, { params }) {
 
     const game = JSON.parse(fs.readFileSync(gameFilepath, 'utf8'));
 
+    // Backward-compatible field migration for pre-existing games
+    if (game.gameState) {
+      if (game.gameState.pendingPeggingScore === undefined) game.gameState.pendingPeggingScore = null;
+      if (!game.gameState.peggingHistory) game.gameState.peggingHistory = [];
+      const cs = game.gameState.countingState;
+      if (cs) {
+        if (cs.claimedScore === undefined) cs.claimedScore = null;
+        if (cs.actualScore === undefined) cs.actualScore = null;
+        if (cs.actualBreakdown === undefined) cs.actualBreakdown = null;
+        if (cs.countedHand === undefined) cs.countedHand = null;
+        if (cs.waitingForVerification === undefined) cs.waitingForVerification = false;
+      }
+    }
+
     // Verify user is a participant
     const playerKey = getPlayerKey(game, userInfo.userId);
     if (!playerKey) {
@@ -142,6 +156,22 @@ export async function POST(request, { params }) {
           { status: 400 }
         );
       }
+    } else if (moveType === 'accept-pegging-score') {
+      // Allow if pending score belongs to this player
+      if (game.gameState?.pendingPeggingScore?.player !== playerKey) {
+        return NextResponse.json(
+          { success: false, error: 'No pending score for you to accept' },
+          { status: 400 }
+        );
+      }
+    } else if (moveType === 'claim-count' || moveType === 'verify-count' || moveType === 'call-muggins') {
+      // Turn-based: check currentTurn
+      if (game.currentTurn !== playerKey) {
+        return NextResponse.json(
+          { success: false, error: "It's not your turn" },
+          { status: 400 }
+        );
+      }
     } else {
       // For other phases, verify it's this player's turn
       if (game.currentTurn !== playerKey) {
@@ -185,7 +215,12 @@ export async function POST(request, { params }) {
     });
 
     // Update scores if applicable
-    if (moveResult.scoreChange) {
+    if (moveResult.scoreChanges) {
+      // Multiple score changes (e.g., muggins)
+      for (const sc of moveResult.scoreChanges) {
+        game.scores[sc.player] += sc.change;
+      }
+    } else if (moveResult.scoreChange) {
       // Use scorePlayer if specified (e.g., His Heels goes to dealer, not cutter)
       const scoringPlayer = moveResult.scorePlayer || playerKey;
       game.scores[scoringPlayer] += moveResult.scoreChange;
@@ -222,7 +257,8 @@ export async function POST(request, { params }) {
         gameState: game.gameState,
         lastMove: game.lastMove,
         winner: game.winner
-      }
+      },
+      mugginsResult: moveResult.mugginsResult || null
     });
   } catch (error) {
     console.error('Error processing move:', error);
@@ -409,13 +445,103 @@ function processMove(game, playerKey, moveType, data) {
     }
 
     case 'accept_count':
-      // Player accepting opponent's count (for muggins support later)
+      // Legacy - kept for backward compat
       return {
         success: true,
         newGameState: state,
         nextTurn: opponentKey,
         description: `${username} accepted the count`
       };
+
+    case 'accept-pegging-score': {
+      const result = processAcceptPeggingScore(state, playerKey);
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        scoreChange: result.scoreChange,
+        scorePlayer: result.scorePlayer,
+        description: `${username} ${result.description}`
+      };
+    }
+
+    case 'claim-count': {
+      if (data?.claimedScore === undefined || data.claimedScore === null) {
+        return { success: false, error: 'claimedScore is required' };
+      }
+
+      const result = processClaimCount(state, playerKey, data.claimedScore);
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        description: `${username} ${result.description}`
+      };
+    }
+
+    case 'verify-count': {
+      const result = processVerifyCount(state, playerKey);
+      if (!result.success) {
+        return result;
+      }
+
+      let finalState = result.newState;
+
+      // If counting is complete (phase changed to DEALING), start new round
+      if (finalState.phase === GAME_PHASE.DEALING) {
+        const currentP1Score = game.scores.player1 + (result.scorePlayer === 'player1' ? result.scoreChange : 0);
+        const currentP2Score = game.scores.player2 + (result.scorePlayer === 'player2' ? result.scoreChange : 0);
+        finalState = startNewRound(finalState, currentP1Score, currentP2Score);
+      }
+
+      return {
+        success: true,
+        newGameState: finalState,
+        nextTurn: result.nextTurn,
+        scoreChange: result.scoreChange,
+        scorePlayer: result.scorePlayer,
+        description: `${username} ${result.description}`
+      };
+    }
+
+    case 'call-muggins': {
+      const result = processCallMuggins(state, playerKey);
+      if (!result.success) {
+        return result;
+      }
+
+      let finalState = result.newState;
+
+      // If counting is complete (phase changed to DEALING), start new round
+      if (finalState.phase === GAME_PHASE.DEALING) {
+        let p1Score = game.scores.player1;
+        let p2Score = game.scores.player2;
+        if (result.scoreChanges) {
+          for (const sc of result.scoreChanges) {
+            if (sc.player === 'player1') p1Score += sc.change;
+            if (sc.player === 'player2') p2Score += sc.change;
+          }
+        }
+        finalState = startNewRound(finalState, p1Score, p2Score);
+      }
+
+      return {
+        success: true,
+        newGameState: finalState,
+        nextTurn: result.nextTurn,
+        scoreChanges: result.scoreChanges,
+        mugginsResult: result.mugginsResult,
+        description: `${username} ${result.description}`
+      };
+    }
 
     default:
       return { success: false, error: `Unknown move type: ${moveType}` };

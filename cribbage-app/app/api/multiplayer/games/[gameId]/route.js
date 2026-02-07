@@ -72,6 +72,20 @@ export async function GET(request, { params }) {
 
     const game = JSON.parse(fs.readFileSync(gameFilepath, 'utf8'));
 
+    // Backward-compatible field migration for pre-existing games
+    if (game.gameState) {
+      if (game.gameState.pendingPeggingScore === undefined) game.gameState.pendingPeggingScore = null;
+      if (!game.gameState.peggingHistory) game.gameState.peggingHistory = [];
+      const cs = game.gameState.countingState;
+      if (cs) {
+        if (cs.claimedScore === undefined) cs.claimedScore = null;
+        if (cs.actualScore === undefined) cs.actualScore = null;
+        if (cs.actualBreakdown === undefined) cs.actualBreakdown = null;
+        if (cs.countedHand === undefined) cs.countedHand = null;
+        if (cs.waitingForVerification === undefined) cs.waitingForVerification = false;
+      }
+    }
+
     // Check if user is a participant
     const playerKey = getPlayerKey(game, userInfo.userId);
     if (!playerKey) {
