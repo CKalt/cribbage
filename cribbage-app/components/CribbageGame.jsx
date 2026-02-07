@@ -2645,16 +2645,9 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         );
                       })()}
-                      {showCribHere ? (
-                        <div ref={cribDisplayRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 min-h-[40px]">
-                          {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
-                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
-                              <PlayingCard card={card} highlighted={cribHighlighted} />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div ref={computerHandRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
+                      <div className="relative">
+                        {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
+                        <div ref={computerHandRef} className={`flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                             gameState === 'play' ? computerPlayHand :
                             gameState === 'cribSelect' && computerDiscardDone && computerKeptHand ? computerKeptHand :
@@ -2669,7 +2662,17 @@ export default function CribbageGame({ onLogout }) {
                             </div>
                           ))}
                         </div>
-                      )}
+                        {/* Crib cards - overlaid in same position as hand */}
+                        {showCribHere && (
+                          <div ref={cribDisplayRef} className="absolute inset-0 flex flex-wrap justify-center items-center [&>*:not(:first-child)]:-ml-3">
+                            {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
+                              <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                                <PlayingCard card={card} highlighted={cribHighlighted} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   );
@@ -2745,74 +2748,64 @@ export default function CribbageGame({ onLogout }) {
                       {showCribHere ? "Crib (Yours):" : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
                     </div>
                     <div className="flex items-center justify-center gap-8">
-                      {showCribHere ? (
-                        <>
-                          <div ref={cribDisplayRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 min-h-[40px]">
+                      <div className="relative">
+                        {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
+                        <div className={`flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                          {(gameState === 'cribSelect' ? playerHand :
+                            gameState === 'play' ? playerPlayHand :
+                            playerHand).map((card, idx) => (
+                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                              <PlayingCard
+                                card={card}
+                                selected={!showCribHere && selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
+                                disabled={
+                                  showCribHere ||
+                                  (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
+                                  (gameState === 'cribSelect' && playerHand.length !== 6)
+                                }
+                                highlighted={handHighlighted}
+                                onClick={(e) => {
+                                  if (showCribHere) return;
+                                  if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
+                                  else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card, e);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {/* Crib cards - overlaid in same position as hand */}
+                        {showCribHere && (
+                          <div ref={cribDisplayRef} className="absolute inset-0 flex flex-wrap justify-center items-center [&>*:not(:first-child)]:-ml-3">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
                               </div>
                             ))}
                           </div>
-                          {cribRevealPhase === 'revealing' && (
-                            <div ref={cribPileRef} className="flex flex-col items-center transition-opacity duration-300 opacity-60">
-                              <div className="relative w-12 h-16">
-                                <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />
-                                <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />
-                                <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />
-                                <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>
+                        )}
+                      </div>
+                      {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
+                        const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
+                        return (
+                        <div ref={cribPileRef} className={`flex flex-col items-center ${cribRevealPhase === 'revealing' ? 'transition-opacity duration-300 opacity-60' : ''}`}>
+                          <div className="relative w-12 h-16">
+                            {pileCount === 0 ? (
+                              <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
+                                <span className="text-[10px] text-green-600">Crib</span>
                               </div>
-                              <div className="text-[10px] text-gray-400 mt-4">Crib</div>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
-                            {(gameState === 'cribSelect' ? playerHand :
-                              gameState === 'play' ? playerPlayHand :
-                              playerHand).map((card, idx) => (
-                              <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
-                                <PlayingCard
-                                  card={card}
-                                  selected={selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
-                                  disabled={
-                                    (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
-                                    (gameState === 'cribSelect' && playerHand.length !== 6)
-                                  }
-                                  highlighted={handHighlighted}
-                                  onClick={(e) => {
-                                    if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
-                                    else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card, e);
-                                  }}
-                                />
-                              </div>
-                            ))}
+                            ) : (
+                              <>
+                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
+                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
+                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
+                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                              </>
+                            )}
                           </div>
-                          {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (() => {
-                            const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
-                            return (
-                            <div ref={cribPileRef} className="flex flex-col items-center">
-                              <div className="relative w-12 h-16">
-                                {pileCount === 0 ? (
-                                  <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
-                                    <span className="text-[10px] text-green-600">Crib</span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
-                                    {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
-                                    {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
-                                    {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
-                                  </>
-                                )}
-                              </div>
-                              <div className="text-[10px] text-gray-400 mt-4">Crib</div>
-                            </div>
-                            );
-                          })()}
-                        </>
-                      )}
+                          <div className="text-[10px] text-gray-400 mt-4">Crib</div>
+                        </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   );
