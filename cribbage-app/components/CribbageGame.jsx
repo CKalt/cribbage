@@ -1091,10 +1091,16 @@ export default function CribbageGame({ onLogout }) {
         const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount);
 
         if (card) {
-          // Animate computer card from a single card in the hand to play area
+          // Animate computer card from a single card in the hand to play area center
           const firstCard = computerHandRef.current?.querySelector(':scope > *');
           const startRect = firstCard?.getBoundingClientRect();
-          const endRect = computerPlayAreaRef.current?.getBoundingClientRect();
+          const areaRect = computerPlayAreaRef.current?.getBoundingClientRect();
+          const endRect = areaRect ? {
+            top: areaRect.top,
+            left: areaRect.left + areaRect.width / 2 - (startRect?.width || 0) / 2,
+            width: areaRect.width,
+            height: areaRect.height
+          } : null;
 
           if (startRect && endRect) {
             setFlyingCard({
@@ -1221,9 +1227,15 @@ export default function CribbageGame({ onLogout }) {
       return;
     }
 
-    // Get positions for animation
+    // Get positions for animation - target center of play area
     const startRect = cardEvent?.currentTarget?.getBoundingClientRect();
-    const endRect = playerPlayAreaRef.current?.getBoundingClientRect();
+    const areaRect = playerPlayAreaRef.current?.getBoundingClientRect();
+    const endRect = areaRect ? {
+      top: areaRect.top,
+      left: areaRect.left + areaRect.width / 2 - (startRect?.width || 0) / 2,
+      width: areaRect.width,
+      height: areaRect.height
+    } : null;
 
     if (startRect && endRect) {
       // Start animation, defer state update until animation completes
