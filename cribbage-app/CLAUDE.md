@@ -9,9 +9,31 @@
 For this project, Claude may perform git push and pull operations for deployment. This overrides the global rule requiring user to push/pull.
 
 ## Deployment
-- EC2 IP: 3.132.10.219
-- Domain: cribbage.chrisk.com
-- SSH: `ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@3.132.10.219`
-- Deploy: `ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage && git pull && cd cribbage-app && npm run build && pm2 restart cribbage"`
-- App runs via PM2 on port 3000
-- Nginx reverse proxy on port 80/443
+
+Claude Code handles the entire deployment stack on EC2, including git push, pull, build, and PM2 restart. Two branches are served via Nginx reverse proxy (port 80/443):
+
+### Production
+- **URL:** https://cribbage.chrisk.com
+- **Branch:** `main`
+- **EC2 path:** `~/cribbage/cribbage-app`
+- **PM2 process:** `cribbage`
+- **Deploy command:**
+  ```bash
+  ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage && git pull && cd cribbage-app && npm run build && pm2 restart cribbage"
+  ```
+
+### Beta
+- **URL:** https://beta.cribbage.chrisk.com
+- **Branch:** `multiplayer`
+- **EC2 path:** `~/cribbage-beta/cribbage-app`
+- **PM2 process:** `cribbage-beta`
+- **Deploy command:**
+  ```bash
+  ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com "cd cribbage-beta && git pull && cd cribbage-app && npm run build && pm2 restart cribbage-beta"
+  ```
+
+### Common
+- **EC2 IP:** 3.132.10.219
+- **SSH:** `ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@3.132.10.219`
+- **Stack:** Next.js + PM2 + Nginx
+- NEVER deploy to production (`cribbage`) directory when working on multiplayer beta features
