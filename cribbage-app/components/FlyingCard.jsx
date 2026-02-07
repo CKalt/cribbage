@@ -11,8 +11,9 @@ import { createPortal } from 'react-dom';
  * @param {object} startRect - Source getBoundingClientRect() { top, left, width, height }
  * @param {object} endRect - Target getBoundingClientRect() { top, left }
  * @param {function} onComplete - Called when animation finishes
+ * @param {boolean} faceDown - Show card back instead of face
  */
-export default function FlyingCard({ card, startRect, endRect, onComplete }) {
+export default function FlyingCard({ card, startRect, endRect, onComplete, faceDown = false }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -46,11 +47,17 @@ export default function FlyingCard({ card, startRect, endRect, onComplete }) {
         if (onComplete) onComplete();
       }}
     >
-      <div className={`bg-white rounded p-2 text-xl font-bold w-full h-full flex items-center justify-center ${
-        isRed ? 'text-red-600' : 'text-black'
-      }`}>
-        {card.rank}{card.suit}
-      </div>
+      {faceDown ? (
+        <div className="bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-full h-full flex items-center justify-center font-bold text-lg">
+          ?
+        </div>
+      ) : (
+        <div className={`bg-white rounded p-2 text-xl font-bold w-full h-full flex items-center justify-center ${
+          isRed ? 'text-red-600' : 'text-black'
+        }`}>
+          {card.rank}{card.suit}
+        </div>
+      )}
     </div>
   );
 

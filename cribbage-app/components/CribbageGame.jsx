@@ -132,6 +132,13 @@ export default function CribbageGame({ onLogout }) {
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
   const [cribRevealedCards, setCribRevealedCards] = useState([]);
 
+  // Computer discard tracking
+  const [computerKeptHand, setComputerKeptHand] = useState(null);
+  const [computerDiscardCards, setComputerDiscardCards] = useState([]);
+  const [computerDiscardDone, setComputerDiscardDone] = useState(false);
+  const [cribCardsInPile, setCribCardsInPile] = useState(0);
+  const [computerDiscardMoment, setComputerDiscardMoment] = useState(null);
+
   // Debug state
   const [debugLog, setDebugLog] = useState([]);
   const [gameLog, setGameLog] = useState([]);
@@ -177,6 +184,7 @@ export default function CribbageGame({ onLogout }) {
       computerClaimedScore, actualScore, pendingCountContinue,
       playerCutCard, computerCutCard, cutResultReady,
       pendingScore,
+      computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
     });
   }, [
     gameState, dealer, currentPlayer, message,
@@ -188,6 +196,7 @@ export default function CribbageGame({ onLogout }) {
     peggingHistory, countingHistory, computerCountingHand,
     countingTurn, handsCountedThisRound, counterIsComputer,
     computerClaimedScore, actualScore, pendingCountContinue,
+    computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
     playerCutCard, computerCutCard, cutResultReady,
     pendingScore,
   ]);
@@ -385,6 +394,10 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerClaimedScore !== undefined) setComputerClaimedScore(restored.computerClaimedScore);
     if (restored.actualScore !== undefined) setActualScore(restored.actualScore);
     if (restored.pendingCountContinue !== undefined) setPendingCountContinue(restored.pendingCountContinue);
+    if (restored.computerKeptHand !== undefined) setComputerKeptHand(restored.computerKeptHand);
+    if (restored.computerDiscardCards !== undefined) setComputerDiscardCards(restored.computerDiscardCards);
+    if (restored.computerDiscardDone !== undefined) setComputerDiscardDone(restored.computerDiscardDone);
+    if (restored.cribCardsInPile !== undefined) setCribCardsInPile(restored.cribCardsInPile);
 
     // Validate and fix counting state consistency
     // The source of truth is handsCountedThisRound and dealer - derive counterIsComputer from them
@@ -743,8 +756,18 @@ export default function CribbageGame({ onLogout }) {
       console.error('Dealing error - should be 6 cards each. Player:', playerCards.length, 'Computer:', computerCards.length);
     }
 
+    // Computer decides its discard at deal time (enables independent animation timing)
+    const kept = computerSelectCrib(computerCards, dealer === 'computer');
+    const discards = computerCards.filter(card =>
+      !kept.some(c => c.rank === card.rank && c.suit === card.suit)
+    );
+
     setPlayerHand(playerCards);
     setComputerHand(computerCards);
+    setComputerKeptHand(kept);
+    setComputerDiscardCards(discards);
+    setComputerDiscardDone(false);
+    setCribCardsInPile(0);
     setDeck(currentDeck.slice(12));
     setCrib([]);
     setSelectedCards([]);
@@ -760,6 +783,11 @@ export default function CribbageGame({ onLogout }) {
     setShowPeggingSummary(false);
     setCountingHistory([]);
     setHandsCountedThisRound(0);  // Reset for new hand
+
+    // Randomly choose when computer will discard (simulates human deliberation)
+    const moment = [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)];
+    setComputerDiscardMoment(moment);
+
     setGameState('cribSelect');
     setMessage('Select 2 cards for the crib');
 
@@ -779,9 +807,77 @@ export default function CribbageGame({ onLogout }) {
     if (isSelected) {
       setSelectedCards(selectedCards.filter(c => !(c.rank === card.rank && c.suit === card.suit)));
     } else if (selectedCards.length < 2) {
-      setSelectedCards([...selectedCards, card]);
+      const newSelected = [...selectedCards, card];
+      setSelectedCards(newSelected);
+
+      // Moment 2: Computer discards when player selects first card
+      if (computerDiscardMoment === 2 && !computerDiscardDone && newSelected.length === 1) {
+        const delay = 500 + Math.random() * 1000;
+        setTimeout(() => animateComputerDiscard(), delay);
+      }
+      // Moment 3: Computer discards when player selects second card
+      if (computerDiscardMoment === 3 && !computerDiscardDone && newSelected.length === 2) {
+        const delay = 300 + Math.random() * 700;
+        setTimeout(() => animateComputerDiscard(), delay);
+      }
     }
   };
+
+  // Animate computer discarding 2 face-down cards to the crib pile
+  const animateComputerDiscard = (onDone) => {
+    if (computerDiscardDone || computerDiscardCards.length !== 2) {
+      if (onDone) onDone();
+      return;
+    }
+
+    const firstCard = computerHandRef.current?.querySelector(':scope > *');
+    const startRect = firstCard?.getBoundingClientRect();
+    const endRect = cribPileRef.current?.getBoundingClientRect();
+
+    if (!startRect || !endRect) {
+      // Fallback: complete without animation
+      setComputerDiscardDone(true);
+      setCribCardsInPile(prev => prev + 2);
+      if (onDone) onDone();
+      return;
+    }
+
+    // Animate first face-down card
+    setFlyingCard({
+      card: computerDiscardCards[0],
+      startRect,
+      endRect,
+      faceDown: true,
+      onComplete: () => {
+        setCribCardsInPile(prev => prev + 1);
+        // Get fresh position for second card
+        const secondCard = computerHandRef.current?.querySelector(':scope > *');
+        const startRect2 = secondCard?.getBoundingClientRect() || startRect;
+        // Animate second face-down card
+        setFlyingCard({
+          card: computerDiscardCards[1],
+          startRect: startRect2,
+          endRect,
+          faceDown: true,
+          onComplete: () => {
+            setFlyingCard(null);
+            setCribCardsInPile(prev => prev + 1);
+            setComputerDiscardDone(true);
+            if (onDone) onDone();
+          }
+        });
+      }
+    });
+  };
+
+  // Moment 1: Computer discards shortly after dealing
+  useEffect(() => {
+    if (gameState === 'cribSelect' && computerDiscardMoment === 1 && !computerDiscardDone) {
+      const delay = 1500 + Math.random() * 1500;
+      const timer = setTimeout(() => animateComputerDiscard(), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, computerDiscardMoment, computerDiscardDone]);
 
   // Apply crib discard state changes (extracted for animation deferral)
   const applyCribDiscard = useCallback(() => {
@@ -789,13 +885,12 @@ export default function CribbageGame({ onLogout }) {
       !selectedCards.some(s => s.rank === card.rank && s.suit === card.suit)
     );
 
-    const newComputerHand = computerSelectCrib(computerHand, dealer === 'computer');
+    // Use pre-computed computer decision from dealHands
+    const newComputerHand = computerKeptHand || computerSelectCrib(computerHand, dealer === 'computer');
+    const discards = computerDiscardCards.length === 2 ? computerDiscardCards :
+      computerHand.filter(card => !newComputerHand.some(c => c.rank === card.rank && c.suit === card.suit));
 
-    const computerDiscards = computerHand.filter(card =>
-      !newComputerHand.some(c => c.rank === card.rank && c.suit === card.suit)
-    );
-
-    const newCrib = [...selectedCards, ...computerDiscards];
+    const newCrib = [...selectedCards, ...discards];
 
     if (newPlayerHand.length !== 4 || newComputerHand.length !== 4 || newCrib.length !== 4) {
       console.error('Invalid card counts after discard');
@@ -806,6 +901,7 @@ export default function CribbageGame({ onLogout }) {
     setComputerHand(newComputerHand);
     setCrib(newCrib);
     setSelectedCards([]);
+    setCribCardsInPile(4);
 
     setPlayerPlayHand([...newPlayerHand]);
     setComputerPlayHand([...newComputerHand]);
@@ -818,7 +914,7 @@ export default function CribbageGame({ onLogout }) {
 
     logGameEvent('DISCARD_TO_CRIB', {
       playerDiscards: selectedCards,
-      computerDiscards: computerDiscards,
+      computerDiscards: discards,
       crib: newCrib,
       playerHand: newPlayerHand,
       computerHand: newComputerHand
@@ -828,7 +924,7 @@ export default function CribbageGame({ onLogout }) {
     setGameState('cutForStarter');
     const nonDealer = dealer === 'player' ? 'Computer' : 'You';
     setMessage(`${nonDealer === 'You' ? 'Cut' : 'Computer cuts'} for the starter card`);
-  }, [playerHand, selectedCards, computerHand, dealer]);
+  }, [playerHand, selectedCards, computerHand, computerKeptHand, computerDiscardCards, dealer]);
 
   // Discard to crib with animation
   const discardToCrib = () => {
@@ -846,31 +942,71 @@ export default function CribbageGame({ onLogout }) {
       (dealer === 'computer' ? computerHandRef : null)?.current?.getBoundingClientRect() ||
       { top: dealer === 'computer' ? 100 : 500, left: window.innerWidth / 2 - 20 };
 
+    // After all animations complete, finalize
+    const finalize = () => {
+      setFlyingCard(null);
+      applyCribDiscard();
+    };
+
+    // After player animation completes: handle moment 5 or finalize
+    const afterPlayerDiscard = () => {
+      setFlyingCard(null);
+      if (computerDiscardMoment === 5 && !computerDiscardDone) {
+        const delay = 500 + Math.random() * 500;
+        setTimeout(() => animateComputerDiscard(finalize), delay);
+      } else {
+        finalize();
+      }
+    };
+
     if (cardElements.length >= 2) {
       // Capture both start positions before any animation
       const startRect1 = cardElements[0].getBoundingClientRect();
       const startRect2 = cardElements[1].getBoundingClientRect();
 
-      // Animate first card, then second, then apply state
-      setFlyingCard({
-        card: selectedCards[0],
-        startRect: startRect1,
-        endRect,
-        isComputer: false,
-        onComplete: () => {
-          // Animate second card
-          setFlyingCard({
-            card: selectedCards[1],
-            startRect: startRect2,
-            endRect,
-            isComputer: false,
-            onComplete: () => {
-              setFlyingCard(null);
-              applyCribDiscard();
-            }
-          });
-        }
-      });
+      // Moment 4: Interleave - player card 1, computer cards, player card 2
+      if (computerDiscardMoment === 4 && !computerDiscardDone) {
+        setFlyingCard({
+          card: selectedCards[0],
+          startRect: startRect1,
+          endRect,
+          onComplete: () => {
+            setCribCardsInPile(prev => prev + 1);
+            // Computer's two cards fly next
+            animateComputerDiscard(() => {
+              // Then player's second card
+              setFlyingCard({
+                card: selectedCards[1],
+                startRect: startRect2,
+                endRect,
+                onComplete: () => {
+                  setCribCardsInPile(prev => prev + 1);
+                  finalize();
+                }
+              });
+            });
+          }
+        });
+      } else {
+        // Moments 1-3, 5: player cards animate sequentially
+        setFlyingCard({
+          card: selectedCards[0],
+          startRect: startRect1,
+          endRect,
+          onComplete: () => {
+            setCribCardsInPile(prev => prev + 1);
+            setFlyingCard({
+              card: selectedCards[1],
+              startRect: startRect2,
+              endRect,
+              onComplete: () => {
+                setCribCardsInPile(prev => prev + 1);
+                afterPlayerDiscard();
+              }
+            });
+          }
+        });
+      }
     } else {
       // Fallback: no animation
       applyCribDiscard();
@@ -2025,11 +2161,12 @@ export default function CribbageGame({ onLogout }) {
     <>
     {flyingCard && (
       <FlyingCard
-        key={`${flyingCard.card.rank}${flyingCard.card.suit}`}
+        key={`${flyingCard.card.rank}${flyingCard.card.suit}${flyingCard.faceDown ? '-fd' : ''}`}
         card={flyingCard.card}
         startRect={flyingCard.startRect}
         endRect={flyingCard.endRect}
         onComplete={flyingCard.onComplete}
+        faceDown={flyingCard.faceDown || false}
       />
     )}
     <div className="min-h-screen bg-green-900 p-4">
@@ -2481,10 +2618,18 @@ export default function CribbageGame({ onLogout }) {
                     {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (
                       <div ref={cribPileRef} className={`flex flex-col items-center transition-opacity duration-300 ${cribRevealPhase === 'revealing' ? 'opacity-60' : ''}`}>
                         <div className="relative w-12 h-16">
-                          <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />
-                          <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />
-                          <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />
-                          <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>
+                          {cribCardsInPile === 0 ? (
+                            <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
+                              <span className="text-[10px] text-green-600">Crib</span>
+                            </div>
+                          ) : (
+                            <>
+                              {cribCardsInPile >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
+                              {cribCardsInPile >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
+                              {cribCardsInPile >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
+                              {cribCardsInPile >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                            </>
+                          )}
                         </div>
                         <div className="text-[10px] text-gray-400 mt-4">Crib</div>
                       </div>
@@ -2492,6 +2637,7 @@ export default function CribbageGame({ onLogout }) {
                     <div ref={computerHandRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
                       {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                         gameState === 'play' ? computerPlayHand :
+                        gameState === 'cribSelect' && computerDiscardDone && computerKeptHand ? computerKeptHand :
                         computerHand).map((card, idx) => (
                         <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                           <PlayingCard
@@ -2597,10 +2743,18 @@ export default function CribbageGame({ onLogout }) {
                     {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (
                       <div ref={cribPileRef} className="flex flex-col items-center">
                         <div className="relative w-12 h-16">
-                          <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />
-                          <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />
-                          <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />
-                          <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>
+                          {cribCardsInPile === 0 ? (
+                            <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
+                              <span className="text-[10px] text-green-600">Crib</span>
+                            </div>
+                          ) : (
+                            <>
+                              {cribCardsInPile >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
+                              {cribCardsInPile >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
+                              {cribCardsInPile >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
+                              {cribCardsInPile >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                            </>
+                          )}
                         </div>
                         <div className="text-[10px] text-gray-400 mt-4">Crib</div>
                       </div>
