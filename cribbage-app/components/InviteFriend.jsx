@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
  * Invite Friend to Play - simple modal to search and invite a player
- * After sending an invitation, polls to detect when the friend accepts
- * and auto-redirects into the game.
+ * Loads all players once, filters client-side as you type.
+ * After sending an invitation, polls to detect when the friend accepts.
  */
 export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
-  const [players, setPlayers] = useState([]);
+  const [allPlayers, setAllPlayers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(null);
@@ -37,7 +37,6 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
           const response = await fetch('/api/multiplayer/invitations');
           const data = await response.json();
           if (data.success && data.acceptedGames?.length > 0) {
-            // Friend accepted! Redirect to the game
             clearInterval(pollRef.current);
             pollRef.current = null;
             const game = data.acceptedGames[0];
@@ -59,13 +58,10 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      const url = searchTerm
-        ? `/api/multiplayer/players?search=${encodeURIComponent(searchTerm)}`
-        : '/api/multiplayer/players';
-      const response = await fetch(url);
+      const response = await fetch('/api/multiplayer/players');
       const data = await response.json();
       if (data.success) {
-        setPlayers(data.players);
+        setAllPlayers(data.players);
       }
     } catch (err) {
       // ignore
@@ -73,6 +69,15 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
       setLoading(false);
     }
   };
+
+  // Client-side filter as you type
+  const filteredPlayers = useMemo(() => {
+    if (!searchTerm.trim()) return allPlayers;
+    const term = searchTerm.toLowerCase();
+    return allPlayers.filter(
+      p => p.username.toLowerCase().includes(term) || p.email.toLowerCase().includes(term)
+    );
+  }, [allPlayers, searchTerm]);
 
   const handleInvite = async (playerEmail) => {
     setInviteLoading(playerEmail);
@@ -113,22 +118,17 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
           </button>
         </div>
 
-        {/* Search */}
-        <form onSubmit={(e) => { e.preventDefault(); fetchPlayers(); }} className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by email..."
-              className="flex-1 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:border-green-500 focus:outline-none text-sm"
-              autoFocus
-            />
-            <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
-              Search
-            </Button>
-          </div>
-        </form>
+        {/* Search - live filter, no submit needed */}
+        <div className="mb-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filter by name or email..."
+            className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:border-green-500 focus:outline-none text-sm"
+            autoFocus
+          />
+        </div>
 
         {/* Message */}
         {message && (
@@ -149,13 +149,13 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
         {/* Player list */}
         <div className="space-y-2 max-h-[40vh] overflow-y-auto">
           {loading ? (
-            <div className="text-gray-400 text-center py-4">Searching...</div>
-          ) : players.length === 0 ? (
+            <div className="text-gray-400 text-center py-4">Loading players...</div>
+          ) : filteredPlayers.length === 0 ? (
             <div className="text-gray-500 text-center py-4">
-              {searchTerm ? 'No players found' : 'No other players yet'}
+              {searchTerm ? 'No players match' : 'No other players yet'}
             </div>
           ) : (
-            players.map((player) => (
+            filteredPlayers.map((player) => (
               <div
                 key={player.id}
                 className="flex items-center gap-3 p-3 rounded border border-gray-700 hover:border-gray-600"
