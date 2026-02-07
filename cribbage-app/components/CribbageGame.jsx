@@ -127,6 +127,8 @@ export default function CribbageGame({ onLogout }) {
   const cribPileRef = useRef(null);
   const cribDisplayRef = useRef(null);
   const cribPileLastRect = useRef(null);
+  const handCardRectsRef = useRef([]); // Captured hand card positions for crib reveal animation
+  const playerHandContainerRef = useRef(null);
 
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
@@ -604,12 +606,19 @@ export default function CribbageGame({ onLogout }) {
 
   // Crib reveal animation - flies cards one at a time from pile to display
   const startCribReveal = () => {
+    // Capture actual hand card positions BEFORE the phase change makes them invisible
+    const handContainer = dealer === 'computer' ? computerHandRef.current : playerHandContainerRef.current;
+    if (handContainer) {
+      const cards = handContainer.children;
+      handCardRectsRef.current = Array.from(cards).map(el => el.getBoundingClientRect());
+    }
+
     setCribRevealPhase('revealing');
     setCribRevealedCards([]);
     setMessage('Turning over the crib...');
 
-    // Small delay for the crib display area to render
-    setTimeout(() => revealNextCribCard(0), 200);
+    // Wait for layout to stabilize with the box visible and hand invisible
+    setTimeout(() => revealNextCribCard(0), 500);
   };
 
   const revealNextCribCard = (index) => {
@@ -622,32 +631,26 @@ export default function CribbageGame({ onLogout }) {
     }
 
     const startRect = cribPileLastRect.current;
-    const destRect = cribDisplayRef.current?.getBoundingClientRect();
+    const targetCardRect = handCardRectsRef.current[index];
 
-    if (startRect && destRect) {
-      // Calculate center-aligned landing position matching the overlapping layout
-      const cardWidth = 48; // approximate card width
-      const overlap = -12; // -ml-3 = -12px overlap
-      const totalWidth = cardWidth + (crib.length - 1) * (cardWidth + overlap);
-      const startX = destRect.left + (destRect.width - totalWidth) / 2;
-      const cardLeft = startX + index * (cardWidth + overlap);
-
+    if (startRect && targetCardRect) {
+      // Fly from crib pile to the exact position where the hand card was
       setFlyingCard({
         card: crib[index],
         startRect: {
           top: startRect.top,
           left: startRect.left,
-          width: cardWidth,
-          height: startRect.height || 64,
+          width: targetCardRect.width,
+          height: targetCardRect.height,
         },
         endRect: {
-          top: destRect.top + (index % 2 === 1 ? 4 : 0),
-          left: cardLeft,
+          top: targetCardRect.top,
+          left: targetCardRect.left,
         },
         onComplete: () => {
           setFlyingCard(null);
           setCribRevealedCards(prev => [...prev, crib[index]]);
-          setTimeout(() => revealNextCribCard(index + 1), 150);
+          setTimeout(() => revealNextCribCard(index + 1), 200);
         }
       });
     } else {
@@ -2615,9 +2618,11 @@ export default function CribbageGame({ onLogout }) {
                     ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'));
                   const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
                     counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2;
+                  // Keep border visible during entire crib reveal so the box never disappears
+                  const showBorder = handHighlighted || cribHighlighted || showCribHere;
                   return (
                   <div className={`mb-6 p-2 rounded ${
-                    handHighlighted || cribHighlighted ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                    showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">
                       {showCribHere ? "Crib (Computer's):" : `Computer's Hand: ${gameState === 'play' ? `${computerPlayHand.length} cards` : ''}`}
@@ -2740,9 +2745,10 @@ export default function CribbageGame({ onLogout }) {
                   );
                   const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
                     !counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2;
+                  const showBorder = handHighlighted || cribHighlighted || showCribHere;
                   return (
                   <div className={`mb-6 p-2 rounded ${
-                    handHighlighted || cribHighlighted ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                    showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">
                       {showCribHere ? "Crib (Yours):" : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
@@ -2750,7 +2756,7 @@ export default function CribbageGame({ onLogout }) {
                     <div className="flex items-center justify-center gap-8">
                       <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
                             playerHand).map((card, idx) => (
