@@ -768,9 +768,9 @@ export default function CribbageGame({ onLogout }) {
 
     // Find the selected card elements by looking for cards with the cyan selection ring
     const cardElements = document.querySelectorAll('[class*="ring-cyan"]');
-    // Target: dealer's hand area (where crib conceptually goes)
-    const targetRef = dealer === 'computer' ? computerHandRef : null;
-    const endRect = targetRef?.current?.getBoundingClientRect() ||
+    // Target: crib pile (shown next to dealer's hand)
+    const endRect = cribPileRef.current?.getBoundingClientRect() ||
+      (dealer === 'computer' ? computerHandRef : null)?.current?.getBoundingClientRect() ||
       { top: dealer === 'computer' ? 100 : 500, left: window.innerWidth / 2 - 20 };
 
     if (cardElements.length >= 2) {
@@ -1946,10 +1946,10 @@ export default function CribbageGame({ onLogout }) {
     <>
     {flyingCard && (
       <FlyingCard
+        key={`${flyingCard.card.rank}${flyingCard.card.suit}`}
         card={flyingCard.card}
         startRect={flyingCard.startRect}
         endRect={flyingCard.endRect}
-
         onComplete={flyingCard.onComplete}
       />
     )}
@@ -2398,15 +2398,16 @@ export default function CribbageGame({ onLogout }) {
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
                   <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
-                  <div className="flex items-center justify-center gap-4">
-                    {dealer === 'computer' && (gameState === 'play' || gameState === 'counting') && crib.length > 0 && handsCountedThisRound < 2 && (
+                  <div className="flex items-center justify-center gap-8">
+                    {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (
                       <div ref={cribPileRef} className="flex flex-col items-center">
-                        <div className="relative w-10 h-14">
-                          <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-10 h-14" />
-                          <div className="absolute top-0.5 left-0.5 bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-10 h-14" />
-                          <div className="absolute top-1 left-1 bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-10 h-14 flex items-center justify-center font-bold text-xs">Crib</div>
+                        <div className="relative w-12 h-16">
+                          <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />
+                          <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />
+                          <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />
+                          <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>
                         </div>
-                        <div className="text-[10px] text-gray-400 mt-2">Crib</div>
+                        <div className="text-[10px] text-gray-400 mt-4">Crib</div>
                       </div>
                     )}
                     <div ref={computerHandRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
@@ -2487,7 +2488,7 @@ export default function CribbageGame({ onLogout }) {
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
                   <div className="text-sm mb-2">Your Hand: ({gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)</div>
-                  <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center justify-center gap-8">
                     <div className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3">
                       {(gameState === 'cribSelect' ? playerHand :
                         gameState === 'play' ? playerPlayHand :
@@ -2514,14 +2515,15 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                       ))}
                     </div>
-                    {dealer === 'player' && (gameState === 'play' || gameState === 'counting') && crib.length > 0 && handsCountedThisRound < 2 && (
+                    {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (
                       <div ref={cribPileRef} className="flex flex-col items-center">
-                        <div className="relative w-10 h-14">
-                          <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-10 h-14" />
-                          <div className="absolute top-0.5 left-0.5 bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-10 h-14" />
-                          <div className="absolute top-1 left-1 bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-10 h-14 flex items-center justify-center font-bold text-xs">Crib</div>
+                        <div className="relative w-12 h-16">
+                          <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />
+                          <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />
+                          <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />
+                          <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>
                         </div>
-                        <div className="text-[10px] text-gray-400 mt-2">Crib</div>
+                        <div className="text-[10px] text-gray-400 mt-4">Crib</div>
                       </div>
                     )}
                   </div>
