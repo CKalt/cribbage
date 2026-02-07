@@ -2645,9 +2645,9 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         );
                       })()}
-                      <div className="relative">
+                      <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={computerHandRef} className={`flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                             gameState === 'play' ? computerPlayHand :
                             gameState === 'cribSelect' && computerDiscardDone && computerKeptHand ? computerKeptHand :
@@ -2662,9 +2662,9 @@ export default function CribbageGame({ onLogout }) {
                             </div>
                           ))}
                         </div>
-                        {/* Crib cards - overlaid in same position as hand */}
+                        {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
-                          <div ref={cribDisplayRef} className="absolute inset-0 flex flex-wrap justify-center items-center [&>*:not(:first-child)]:-ml-3">
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
@@ -2748,9 +2748,9 @@ export default function CribbageGame({ onLogout }) {
                       {showCribHere ? "Crib (Yours):" : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
                     </div>
                     <div className="flex items-center justify-center gap-8">
-                      <div className="relative">
+                      <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div className={`flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                        <div className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
                             playerHand).map((card, idx) => (
@@ -2773,9 +2773,9 @@ export default function CribbageGame({ onLogout }) {
                             </div>
                           ))}
                         </div>
-                        {/* Crib cards - overlaid in same position as hand */}
+                        {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
-                          <div ref={cribDisplayRef} className="absolute inset-0 flex flex-wrap justify-center items-center [&>*:not(:first-child)]:-ml-3">
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
