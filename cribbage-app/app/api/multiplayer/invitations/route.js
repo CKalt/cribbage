@@ -228,6 +228,7 @@ export async function GET(request) {
     const invitesDir = path.join(process.cwd(), 'data', 'invitations');
     const received = [];
     const sent = [];
+    const acceptedGames = [];
 
     if (fs.existsSync(invitesDir)) {
       const files = fs.readdirSync(invitesDir).filter(f => f.endsWith('.json'));
@@ -239,6 +240,23 @@ export async function GET(request) {
 
           // Skip expired invites (but could also clean them up)
           if (isInvitationExpired(invite) && invite.status === INVITE_STATUS.PENDING) {
+            continue;
+          }
+
+          // For sent invitations that were recently accepted, include them so sender can auto-redirect
+          if (invite.status === INVITE_STATUS.ACCEPTED &&
+              invite.from.email.toLowerCase() === userInfo.email.toLowerCase() &&
+              invite.gameId) {
+            const acceptedAt = new Date(invite.acceptedAt);
+            const minutesAgo = (Date.now() - acceptedAt.getTime()) / 60000;
+            if (minutesAgo < 5) {
+              acceptedGames.push({
+                id: invite.id,
+                gameId: invite.gameId,
+                to: invite.toEmail,
+                acceptedAt: invite.acceptedAt
+              });
+            }
             continue;
           }
 
@@ -280,6 +298,7 @@ export async function GET(request) {
       success: true,
       received,
       sent,
+      acceptedGames,
       totalReceived: received.length,
       totalSent: sent.length
     });

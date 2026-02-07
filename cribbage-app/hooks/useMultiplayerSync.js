@@ -28,11 +28,11 @@ export function useMultiplayerSync(gameId, isMyTurn) {
         setOpponent(data.game.opponent);
         setError(null);
 
-        // Check if opponent is connected (seen in last 30 seconds)
+        // Check if opponent is connected (seen in last 2 minutes)
         if (data.game.opponent?.lastSeen) {
           const lastSeen = new Date(data.game.opponent.lastSeen);
           const secondsAgo = (Date.now() - lastSeen.getTime()) / 1000;
-          setOpponentConnected(secondsAgo < 30);
+          setOpponentConnected(secondsAgo < 120);
         }
 
         lastPollRef.current = Date.now();

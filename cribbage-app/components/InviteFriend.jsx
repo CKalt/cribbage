@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
  * Invite Friend to Play - simple modal to search and invite a player
+ * After sending an invitation, polls to detect when the friend accepts
+ * and auto-redirects into the game.
  */
 export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
   const [players, setPlayers] = useState([]);
@@ -12,14 +14,47 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(null);
   const [message, setMessage] = useState(null);
+  const [waitingForAccept, setWaitingForAccept] = useState(false);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
       setSearchTerm('');
       setMessage(null);
+      setWaitingForAccept(false);
       fetchPlayers();
     }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [isOpen]);
+
+  // Poll for accepted invitations when waiting
+  useEffect(() => {
+    if (waitingForAccept && isOpen) {
+      pollRef.current = setInterval(async () => {
+        try {
+          const response = await fetch('/api/multiplayer/invitations');
+          const data = await response.json();
+          if (data.success && data.acceptedGames?.length > 0) {
+            // Friend accepted! Redirect to the game
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+            const game = data.acceptedGames[0];
+            setMessage({ type: 'success', text: `${game.to.split('@')[0]} accepted! Starting game...` });
+            setTimeout(() => {
+              onGameStarted(game.gameId);
+            }, 1000);
+          }
+        } catch (err) {
+          // ignore poll errors
+        }
+      }, 3000);
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [waitingForAccept, isOpen, onGameStarted]);
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -51,6 +86,7 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
       const data = await response.json();
       if (data.success) {
         setMessage({ type: 'success', text: `Invitation sent to ${playerEmail.split('@')[0]}! Waiting for them to accept...` });
+        setWaitingForAccept(true);
       } else {
         setMessage({ type: 'error', text: data.error });
       }
@@ -100,6 +136,13 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
             message.type === 'success' ? 'bg-green-700 text-green-100' : 'bg-red-700 text-red-100'
           }`}>
             {message.text}
+          </div>
+        )}
+
+        {/* Waiting indicator */}
+        {waitingForAccept && (
+          <div className="mb-4 text-center text-yellow-400 text-sm animate-pulse">
+            Waiting for friend to accept...
           </div>
         )}
 

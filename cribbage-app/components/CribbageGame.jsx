@@ -2699,6 +2699,10 @@ export default function CribbageGame({ onLogout }) {
         <InviteFriend
           isOpen={showInviteFriend}
           onClose={() => setShowInviteFriend(false)}
+          onGameStarted={(gameId) => {
+            setShowInviteFriend(false);
+            setActiveMultiplayerGameId(gameId);
+          }}
         />
 
         {/* Multiplayer Game - renders full-screen overlay when active */}
