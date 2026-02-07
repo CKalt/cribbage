@@ -1,11 +1,9 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.1.0-b93';
+export const APP_VERSION = 'v0.1.0-b94-20260207';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
-Bug fixes in this release:
-- Fixed: Computer now correctly says "Go" when it can't play (Bug #51)
-- Fixed: Crib counting now hides your hand to reduce confusion (Bug #50)
-- Fixed: Create Account page now has green theme matching login (Bug #39)
+New in this release:
+- Cards now fly from your hand to the play area during pegging!
 
 Coming soon: Multiplayer mode! Challenge your friends to real-time cribbage games.
 
