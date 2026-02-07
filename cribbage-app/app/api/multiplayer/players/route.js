@@ -109,7 +109,8 @@ export async function GET(request) {
           const filepath = path.join(dataDir, file);
           const userData = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
-          const email = userData.email || odersId;
+          const email = userData.email;
+          if (!email) continue;  // Skip users without email
           const username = email.split('@')[0];
           const lastSeen = userData.lastSeen || null;
           const isOnline = lastSeen ? new Date(lastSeen) > fiveMinutesAgo : false;

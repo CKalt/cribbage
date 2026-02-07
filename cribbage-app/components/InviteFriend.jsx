@@ -158,19 +158,17 @@ export default function InviteFriend({ isOpen, onClose, onGameStarted }) {
             players.map((player) => (
               <div
                 key={player.id}
-                className="flex items-center justify-between p-3 rounded border border-gray-700 hover:border-gray-600"
+                className="flex items-center gap-3 p-3 rounded border border-gray-700 hover:border-gray-600"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${player.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
-                  <div>
-                    <div className="text-white font-medium">{player.username}</div>
-                    <div className="text-gray-400 text-xs">{player.email}</div>
-                  </div>
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${player.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-medium truncate">{player.username}</div>
+                  <div className="text-gray-400 text-xs truncate">{player.email}</div>
                 </div>
                 <Button
                   onClick={() => handleInvite(player.email)}
                   disabled={inviteLoading === player.email || player.hasActiveGame}
-                  className={`text-sm px-4 py-1 ${
+                  className={`text-sm px-4 py-1 flex-shrink-0 ${
                     player.hasActiveGame
                       ? 'bg-gray-600 cursor-not-allowed'
                       : 'bg-green-600 hover:bg-green-700'
