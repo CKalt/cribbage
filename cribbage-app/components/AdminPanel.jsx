@@ -11,16 +11,22 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
   const [activeTab, setActiveTab] = useState('stats');
   const [stats, setStats] = useState([]);
   const [reports, setReports] = useState([]);
+  const [mpGames, setMpGames] = useState([]);
+  const [mpInvites, setMpInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [actionMessage, setActionMessage] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
+      setActionMessage(null);
       if (activeTab === 'stats') {
         fetchStats();
-      } else {
+      } else if (activeTab === 'reports') {
         fetchReports();
+      } else if (activeTab === 'multiplayer') {
+        fetchMultiplayer();
       }
     }
   }, [isOpen, activeTab]);
@@ -58,6 +64,45 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMultiplayer = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/multiplayer');
+      const data = await response.json();
+      if (data.success) {
+        setMpGames(data.games);
+        setMpInvites(data.invitations);
+      } else {
+        setError(data.error || 'Failed to load multiplayer data');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMpAction = async (action, id) => {
+    setActionMessage(null);
+    try {
+      const response = await fetch('/api/admin/multiplayer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, id })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setActionMessage({ type: 'success', text: data.message });
+        fetchMultiplayer();
+      } else {
+        setActionMessage({ type: 'error', text: data.error });
+      }
+    } catch (err) {
+      setActionMessage({ type: 'error', text: 'Failed: ' + err.message });
     }
   };
 
@@ -119,6 +164,16 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
           >
             Bug Reports
           </button>
+          <button
+            onClick={() => setActiveTab('multiplayer')}
+            className={`px-3 py-1 text-sm rounded ${
+              activeTab === 'multiplayer'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Multiplayer
+          </button>
         </div>
 
         {/* Content */}
@@ -159,7 +214,7 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                 </table>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'reports' ? (
             /* Bug Reports Tab */
             <div className="space-y-2">
               {reports.length === 0 ? (
@@ -263,7 +318,89 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                 ))
               )}
             </div>
-          )}
+          ) : activeTab === 'multiplayer' ? (
+            /* Multiplayer Tab */
+            <div className="space-y-4">
+              {/* Action message */}
+              {actionMessage && (
+                <div className={`p-2 rounded text-sm ${
+                  actionMessage.type === 'success' ? 'bg-green-700 text-green-100' : 'bg-red-700 text-red-100'
+                }`}>
+                  {actionMessage.text}
+                </div>
+              )}
+
+              {/* Nuke All button */}
+              <Button
+                onClick={() => {
+                  if (confirm('Delete ALL games and invitations?')) {
+                    handleMpAction('nuke-all');
+                  }
+                }}
+                className="w-full bg-red-600 hover:bg-red-700 text-sm"
+              >
+                Delete All Games & Invitations
+              </Button>
+
+              {/* Games */}
+              <div>
+                <div className="text-gray-400 text-xs mb-2 uppercase tracking-wide">
+                  Games ({mpGames.length})
+                </div>
+                {mpGames.length === 0 ? (
+                  <div className="text-gray-500 text-sm text-center py-2">No games</div>
+                ) : (
+                  mpGames.map((game) => (
+                    <div key={game.id} className="flex items-center justify-between p-2 rounded border border-gray-700 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm truncate">
+                          {game.player1.split('@')[0]} vs {game.player2.split('@')[0]}
+                        </div>
+                        <div className="text-gray-400 text-xs">
+                          {game.status} - {formatDateShort(game.createdAt)}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleMpAction('delete-game', game.id)}
+                        className="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 ml-2"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Invitations */}
+              <div>
+                <div className="text-gray-400 text-xs mb-2 uppercase tracking-wide">
+                  Invitations ({mpInvites.length})
+                </div>
+                {mpInvites.length === 0 ? (
+                  <div className="text-gray-500 text-sm text-center py-2">No invitations</div>
+                ) : (
+                  mpInvites.map((invite) => (
+                    <div key={invite.id} className="flex items-center justify-between p-2 rounded border border-gray-700 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm truncate">
+                          {invite.from.split('@')[0]} {'\u2192'} {invite.to.split('@')[0]}
+                        </div>
+                        <div className="text-gray-400 text-xs">
+                          {invite.status} - {formatDateShort(invite.createdAt)}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleMpAction('delete-invitation', invite.id)}
+                        className="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 ml-2"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Footer */}
