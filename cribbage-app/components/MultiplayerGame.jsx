@@ -20,7 +20,6 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [lastPlayAnnouncement, setLastPlayAnnouncement] = useState(null);
   const [newCardIndex, setNewCardIndex] = useState(-1);
   const [cutForDealerState, setCutForDealerState] = useState({ myCut: null, opponentCut: null, result: null });
-  const [showDealerResult, setShowDealerResult] = useState(false);
   const prevPlayedCountRef = useRef(0);
 
   // Get current user for email display
@@ -142,7 +141,6 @@ export default function MultiplayerGame({ gameId, onExit }) {
     try {
       const result = await submitMove('cut-for-dealer', { cutPosition: position });
       if (result.success) {
-        // Get the card that was cut from the updated game state
         const gs = result.game?.gameState;
         const myKey = gameState?.myPlayerKey;
         if (gs?.cutForDealer) {
@@ -152,11 +150,37 @@ export default function MultiplayerGame({ gameId, onExit }) {
           setCutForDealerState(prev => ({
             myCut: myCard || prev.myCut,
             opponentCut: oppCard || prev.opponentCut,
-            result: gs.phase !== 'cuttingForDealer' ? 'determined' : (gs.cutForDealer?.tied ? 'tied' : null)
+            result: gs.cutForDealer?.dealer ? 'determined' : (gs.cutForDealer?.tied ? 'tied' : prev.result)
           }));
         }
       } else {
         console.error('Cut for dealer failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle acknowledge dealer
+  const handleAcknowledgeDealer = async () => {
+    setSubmitting(true);
+    try {
+      const result = await submitMove('acknowledge-dealer', {});
+      if (!result.success) {
+        console.error('Acknowledge failed:', result.error);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle deal (dealer clicks "Deal the cards")
+  const handleDeal = async () => {
+    setSubmitting(true);
+    try {
+      const result = await submitMove('deal', {});
+      if (!result.success) {
+        console.error('Deal failed:', result.error);
       }
     } finally {
       setSubmitting(false);
@@ -174,20 +198,11 @@ export default function MultiplayerGame({ gameId, onExit }) {
       const myCard = gs.cutForDealer?.[`${myKey}Card`];
       const oppCard = gs.cutForDealer?.[`${opponentKey}Card`];
 
-      const wasCutting = cutForDealerState.result !== 'determined';
-      const nowDetermined = gs.phase !== 'cuttingForDealer' && myCard && oppCard;
-
       setCutForDealerState(prev => ({
         myCut: myCard || prev.myCut,
         opponentCut: oppCard || prev.opponentCut,
-        result: gs.phase !== 'cuttingForDealer' ? 'determined' : (gs.cutForDealer?.tied ? 'tied' : prev.result)
+        result: gs.cutForDealer?.dealer ? 'determined' : (gs.cutForDealer?.tied ? 'tied' : prev.result)
       }));
-
-      // Show dealer result overlay briefly when transitioning
-      if (wasCutting && nowDetermined) {
-        setShowDealerResult(true);
-        setTimeout(() => setShowDealerResult(false), 3000);
-      }
     }
   }, [gameState?.gameState?.phase, gameState?.gameState?.cutForDealer]);
 
@@ -410,105 +425,168 @@ export default function MultiplayerGame({ gameId, onExit }) {
           )}
 
           {/* Cut for Dealer Phase */}
-          {getCurrentPhase() === GAME_PHASE.CUTTING_FOR_DEALER && (
-            <div className="mb-4">
-              <div className="text-center text-white text-xl font-bold mb-4">
-                Cut for Dealer
-              </div>
-              <div className="text-center text-gray-400 mb-6">
-                Low card deals. Tap the deck to cut!
-              </div>
+          {getCurrentPhase() === GAME_PHASE.CUTTING_FOR_DEALER && (() => {
+            const cutData = gameState?.gameState?.cutForDealer;
+            const myKey = gameState?.myPlayerKey;
+            const opponentKey = myKey === 'player1' ? 'player2' : 'player1';
+            const dealerDetermined = !!cutData?.dealer;
+            const iAmDealer = cutData?.dealer === myKey;
+            const myAck = cutData?.[`${myKey}Acknowledged`];
+            const oppAck = cutData?.[`${opponentKey}Acknowledged`];
+            const bothAcknowledged = myAck && oppAck;
 
-              <div className="flex justify-center gap-8 sm:gap-12">
-                {/* My cut */}
-                <div className="text-center">
-                  <div className="text-sm text-green-400 mb-2 font-medium">Your Cut</div>
-                  {cutForDealerState.myCut ? (
-                    <DeckCut
-                      disabled={true}
-                      label=""
-                      revealedCard={cutForDealerState.myCut}
-                      showCutAnimation={true}
-                    />
-                  ) : (
-                    <DeckCut
-                      onCut={handleCutForDealer}
-                      disabled={submitting || cutForDealerState.myCut !== null}
-                      label=""
-                    />
-                  )}
+            return (
+              <div className="mb-4">
+                <div className="text-center text-white text-xl font-bold mb-4">
+                  Cut for Dealer
                 </div>
 
-                {/* Opponent's cut */}
-                <div className="text-center">
-                  <div className="text-sm text-blue-400 mb-2 font-medium">{opponent?.username || 'Opponent'}'s Cut</div>
-                  {cutForDealerState.opponentCut ? (
-                    <DeckCut
-                      disabled={true}
-                      label=""
-                      revealedCard={cutForDealerState.opponentCut}
-                      showCutAnimation={true}
-                    />
-                  ) : (
-                    <div className="h-64 flex items-center justify-center">
-                      <div className="text-gray-500 text-sm">
-                        {cutForDealerState.myCut ? 'Waiting for opponent...' : 'Waiting...'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Result message */}
-              {cutForDealerState.result === 'tied' && (
-                <div className="text-center mt-6">
-                  <div className="inline-block bg-yellow-600 text-white px-6 py-3 rounded-full text-lg font-bold animate-pulse">
-                    Tied! Cut again!
+                {!dealerDetermined && (
+                  <div className="text-center text-gray-400 mb-6">
+                    Low card deals. Tap the deck to cut!
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
-          {/* Dealer determined overlay */}
-          {showDealerResult && cutForDealerState.myCut && cutForDealerState.opponentCut && (
-            <div className="mb-4 text-center">
-              <div className="bg-gray-700 rounded-lg p-6 mb-4">
-                <div className="text-white text-xl font-bold mb-4">Dealer Determined!</div>
-                <div className="flex justify-center gap-8 mb-4">
-                  <div>
-                    <div className="text-sm text-green-400 mb-1">You</div>
-                    <div className={`w-16 h-24 bg-white rounded-lg shadow-lg flex items-center justify-center text-xl font-bold border-2 border-green-400 ${
-                      cutForDealerState.myCut.suit === '♥' || cutForDealerState.myCut.suit === '♦' ? 'text-red-600' : 'text-black'
-                    }`}>
+                {/* Side-by-side decks / cards */}
+                {!dealerDetermined ? (
+                  <div className="flex justify-center gap-8 sm:gap-12">
+                    {/* My cut */}
+                    <div className="text-center">
+                      <div className="text-sm text-green-400 mb-2 font-medium">Your Cut</div>
+                      {cutForDealerState.myCut ? (
+                        <DeckCut
+                          disabled={true}
+                          label=""
+                          revealedCard={cutForDealerState.myCut}
+                          showCutAnimation={true}
+                        />
+                      ) : (
+                        <DeckCut
+                          onCut={handleCutForDealer}
+                          disabled={submitting || cutForDealerState.myCut !== null}
+                          label=""
+                        />
+                      )}
+                    </div>
+
+                    {/* Opponent's cut */}
+                    <div className="text-center">
+                      <div className="text-sm text-blue-400 mb-2 font-medium">{opponent?.username || 'Opponent'}'s Cut</div>
+                      {cutForDealerState.opponentCut ? (
+                        <DeckCut
+                          disabled={true}
+                          label=""
+                          revealedCard={cutForDealerState.opponentCut}
+                          showCutAnimation={true}
+                        />
+                      ) : (
+                        <div className="h-64 flex items-center justify-center">
+                          <div className="text-gray-500 text-sm">
+                            {cutForDealerState.myCut ? 'Waiting for opponent...' : 'Waiting...'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Dealer determined - show both cards and result */
+                  <div className="text-center">
+                    <div className="flex justify-center gap-8 mb-4">
                       <div>
-                        <div>{cutForDealerState.myCut.rank}</div>
-                        <div>{cutForDealerState.myCut.suit}</div>
+                        <div className="text-sm text-green-400 mb-1">You</div>
+                        <div className={`w-16 h-24 bg-white rounded-lg shadow-lg flex items-center justify-center text-xl font-bold border-2 ${
+                          iAmDealer ? 'border-yellow-400 ring-2 ring-yellow-400/50' : 'border-green-400'
+                        } ${
+                          cutForDealerState.myCut?.suit === '♥' || cutForDealerState.myCut?.suit === '♦' ? 'text-red-600' : 'text-black'
+                        }`}>
+                          <div>
+                            <div>{cutForDealerState.myCut?.rank}</div>
+                            <div>{cutForDealerState.myCut?.suit}</div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-gray-400 text-2xl font-bold">vs</div>
-                  <div>
-                    <div className="text-sm text-blue-400 mb-1">{opponent?.username}</div>
-                    <div className={`w-16 h-24 bg-white rounded-lg shadow-lg flex items-center justify-center text-xl font-bold border-2 border-blue-400 ${
-                      cutForDealerState.opponentCut.suit === '♥' || cutForDealerState.opponentCut.suit === '♦' ? 'text-red-600' : 'text-black'
-                    }`}>
+                      <div className="flex items-center text-gray-400 text-2xl font-bold">vs</div>
                       <div>
-                        <div>{cutForDealerState.opponentCut.rank}</div>
-                        <div>{cutForDealerState.opponentCut.suit}</div>
+                        <div className="text-sm text-blue-400 mb-1">{opponent?.username}</div>
+                        <div className={`w-16 h-24 bg-white rounded-lg shadow-lg flex items-center justify-center text-xl font-bold border-2 ${
+                          !iAmDealer ? 'border-yellow-400 ring-2 ring-yellow-400/50' : 'border-blue-400'
+                        } ${
+                          cutForDealerState.opponentCut?.suit === '♥' || cutForDealerState.opponentCut?.suit === '♦' ? 'text-red-600' : 'text-black'
+                        }`}>
+                          <div>
+                            <div>{cutForDealerState.opponentCut?.rank}</div>
+                            <div>{cutForDealerState.opponentCut?.suit}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    <div className="text-yellow-400 text-lg font-bold mb-4">
+                      {iAmDealer ? 'You deal!' : `${opponent?.username} deals!`}
+                    </div>
+
+                    {/* Action buttons based on role */}
+                    {!myAck && !iAmDealer && (
+                      <Button
+                        onClick={handleAcknowledgeDealer}
+                        disabled={submitting}
+                        className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3"
+                      >
+                        {submitting ? 'Confirming...' : 'Confirm Dealer'}
+                      </Button>
+                    )}
+
+                    {!myAck && iAmDealer && (
+                      <Button
+                        onClick={handleAcknowledgeDealer}
+                        disabled={submitting}
+                        className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3"
+                      >
+                        {submitting ? 'Confirming...' : 'Confirm'}
+                      </Button>
+                    )}
+
+                    {myAck && iAmDealer && !bothAcknowledged && (
+                      <div className="text-gray-400">
+                        Waiting for {opponent?.username} to confirm...
+                      </div>
+                    )}
+
+                    {myAck && !iAmDealer && !bothAcknowledged && (
+                      <div className="text-gray-400">
+                        Waiting for {opponent?.username} to confirm...
+                      </div>
+                    )}
+
+                    {bothAcknowledged && iAmDealer && (
+                      <Button
+                        onClick={handleDeal}
+                        disabled={submitting}
+                        className="bg-yellow-600 hover:bg-yellow-700 text-lg px-8 py-3 animate-pulse"
+                      >
+                        {submitting ? 'Dealing...' : 'Deal the Cards'}
+                      </Button>
+                    )}
+
+                    {bothAcknowledged && !iAmDealer && (
+                      <div className="text-gray-400">
+                        Waiting for {opponent?.username} to deal...
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="text-yellow-400 text-lg font-bold">
-                  {gameState?.gameState?.dealer === gameState?.myPlayerKey
-                    ? 'You deal!'
-                    : `${opponent?.username} deals!`}
-                </div>
-                <div className="text-gray-400 text-sm mt-2">Dealing cards...</div>
+                )}
+
+                {/* Tie message */}
+                {cutForDealerState.result === 'tied' && !dealerDetermined && (
+                  <div className="text-center mt-6">
+                    <div className="inline-block bg-yellow-600 text-white px-6 py-3 rounded-full text-lg font-bold animate-pulse">
+                      Tied! Cut again!
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Phase-specific content */}
           {getCurrentPhase() === GAME_PHASE.DISCARDING && (

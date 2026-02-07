@@ -202,8 +202,87 @@ export function processCutForDealer(gameState, playerKey, cutPosition) {
   // Lower card deals (Ace is lowest/best)
   const dealer = myRank < opponentRank ? playerKey : opponentKey;
 
+  // Stay in cuttingForDealer phase - wait for both players to acknowledge
+  cutForDealer.dealer = dealer;
+  cutForDealer.player1Acknowledged = false;
+  cutForDealer.player2Acknowledged = false;
+
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      cutForDealer
+    },
+    description: `Dealer determined!`,
+    nextTurn: opponentKey, // Other player needs to see result
+    dealerDetermined: true,
+    dealer: dealer
+  };
+}
+
+/**
+ * Process an acknowledge-dealer move
+ * Both players must acknowledge before dealer can deal
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - 'player1' or 'player2'
+ * @returns {object} { success, newState, error, description, nextTurn }
+ */
+export function processAcknowledgeDealer(gameState, playerKey) {
+  if (gameState.phase !== GAME_PHASE.CUTTING_FOR_DEALER) {
+    return { success: false, error: 'Not in cut-for-dealer phase' };
+  }
+
+  if (!gameState.cutForDealer?.dealer) {
+    return { success: false, error: 'Dealer not yet determined' };
+  }
+
+  const ackKey = `${playerKey}Acknowledged`;
+  if (gameState.cutForDealer[ackKey]) {
+    return { success: false, error: 'Already acknowledged' };
+  }
+
+  const cutForDealer = { ...gameState.cutForDealer };
+  cutForDealer[ackKey] = true;
+
+  const opponentKey = playerKey === 'player1' ? 'player2' : 'player1';
+
+  return {
+    success: true,
+    newState: {
+      ...gameState,
+      cutForDealer
+    },
+    description: `Acknowledged dealer.`,
+    nextTurn: cutForDealer.dealer // Dealer's turn to deal
+  };
+}
+
+/**
+ * Process a deal move - dealer deals the cards after both acknowledge
+ * @param {object} gameState - Current game state
+ * @param {string} playerKey - Must be the dealer
+ * @returns {object} { success, newState, error, description, nextTurn }
+ */
+export function processDeal(gameState, playerKey) {
+  if (gameState.phase !== GAME_PHASE.CUTTING_FOR_DEALER) {
+    return { success: false, error: 'Not in cut-for-dealer phase' };
+  }
+
+  const cutForDealer = gameState.cutForDealer;
+  if (!cutForDealer?.dealer) {
+    return { success: false, error: 'Dealer not yet determined' };
+  }
+
+  if (playerKey !== cutForDealer.dealer) {
+    return { success: false, error: 'Only the dealer can deal' };
+  }
+
+  if (!cutForDealer.player1Acknowledged || !cutForDealer.player2Acknowledged) {
+    return { success: false, error: 'Both players must acknowledge first' };
+  }
+
   // Deal cards for the first round
-  const roundState = initializeRoundState(dealer);
+  const roundState = initializeRoundState(cutForDealer.dealer);
 
   return {
     success: true,
@@ -211,10 +290,8 @@ export function processCutForDealer(gameState, playerKey, cutPosition) {
       ...roundState,
       cutForDealer: cutForDealer
     },
-    description: `Dealer determined! Cards are being dealt.`,
-    nextTurn: 'player1', // Both need to discard
-    dealerDetermined: true,
-    dealer: dealer
+    description: `Cards dealt!`,
+    nextTurn: 'player1' // Both need to discard
   };
 }
 

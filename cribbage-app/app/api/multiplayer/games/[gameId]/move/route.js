@@ -17,7 +17,7 @@ function getDisplayName(userId, email) {
   } catch (e) { /* fall through */ }
   return email ? email.split('@')[0] : 'Unknown';
 }
-import { processDiscard, processCut, processPlay, processCount, startNewRound, processCutForDealer, GAME_PHASE } from '@/lib/multiplayer-game';
+import { processDiscard, processCut, processPlay, processCount, startNewRound, processCutForDealer, processAcknowledgeDealer, processDeal, GAME_PHASE } from '@/lib/multiplayer-game';
 
 /**
  * Decode JWT token to extract user ID and email
@@ -113,6 +113,23 @@ export async function POST(request, { params }) {
       if (game.gameState.cutForDealer?.[cardKey] !== null) {
         return NextResponse.json(
           { success: false, error: 'You have already cut' },
+          { status: 400 }
+        );
+      }
+    } else if (gamePhase === GAME_PHASE.CUTTING_FOR_DEALER && moveType === 'acknowledge-dealer') {
+      // Allow acknowledge if player hasn't acknowledged yet
+      const ackKey = `${playerKey}Acknowledged`;
+      if (game.gameState.cutForDealer?.[ackKey]) {
+        return NextResponse.json(
+          { success: false, error: 'Already acknowledged' },
+          { status: 400 }
+        );
+      }
+    } else if (gamePhase === GAME_PHASE.CUTTING_FOR_DEALER && moveType === 'deal') {
+      // Only the dealer can deal
+      if (playerKey !== game.gameState.cutForDealer?.dealer) {
+        return NextResponse.json(
+          { success: false, error: 'Only the dealer can deal' },
           { status: 400 }
         );
       }
@@ -253,6 +270,34 @@ function processMove(game, playerKey, moveType, data) {
         dealerDetermined: result.dealerDetermined,
         dealer: result.dealer,
         tied: result.tied
+      };
+    }
+
+    case 'acknowledge-dealer': {
+      const result = processAcknowledgeDealer(state, playerKey);
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        description: `${username} ${result.description}`
+      };
+    }
+
+    case 'deal': {
+      const result = processDeal(state, playerKey);
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        newGameState: result.newState,
+        nextTurn: result.nextTurn,
+        description: `${username} ${result.description}`
       };
     }
 
