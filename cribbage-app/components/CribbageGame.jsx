@@ -31,6 +31,7 @@ import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
 import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
+import FlyingCard from './FlyingCard';
 import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
@@ -115,6 +116,14 @@ export default function CribbageGame({ onLogout }) {
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationScore, setCelebrationScore] = useState(null);
+
+  // Card flight animation state
+  const [flyingCard, setFlyingCard] = useState(null);
+  const [landingCardIndex, setLandingCardIndex] = useState(-1);
+  const [landingIsComputer, setLandingIsComputer] = useState(false);
+  const playerPlayAreaRef = useRef(null);
+  const computerPlayAreaRef = useRef(null);
+  const computerHandRef = useRef(null);
 
   // Debug state
   const [debugLog, setDebugLog] = useState([]);
@@ -960,79 +969,104 @@ export default function CribbageGame({ onLogout }) {
     }
   };
 
+  // Apply computer card play (state updates extracted for animation deferral)
+  const applyComputerPlay = useCallback((card) => {
+    const newCount = currentCount + card.value;
+    const newAllPlayed = [...allPlayedCards, card];
+    const { score, reason } = calculatePeggingScore(newAllPlayed, newCount);
+
+    const newComputerPlayHand = computerPlayHand.filter(c => !(c.rank === card.rank && c.suit === card.suit));
+    setComputerPlayHand(newComputerPlayHand);
+    setComputerPlayedCards(prev => [...prev, card]);
+    setAllPlayedCards(newAllPlayed);
+    setCurrentCount(newCount);
+    setLastPlayedBy('computer');
+
+    // Trigger landing pulse
+    setLandingIsComputer(true);
+    setLandingCardIndex(computerPlayedCards.length);
+    setTimeout(() => setLandingCardIndex(-1), 350);
+
+    logGameEvent('PLAY_CARD', {
+      player: 'computer',
+      card: card,
+      newCount: newCount,
+      score: score,
+      reason: reason,
+      remainingCards: newComputerPlayHand.length
+    });
+
+    // Add to pegging history
+    setPeggingHistory(prev => [...prev, {
+      type: 'play',
+      player: 'computer',
+      card: `${card.rank}${card.suit}`,
+      count: newCount,
+      points: score,
+      reason: reason || null
+    }]);
+
+    const isLastCard = newComputerPlayHand.length === 0;
+    const playerOutOfCards = playerPlayHand.length === 0;
+
+    if (score > 0) {
+      setCurrentPlayer('player');
+      if (isLastCard && playerOutOfCards && newCount !== 31) {
+        setPendingScore({
+          player: 'computer',
+          points: score,
+          reason: `Computer plays ${card.rank}${card.suit} - ${reason}`,
+          needsLastCard: true
+        });
+        setMessage(`Computer plays ${card.rank}${card.suit} for ${score} - ${reason} - Click Accept`);
+      } else {
+        setPendingScore({ player: 'computer', points: score, reason: `Computer plays ${card.rank}${card.suit} - ${reason}` });
+        setMessage(`Computer plays ${card.rank}${card.suit} for ${score} - ${reason} - Click Accept`);
+      }
+    } else if (isLastCard && playerOutOfCards) {
+      setCurrentPlayer('player');
+      setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
+      setMessage('Computer gets 1 point for last card - Click Accept');
+    } else {
+      setMessage(`Computer plays ${card.rank}${card.suit} (count: ${newCount})`);
+
+      if (playerPlayHand.length > 0) {
+        setCurrentPlayer('player');
+      } else {
+        const canContinue = newComputerPlayHand.some(c => newCount + c.value <= 31);
+        if (!canContinue && newComputerPlayHand.length > 0) {
+          setCurrentPlayer('player');
+          setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
+          setMessage('Computer gets 1 point for last card - Click Accept');
+        }
+      }
+    }
+  }, [currentCount, allPlayedCards, computerPlayHand, playerPlayHand, computerPlayedCards]);
+
   // Computer makes a play - useEffect
   useEffect(() => {
-    if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore) {
+    if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore && !flyingCard) {
       const timer = setTimeout(() => {
         const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount);
 
         if (card) {
-          const newCount = currentCount + card.value;
-          const newAllPlayed = [...allPlayedCards, card];
-          const { score, reason } = calculatePeggingScore(newAllPlayed, newCount);
+          // Animate computer card from hand area to play area
+          const startRect = computerHandRef.current?.getBoundingClientRect();
+          const endRect = computerPlayAreaRef.current?.getBoundingClientRect();
 
-          const newComputerPlayHand = computerPlayHand.filter(c => !(c.rank === card.rank && c.suit === card.suit));
-          setComputerPlayHand(newComputerPlayHand);
-          setComputerPlayedCards(prev => [...prev, card]);
-          setAllPlayedCards(newAllPlayed);
-          setCurrentCount(newCount);
-          setLastPlayedBy('computer');
-
-          logGameEvent('PLAY_CARD', {
-            player: 'computer',
-            card: card,
-            newCount: newCount,
-            score: score,
-            reason: reason,
-            remainingCards: newComputerPlayHand.length
-          });
-
-          // Add to pegging history
-          setPeggingHistory(prev => [...prev, {
-            type: 'play',
-            player: 'computer',
-            card: `${card.rank}${card.suit}`,
-            count: newCount,
-            points: score,
-            reason: reason || null
-          }]);
-
-          const isLastCard = newComputerPlayHand.length === 0;
-          const playerOutOfCards = playerPlayHand.length === 0;
-
-          if (score > 0) {
-            // Set currentPlayer to 'player' to prevent useEffect from firing again while waiting for Accept
-            setCurrentPlayer('player');
-            // Only award last card if NOT hitting 31 (31 already includes 2-point bonus)
-            if (isLastCard && playerOutOfCards && newCount !== 31) {
-              setPendingScore({
-                player: 'computer',
-                points: score,
-                reason: `Computer plays ${card.rank}${card.suit} - ${reason}`,
-                needsLastCard: true
-              });
-              setMessage(`Computer plays ${card.rank}${card.suit} for ${score} - ${reason} - Click Accept`);
-            } else {
-              setPendingScore({ player: 'computer', points: score, reason: `Computer plays ${card.rank}${card.suit} - ${reason}` });
-              setMessage(`Computer plays ${card.rank}${card.suit} for ${score} - ${reason} - Click Accept`);
-            }
-          } else if (isLastCard && playerOutOfCards) {
-            setCurrentPlayer('player');
-            setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
-            setMessage('Computer gets 1 point for last card - Click Accept');
-          } else {
-            setMessage(`Computer plays ${card.rank}${card.suit} (count: ${newCount})`);
-
-            if (playerPlayHand.length > 0) {
-              setCurrentPlayer('player');
-            } else {
-              const canContinue = newComputerPlayHand.some(c => newCount + c.value <= 31);
-              if (!canContinue && newComputerPlayHand.length > 0) {
-                setCurrentPlayer('player');
-                setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
-                setMessage('Computer gets 1 point for last card - Click Accept');
+          if (startRect && endRect) {
+            setFlyingCard({
+              card,
+              startRect,
+              endRect,
+              isComputer: true,
+              onComplete: () => {
+                setFlyingCard(null);
+                applyComputerPlay(card);
               }
-            }
+            });
+          } else {
+            applyComputerPlay(card);
           }
         } else {
           setMessage('Computer says "Go"');
@@ -1072,16 +1106,10 @@ export default function CribbageGame({ onLogout }) {
 
       return () => clearTimeout(timer);
     }
-  }, [currentPlayer, gameState, pendingScore, computerPlayHand, allPlayedCards, currentCount, playerPlayHand, lastPlayedBy]);
+  }, [currentPlayer, gameState, pendingScore, flyingCard, computerPlayHand, allPlayedCards, currentCount, playerPlayHand, lastPlayedBy, applyComputerPlay]);
 
-  // Player makes a play
-  const playerPlay = (card) => {
-    if (currentPlayer !== 'player' || pendingScore) return;
-    if (currentCount + card.value > 31) {
-      setMessage("Can't play that card - total would exceed 31");
-      return;
-    }
-
+  // Apply player card play (state updates extracted for animation deferral)
+  const applyPlayerPlay = useCallback((card) => {
     const newCount = currentCount + card.value;
     const newAllPlayed = [...allPlayedCards, card];
     const { score, reason } = calculatePeggingScore(newAllPlayed, newCount);
@@ -1092,6 +1120,11 @@ export default function CribbageGame({ onLogout }) {
     setAllPlayedCards(newAllPlayed);
     setCurrentCount(newCount);
     setLastPlayedBy('player');
+
+    // Trigger landing pulse on the newest card
+    setLandingIsComputer(false);
+    setLandingCardIndex(playerPlayedCards.length); // index of the about-to-be-added card
+    setTimeout(() => setLandingCardIndex(-1), 350);
 
     logGameEvent('PLAY_CARD', {
       player: 'player',
@@ -1135,6 +1168,36 @@ export default function CribbageGame({ onLogout }) {
     } else {
       setMessage(`You played ${card.rank}${card.suit} (count: ${newCount})`);
       setCurrentPlayer('computer');
+    }
+  }, [currentCount, allPlayedCards, playerPlayHand, computerPlayHand, playerPlayedCards]);
+
+  // Player makes a play (with card flight animation)
+  const playerPlay = (card, cardEvent) => {
+    if (currentPlayer !== 'player' || pendingScore || flyingCard) return;
+    if (currentCount + card.value > 31) {
+      setMessage("Can't play that card - total would exceed 31");
+      return;
+    }
+
+    // Get positions for animation
+    const startRect = cardEvent?.currentTarget?.getBoundingClientRect();
+    const endRect = playerPlayAreaRef.current?.getBoundingClientRect();
+
+    if (startRect && endRect) {
+      // Start animation, defer state update until animation completes
+      setFlyingCard({
+        card,
+        startRect,
+        endRect,
+        isComputer: false,
+        onComplete: () => {
+          setFlyingCard(null);
+          applyPlayerPlay(card);
+        }
+      });
+    } else {
+      // Fallback: no animation
+      applyPlayerPlay(card);
     }
   };
 
@@ -1838,6 +1901,16 @@ export default function CribbageGame({ onLogout }) {
   const playerCanPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
 
   return (
+    <>
+    {flyingCard && (
+      <FlyingCard
+        card={flyingCard.card}
+        startRect={flyingCard.startRect}
+        endRect={flyingCard.endRect}
+        isComputerCard={flyingCard.isComputer}
+        onComplete={flyingCard.onComplete}
+      />
+    )}
     <div className="min-h-screen bg-green-900 p-4">
       {/* Three-dot menu in top right */}
       <div className="fixed top-4 right-4 z-50">
@@ -2283,7 +2356,7 @@ export default function CribbageGame({ onLogout }) {
                     ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                 }`}>
                   <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div ref={computerHandRef} className="flex flex-wrap gap-2">
                     {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                       gameState === 'play' ? computerPlayHand :
                       computerHand).map((card, idx) => (
@@ -2309,18 +2382,25 @@ export default function CribbageGame({ onLogout }) {
                       {/* Computer's played cards */}
                       <div className="mb-3">
                         <div className="text-xs mb-1">Computer's plays:</div>
-                        <div className="flex flex-wrap gap-1 min-h-[40px]">
+                        <div ref={computerPlayAreaRef} className="flex flex-wrap gap-1 min-h-[40px]">
                           {computerPlayedCards.map((card, idx) => (
-                            <PlayedCard key={idx} card={card} />
+                            <div key={idx} className={idx === landingCardIndex && landingIsComputer ? 'animate-[cardLand_0.3s_ease-out]' : ''}>
+                              <PlayedCard card={card} />
+                            </div>
                           ))}
                         </div>
                       </div>
                       {/* Player's played cards */}
                       <div>
                         <div className="text-xs mb-1">Your plays:</div>
-                        <div className="flex flex-wrap gap-1 min-h-[40px]">
+                        <div ref={playerPlayAreaRef} className="flex flex-wrap gap-1 min-h-[40px]">
                           {playerPlayedCards.map((card, idx) => (
-                            <PlayedCard key={idx} card={card} />
+                            <div
+                              key={idx}
+                              className={idx === landingCardIndex && !landingIsComputer ? 'animate-[cardLand_0.3s_ease-out]' : ''}
+                            >
+                              <PlayedCard card={card} />
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -2369,9 +2449,9 @@ export default function CribbageGame({ onLogout }) {
                           (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
                            ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
                         }
-                        onClick={() => {
+                        onClick={(e) => {
                           if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
-                          else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card);
+                          else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card, e);
                         }}
                       />
                     ))}
@@ -2634,5 +2714,6 @@ export default function CribbageGame({ onLogout }) {
         </div>
       )}
     </div>
+    </>
   );
 }
