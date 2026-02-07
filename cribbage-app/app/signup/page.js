@@ -48,12 +48,13 @@ export default function SignUp() {
             placeholder="Enter your email"
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <PasswordInput
             value={password}
             placeholder="Enter your password"
             onChange={(e) => setPassword(e.target.value)}
+            className="p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <PasswordRequirements
             password={password}
