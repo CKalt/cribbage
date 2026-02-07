@@ -2681,7 +2681,7 @@ export default function CribbageGame({ onLogout }) {
             setActiveMultiplayerGameId(gameId);
           }}
           userEmail={user?.attributes?.email || user?.username}
-          savedGameExists={savedGameExists}
+          computerGameActive={savedGameExists || (gameState !== 'menu' && gameState !== 'gameOver')}
           onResumeComputerGame={resumeGame}
           onNewComputerGame={startNewGame}
         />

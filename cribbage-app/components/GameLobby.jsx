@@ -12,7 +12,7 @@ export default function GameLobby({
   onClose,
   onStartGame,
   userEmail,
-  savedGameExists,
+  computerGameActive,
   onResumeComputerGame,
   onNewComputerGame,
 }) {
@@ -135,7 +135,7 @@ export default function GameLobby({
             <>
               {/* The Computer - always first */}
               <div className={`p-3 rounded border ${
-                savedGameExists ? 'bg-blue-900/30 border-blue-600' : 'border-gray-700'
+                computerGameActive ? 'bg-blue-900/30 border-blue-600' : 'border-gray-700'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -145,12 +145,12 @@ export default function GameLobby({
                     <div>
                       <div className="text-white font-medium">The Computer</div>
                       <div className="text-gray-400 text-xs">
-                        {savedGameExists ? 'Game in progress' : 'Always ready to play'}
+                        {computerGameActive ? 'Game in progress' : 'Always ready to play'}
                       </div>
                     </div>
                   </div>
                   <div>
-                    {savedGameExists ? (
+                    {computerGameActive ? (
                       <Button
                         onClick={() => { onClose(); onResumeComputerGame(); }}
                         className="bg-blue-600 hover:bg-blue-700 text-sm"
