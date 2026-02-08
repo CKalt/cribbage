@@ -129,6 +129,7 @@ export default function CribbageGame({ onLogout }) {
   const cribPileLastRect = useRef(null);
   const handCardRectsRef = useRef([]); // Captured hand card positions for crib reveal animation
   const playerHandContainerRef = useRef(null);
+  const dealScheduledRef = useRef(false); // Prevents double-deal from recovery useEffect
 
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
@@ -767,6 +768,7 @@ export default function CribbageGame({ onLogout }) {
 
   // Deal hands
   const dealHands = (currentDeck) => {
+    dealScheduledRef.current = false;
     const playerCards = currentDeck.slice(0, 6);
     const computerCards = currentDeck.slice(6, 12);
 
@@ -1687,6 +1689,7 @@ export default function CribbageGame({ onLogout }) {
 
     if (newHandsCountedThisRound >= 3) {
       addDebugLog('All counting complete - dealing next hand');
+      dealScheduledRef.current = true;
       setCountingTurn('');
       setCounterIsComputer(null);
 
@@ -1822,6 +1825,7 @@ export default function CribbageGame({ onLogout }) {
 
     if (newHandsCountedThisRound >= 3) {
       addDebugLog('All counting complete - dealing next hand');
+      dealScheduledRef.current = true;
       setCountingTurn('');
       setCounterIsComputer(null);
       setMessage('Hand complete - Dealing next hand...');
@@ -1929,6 +1933,7 @@ export default function CribbageGame({ onLogout }) {
 
         if (newHandsCountedThisRound >= 3) {
           addDebugLog('All counting complete after muggins');
+          dealScheduledRef.current = true;
           setCountingTurn('');
           setCounterIsComputer(null);
 
@@ -2021,10 +2026,13 @@ export default function CribbageGame({ onLogout }) {
 
   // Recovery: if all 3 hands counted but still in counting state, deal next hand
   // This handles the case where the game was saved/restored after counting finished
-  // but before the deal-next-hand timeout fired
+  // but before the deal-next-hand timeout fired.
+  // dealScheduledRef prevents this from firing during normal gameplay (where the
+  // deal is already scheduled by proceedAfterPlayerCount/acceptComputerCount).
   useEffect(() => {
-    if (gameState === 'counting' && handsCountedThisRound >= 3) {
+    if (gameState === 'counting' && handsCountedThisRound >= 3 && !dealScheduledRef.current) {
       console.log(`[Recovery] handsCountedThisRound=${handsCountedThisRound} in counting state - dealing next hand`);
+      dealScheduledRef.current = true;
       const timer = setTimeout(() => {
         setDealer(prev => prev === 'player' ? 'computer' : 'player');
         const newDeck = shuffleDeck(createDeck());
@@ -2645,7 +2653,7 @@ export default function CribbageGame({ onLogout }) {
                 {/* Computer hand / Crib (when computer is dealer) - positioned above play area */}
                 {(() => {
                   const showCribHere = gameState === 'counting' && dealer === 'computer' &&
-                    (handsCountedThisRound >= 2 || cribRevealPhase !== 'idle');
+                    (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
                   const handHighlighted = !showCribHere && gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
                     ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'));
                   const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
@@ -2766,9 +2774,9 @@ export default function CribbageGame({ onLogout }) {
                 {/* Player hand / Crib (when player is dealer) */}
                 {(() => {
                   const showCribHere = gameState === 'counting' && dealer === 'player' &&
-                    (handsCountedThisRound >= 2 || cribRevealPhase !== 'idle');
+                    (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
                   // Hide player's hand during crib counting when computer is dealer (crib shown in computer section)
-                  if (!showCribHere && gameState === 'counting' && handsCountedThisRound >= 2) return null;
+                  if (!showCribHere && gameState === 'counting' && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done')) return null;
                   const handHighlighted = !showCribHere && (
                     (gameState === 'cribSelect') ||
                     (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
