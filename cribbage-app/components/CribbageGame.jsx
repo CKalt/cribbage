@@ -129,7 +129,7 @@ export default function CribbageGame({ onLogout }) {
   const cribPileLastRect = useRef(null);
   const handCardRectsRef = useRef([]); // Captured hand card positions for crib reveal animation
   const playerHandContainerRef = useRef(null);
-  const dealScheduledRef = useRef(false); // Prevents double-deal from recovery useEffect
+  const needsRecoveryDealRef = useRef(false); // Set ONLY during restore when hands >= 3
 
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
@@ -412,8 +412,9 @@ export default function CribbageGame({ onLogout }) {
 
       if (hands >= 3) {
         // All counting done but deal didn't fire (e.g. page refreshed during timeout)
-        // A useEffect will detect this and trigger the next deal
-        console.log(`[Resume] handsCountedThisRound=${hands}, all counting complete - useEffect will deal next hand`);
+        // Set ref so the recovery useEffect (which checks ONLY this ref) will deal
+        console.log(`[Resume] handsCountedThisRound=${hands}, all counting complete - scheduling recovery deal`);
+        needsRecoveryDealRef.current = true;
         setCountingTurn('');
         setCounterIsComputer(null);
         setMessage('Hand complete - Dealing next hand...');
@@ -426,9 +427,10 @@ export default function CribbageGame({ onLogout }) {
         correctCounterIsComputer = (dlr === 'computer');
         correctCountingTurn = dlr;
       } else if (hands === 2) {
-        // Dealer counts crib third
+        // Dealer counts crib third - crib reveal already happened
         correctCounterIsComputer = (dlr === 'computer');
         correctCountingTurn = 'crib';
+        setCribRevealPhase('done');
       }
 
       // Override with correct values if they don't match (skip if hands >= 3, already handled)
@@ -768,7 +770,7 @@ export default function CribbageGame({ onLogout }) {
 
   // Deal hands
   const dealHands = (currentDeck) => {
-    dealScheduledRef.current = false;
+    needsRecoveryDealRef.current = false;
     const playerCards = currentDeck.slice(0, 6);
     const computerCards = currentDeck.slice(6, 12);
 
@@ -1689,7 +1691,7 @@ export default function CribbageGame({ onLogout }) {
 
     if (newHandsCountedThisRound >= 3) {
       addDebugLog('All counting complete - dealing next hand');
-      dealScheduledRef.current = true;
+
       setCountingTurn('');
       setCounterIsComputer(null);
 
@@ -1825,7 +1827,7 @@ export default function CribbageGame({ onLogout }) {
 
     if (newHandsCountedThisRound >= 3) {
       addDebugLog('All counting complete - dealing next hand');
-      dealScheduledRef.current = true;
+
       setCountingTurn('');
       setCounterIsComputer(null);
       setMessage('Hand complete - Dealing next hand...');
@@ -1933,7 +1935,7 @@ export default function CribbageGame({ onLogout }) {
 
         if (newHandsCountedThisRound >= 3) {
           addDebugLog('All counting complete after muggins');
-          dealScheduledRef.current = true;
+    
           setCountingTurn('');
           setCounterIsComputer(null);
 
@@ -2024,15 +2026,13 @@ export default function CribbageGame({ onLogout }) {
     }
   }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn]);
 
-  // Recovery: if all 3 hands counted but still in counting state, deal next hand
-  // This handles the case where the game was saved/restored after counting finished
-  // but before the deal-next-hand timeout fired.
-  // dealScheduledRef prevents this from firing during normal gameplay (where the
-  // deal is already scheduled by proceedAfterPlayerCount/acceptComputerCount).
+  // Recovery: if game was restored with all 3 hands counted, deal next hand.
+  // Uses needsRecoveryDealRef (set ONLY in restore code) to avoid firing during
+  // normal gameplay where handsCountedThisRound transiently reaches 3.
   useEffect(() => {
-    if (gameState === 'counting' && handsCountedThisRound >= 3 && !dealScheduledRef.current) {
-      console.log(`[Recovery] handsCountedThisRound=${handsCountedThisRound} in counting state - dealing next hand`);
-      dealScheduledRef.current = true;
+    if (needsRecoveryDealRef.current) {
+      needsRecoveryDealRef.current = false;
+      console.log('[Recovery] Restored with counting complete - dealing next hand');
       const timer = setTimeout(() => {
         setDealer(prev => prev === 'player' ? 'computer' : 'player');
         const newDeck = shuffleDeck(createDeck());
@@ -2041,7 +2041,7 @@ export default function CribbageGame({ onLogout }) {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [gameState, handsCountedThisRound]);
+  });
 
   // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
   // Single source of truth for what action the user should take
