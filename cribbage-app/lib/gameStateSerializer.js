@@ -56,6 +56,12 @@ export const PERSISTED_STATE_KEYS = [
 
   // Scoring
   'pendingScore',
+
+  // Animation state (for restore)
+  'computerKeptHand',
+  'computerDiscardCards',
+  'computerDiscardDone',
+  'cribCardsInPile',
 ];
 
 /**

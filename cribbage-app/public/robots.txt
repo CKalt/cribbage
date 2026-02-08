@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /confirm
+Disallow: /reset-password
+
+Sitemap: https://cribbage.chrisk.com/sitemap.xml

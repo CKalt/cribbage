@@ -4,40 +4,42 @@
 
 - [Overview](#overview)
 - [Problem Statement](#problem-statement)
-- [ ] [Phase 1: Safe File Copies (No Conflicts)](#phase-1-safe-file-copies-no-conflicts) 🤖
-  - [ ] [1.1: Copy FlyingCard.jsx component from main](#11-copy-flyingcardjsx-component-from-main-🤖)
-  - [ ] [1.2: Copy PlayingCard.jsx updates from main](#12-copy-playingcardjsx-updates-from-main-🤖)
-  - [ ] [1.3: Copy ActionButtons.jsx updates from main](#13-copy-actionbuttonsjsx-updates-from-main-🤖)
-  - [ ] [1.4: Copy SEO files from main](#14-copy-seo-files-from-main-🤖)
-  - [ ] [1.5: Copy auth page styling from main](#15-copy-auth-page-styling-from-main-🤖)
-  - [ ] [1.6: Copy plan documents from main](#16-copy-plan-documents-from-main-🤖)
-- [ ] [Phase 2: Merge Shared Files with Minor Conflicts](#phase-2-merge-shared-files-with-minor-conflicts) 🤖
-  - [ ] [2.1: Merge globals.css — replace slideUp with flight animations](#21-merge-globalscss--replace-slideup-with-flight-animations-🤖)
-  - [ ] [2.2: Keep CribbageBoard.jsx as-is (multiplayer has label props)](#22-keep-cribbageboardjsx-as-is-multiplayer-has-label-props-🤖)
-  - [ ] [2.3: Keep deck.js as-is (multiplayer has seeded shuffle)](#23-keep-deckjs-as-is-multiplayer-has-seeded-shuffle-🤖)
-  - [ ] [2.4: Keep game-state/route.js as-is (multiplayer has email tracking)](#24-keep-game-stateroutejs-as-is-multiplayer-has-email-tracking-🤖)
-  - [ ] [2.5: Update CLAUDE.md with deployment stack info from main](#25-update-claudemd-with-deployment-stack-info-from-main-🤖)
-- [ ] [Phase 3: Major Integration — CribbageGame.jsx Animations](#phase-3-major-integration--cribbagegamejsx-animations) 🤖
-  - [ ] [3.1: Add animation imports and state variables](#31-add-animation-imports-and-state-variables-🤖)
-  - [ ] [3.2: Add animation refs](#32-add-animation-refs-🤖)
-  - [ ] [3.3: Add computer discard pre-computation to dealHands](#33-add-computer-discard-pre-computation-to-dealhands-🤖)
-  - [ ] [3.4: Add computer discard animation functions](#34-add-computer-discard-animation-functions-🤖)
-  - [ ] [3.5: Add card flight animation to pegging (selectCard + playCard)](#35-add-card-flight-animation-to-pegging-selectcard--playcard-🤖)
-  - [ ] [3.6: Add crib reveal animation to counting phase](#36-add-crib-reveal-animation-to-counting-phase-🤖)
-  - [ ] [3.7: Add recovery deal fix (needsRecoveryDealRef)](#37-add-recovery-deal-fix-needsrecoverydealref-🤖)
-  - [ ] [3.8: Update game state persistence with animation state](#38-update-game-state-persistence-with-animation-state-🤖)
-  - [ ] [3.9: Update JSX rendering with animation UI elements](#39-update-jsx-rendering-with-animation-ui-elements-🤖)
-- [ ] [Phase 4: Version Bump](#phase-4-version-bump) 🤖
-  - [ ] [4.1: Update lib/version.js](#41-update-libversionjs-🤖)
-- [ ] [Phase 5: Build & Verify](#phase-5-build--verify) 🤖
-  - [ ] [5.1: Run npm run build and fix any errors](#51-run-npm-run-build-and-fix-any-errors-🤖)
-- [ ] [Phase 6: Git Add & Commit](#phase-6-git-add--commit) 🤖
-  - [ ] [6.1: Git add all changed files and commit](#61-git-add-all-changed-files-and-commit-🤖)
-- [ ] [Phase 7: Push & Deploy to Beta](#phase-7-push--deploy-to-beta) 🤖👤
-  - [ ] [7.1: Push to multiplayer branch and deploy to beta](#71-push-to-multiplayer-branch-and-deploy-to-beta-🤖👤)
-- [ ] [Phase 8: Manual Testing](#phase-8-manual-testing) 👤
-  - [ ] [8.1: Test single-player game with animations](#81-test-single-player-game-with-animations-👤)
-  - [ ] [8.2: Test multiplayer game still works](#82-test-multiplayer-game-still-works-👤)
+- [Bug Fixes Reference](#bug-fixes-reference)
+- [x] [Phase 1: Safe File Copies (No Conflicts)](#phase-1-safe-file-copies-no-conflicts) 🤖
+  - [x] [1.1: Copy FlyingCard.jsx component from main](#11-copy-flyingcardjsx-component-from-main-🤖)
+  - [x] [1.2: Copy PlayingCard.jsx updates from main](#12-copy-playingcardjsx-updates-from-main-🤖)
+  - [x] [1.3: Copy ActionButtons.jsx updates from main](#13-copy-actionbuttonsjsx-updates-from-main-🤖)
+  - [x] [1.4: Copy SEO files from main](#14-copy-seo-files-from-main-🤖)
+  - [x] [1.5: Copy auth page styling from main](#15-copy-auth-page-styling-from-main-🤖)
+  - [x] [1.6: Copy plan documents from main](#16-copy-plan-documents-from-main-🤖)
+- [x] [Phase 2: Merge Shared Files with Minor Conflicts](#phase-2-merge-shared-files-with-minor-conflicts) 🤖
+  - [x] [2.1: Merge globals.css — replace slideUp with flight animations](#21-merge-globalscss--replace-slideup-with-flight-animations-🤖)
+  - [x] [2.2: Keep CribbageBoard.jsx as-is (multiplayer has label props)](#22-keep-cribbageboardjsx-as-is-multiplayer-has-label-props-🤖)
+  - [x] [2.3: Keep deck.js as-is (multiplayer has seeded shuffle)](#23-keep-deckjs-as-is-multiplayer-has-seeded-shuffle-🤖)
+  - [x] [2.4: Keep game-state/route.js as-is (multiplayer has email tracking)](#24-keep-game-stateroutejs-as-is-multiplayer-has-email-tracking-🤖)
+  - [x] [2.5: Update CLAUDE.md with deployment stack info from main](#25-update-claudemd-with-deployment-stack-info-from-main-🤖)
+- [x] [Phase 3: Major Integration — CribbageGame.jsx Animations](#phase-3-major-integration--cribbagegamejsx-animations) 🤖
+  - [x] [3.1: Add animation imports and state variables](#31-add-animation-imports-and-state-variables-🤖)
+  - [x] [3.2: Add animation refs](#32-add-animation-refs-🤖)
+  - [x] [3.3: Add computer discard pre-computation to dealHands](#33-add-computer-discard-pre-computation-to-dealhands-🤖)
+  - [x] [3.4: Add computer discard animation functions](#34-add-computer-discard-animation-functions-🤖)
+  - [x] [3.5: Add card flight animation to pegging (selectCard + playCard)](#35-add-card-flight-animation-to-pegging-selectcard--playcard-🤖)
+  - [x] [3.6: Add crib reveal animation to counting phase](#36-add-crib-reveal-animation-to-counting-phase-🤖)
+  - [x] [3.7: Add recovery deal fix (needsRecoveryDealRef)](#37-add-recovery-deal-fix-needsrecoverydealref-🤖)
+  - [x] [3.8: Update game state persistence with animation state](#38-update-game-state-persistence-with-animation-state-🤖)
+  - [x] [3.9: Update JSX rendering with animation UI elements](#39-update-jsx-rendering-with-animation-ui-elements-🤖)
+- [x] [Phase 4: Version Bump](#phase-4-version-bump) 🤖
+  - [x] [4.1: Update lib/version.js](#41-update-libversionjs-🤖)
+- [x] [Phase 5: Build & Verify](#phase-5-build--verify) 🤖
+  - [x] [5.1: Run npm run build and fix any errors](#51-run-npm-run-build-and-fix-any-errors-🤖)
+- [ ] [Phase 6: Local Testing on Mac](#phase-6-local-testing-on-mac) 👤
+  - [ ] [6.1: Manual testing of single-player with animations](#61-manual-testing-of-single-player-with-animations-👤)
+  - [ ] [6.2: Manual testing of multiplayer functionality](#62-manual-testing-of-multiplayer-functionality-👤)
+  - [ ] [6.3: Manual testing of bug fixes](#63-manual-testing-of-bug-fixes-👤)
+- [ ] [Phase 7: Git Add & Commit](#phase-7-git-add--commit) 🤖
+  - [ ] [7.1: Git add all changed files and commit](#71-git-add-all-changed-files-and-commit-🤖)
+- [ ] [Phase 8: Push & Deploy to Beta](#phase-8-push--deploy-to-beta) 🤖👤
+  - [ ] [8.1: Push to multiplayer branch and deploy to beta](#81-push-to-multiplayer-branch-and-deploy-to-beta-🤖👤)
 
 ---
 
@@ -66,6 +68,53 @@ The `multiplayer` branch is missing all single-player improvements made on `main
 7. **No action bar card display** — ActionButtons doesn't show the played card
 
 A `git merge main` is NOT viable because main deleted all multiplayer files and has 1,489 lines of conflict in CribbageGame.jsx alone.
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Bug Fixes Reference
+
+All bug fixes from `main` that must be merged, ordered by criticality. The **Critical Gameplay** fixes are the highest priority. Animation-related fixes only matter after the animation features are integrated (Phase 3).
+
+### Critical Gameplay Fixes
+
+| Build | Commit | Description | Files |
+|-------|--------|-------------|-------|
+| **b115** | `032be11` | **Eliminate double-deal bug and restore crib highlight on game resume.** Replaced state-based recovery useEffect with `needsRecoveryDealRef` — a ref set ONLY in restore code. Prevents dealer toggling twice (same dealer consecutive hands). Also sets `cribRevealPhase='done'` on restore during crib counting so crib highlight shows correctly. | `CribbageGame.jsx` |
+| **b114** | `43d0f8e` | **Prevent double-deal causing consecutive same dealer; keep hand visible during undercount.** Intermediate fix (superseded by b115's ref approach) but also changed `showCribHere` to depend on `cribRevealPhase` instead of `handsCountedThisRound >= 2`, fixing hand disappearing during undercount review. | `CribbageGame.jsx` |
+| **b113** | `beec631` | **Recover from stuck counting state when `handsCountedThisRound >= 3`.** Added restore handler for completed counting and recovery useEffect. The useEffect approach was later replaced in b115, but the restore handler logic is still needed. | `CribbageGame.jsx` |
+| **b93** | `2a4ced4` | **Bug #51: Computer says "Go" correctly.** Computer now says "Go" when it can't play during pegging, instead of wrongly asking the player to say Go on the computer's turn. **Bug #50: Hide player hand during crib counting** to reduce confusion — only crib cards shown when counting crib. **Bug #39: Green theme for signup page.** | `CribbageGame.jsx`, `app/signup/page.js` |
+
+### Animation Feature Fixes (Apply After Phase 3)
+
+These are iterative refinements to the animation features. The final state of each fix is what matters — earlier iterations are superseded.
+
+| Build | Commit | Description | What It Fixed |
+|-------|--------|-------------|---------------|
+| **b112** | `e6a8128` | **Capture fresh DOM positions before each crib card flies.** Root cause: all 4 target positions were captured upfront, but the grid cell shifted as each card was added. Fix: call `getBoundingClientRect()` right before each card flies, using double `requestAnimationFrame`. | Crib cards 3 & 4 flew to wrong positions |
+| **b111** | `90959af` | **Complete crib reveal animation overhaul.** Final stable version of crib reveal using CSS Grid overlay. | Supersedes b107–b110 |
+| **b106** | `6768e4d` | **Crib pile shows full 4-card stack outside cribSelect phase.** | Crib pile disappeared after discard |
+| **b101** | `be79550` | **Pegging animation flies to center of play area.** | Cards flew to edge instead of center |
+| **b100** | `71b561f` | **Improve crib pile visibility; fix discard animation.** | Crib pile hard to see; discard animation glitchy |
+| — | `969e872` | **Show face-up card for computer animation and fix width.** | Computer's animated card showed wrong face |
+| — | `90ba4fd` | **Show played card in action bar for better visibility.** | Hard to see which card was just played |
+
+### UI Polish (Not Bug Fixes, But Included in Merge)
+
+| Commit | Description | Files |
+|--------|-------------|-------|
+| `9635cab` | Center cards and add overlapping layout for table-top feel | `CribbageGame.jsx` |
+| `97bd333` | Green theme for all auth pages | Auth pages |
+| `379b465` | Match input backgrounds on login and signup | Auth pages |
+| `b8ad5ae` | Add `rm -rf .next` to deploy commands to prevent stale chunk errors | `CLAUDE.md` |
+
+### Integration Notes
+
+- **b115 is the definitive fix** for the double-deal bug. It supersedes b113 and b114. When integrating Phase 3.7, use b115's `needsRecoveryDealRef` approach directly.
+- **b111 is the definitive fix** for crib reveal animation. Builds b107–b110 were iterative attempts — only the final b111 state matters.
+- **Bug #51 (computer Go)** must be integrated into the pegging logic in CribbageGame.jsx. Check if multiplayer's version already has this fix — if not, port the specific `setLastGoPlayer('computer')` + `COMPUTER_GO` log event block.
+- **Bug #50 (hide hand during crib)** is now handled by `cribRevealPhase` condition rather than `handsCountedThisRound >= 2`.
 
 [Back to TOC](#table-of-contents)
 
@@ -394,9 +443,58 @@ Run `npm run build` and resolve any compilation errors. Common issues to watch f
 
 ---
 
-## Phase 6: Git Add & Commit
+## Phase 6: Local Testing on Mac
 
-### 6.1: Git add all changed files and commit 🤖
+**IMPORTANT:** All changes must be tested locally on the Mac (`npm run dev`) before any commit or deployment. The user will run through the test checklist manually. No deployment to beta happens until the user confirms everything works locally.
+
+### 6.1: Manual testing of single-player with animations 👤
+
+Run `npm run dev` on the Mac and test in the browser:
+
+- [ ] Start a new single-player game — deal animation works
+- [ ] Discard to crib — computer discards with face-down card animation at a random moment
+- [ ] Crib pile shows progressive cards (0 → 2 → 4)
+- [ ] Pegging — cards fly from hand to play area when played
+- [ ] Computer cards fly from computer hand area to play area
+- [ ] Action bar shows the played card in the accept-score banner
+- [ ] Cards have borders and shadows (PlayingCard polish)
+- [ ] Counting — crib reveal animation (cards fly one-by-one from pile to display)
+- [ ] Crib cards display correctly during crib counting (not stacked/overlapping)
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### 6.2: Manual testing of multiplayer functionality 👤
+
+- [ ] Multiplayer menu item still appears and works
+- [ ] Game lobby loads and shows invitations
+- [ ] Profile modal works
+- [ ] CribbageBoard shows player names (not just "You"/"CPU")
+- [ ] Admin panel multiplayer tab works
+
+[Back to TOC](#table-of-contents)
+
+---
+
+### 6.3: Manual testing of bug fixes 👤
+
+These are the critical gameplay fixes from main that must be verified:
+
+- [ ] **Bug #51 — Computer Go:** During pegging, if it's the computer's turn and it can't play, it says "Go" (not the player)
+- [ ] **Bug #50 — Hide hand during crib count:** Player hand is hidden when counting the crib, only crib cards shown
+- [ ] **Double-deal fix (b115):** Log out and log back in mid-game during counting — game restores without dealing twice or giving the same player the crib consecutively
+- [ ] **Crib highlight on restore (b115):** Log out during crib counting, log back in — crib cards display correctly with highlight
+
+Once all checks pass, tell Claude "local testing passed" to proceed with commit and deployment.
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Phase 7: Git Add & Commit
+
+### 7.1: Git add all changed files and commit 🤖
 
 Git add each file individually (no wildcards, no `-A`):
 - `components/FlyingCard.jsx` (new)
@@ -422,42 +520,15 @@ Git add each file individually (no wildcards, no `-A`):
 
 ---
 
-## Phase 7: Push & Deploy to Beta
+## Phase 8: Push & Deploy to Beta
 
-### 7.1: Push to multiplayer branch and deploy to beta 🤖👤
+### 8.1: Push to multiplayer branch and deploy to beta 🤖👤
 
 Push to `multiplayer` branch, then deploy to beta:
 ```bash
 ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
   "cd cribbage-beta && git pull && cd cribbage-app && rm -rf .next && npm run build && pm2 restart cribbage-beta"
 ```
-
-[Back to TOC](#table-of-contents)
-
----
-
-## Phase 8: Manual Testing
-
-### 8.1: Test single-player game with animations 👤
-
-- [ ] Start new single-player game
-- [ ] Discard to crib — computer discards with face-down animation at random moment
-- [ ] Crib pile shows progressive cards (0 → 2 → 4)
-- [ ] Pegging — cards fly from hand to play area
-- [ ] Counting — crib reveal animation (cards fly one-by-one from pile to display)
-- [ ] Game restore — animation state correctly restored
-- [ ] Counting recovery — no double-deal on restore with completed counting
-
-[Back to TOC](#table-of-contents)
-
----
-
-### 8.2: Test multiplayer game still works 👤
-
-- [ ] Start new multiplayer game
-- [ ] Multiplayer lobby, invitations, profiles all functional
-- [ ] CribbageBoard shows player names (not just "You"/"CPU")
-- [ ] Admin panel multiplayer tab works
 
 [Back to TOC](#table-of-contents)
 

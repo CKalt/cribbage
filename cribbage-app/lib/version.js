@@ -1,15 +1,19 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.0';
-export const RELEASE_NOTE = `Welcome to Cribbage Multiplayer! 🎴
+export const APP_VERSION = 'v0.3.0-b01-20260207';
+export const RELEASE_NOTE = `Cribbage v0.3.0 — Animations & Polish! 🎴
 
-NEW: Challenge your friends to real-time cribbage games!
+NEW in this version:
+- Card flight animations during pegging
+- Computer discard animation with random timing
+- Crib reveal animation (cards fly one-by-one)
+- Landing pulse effects on played cards
+- Progressive crib pile display
+- Auth page styling refresh (green theme)
+- Bug fixes: dealer alternation, counting recovery, double-deal prevention
+
+Multiplayer features still available:
+- Challenge friends to real-time cribbage games
 - Invite players by email
-- Full multiplayer gameplay with turn notifications
-
-To start a multiplayer game:
-1. Click "Multiplayer" from the main menu
-2. Click "New Game" and enter your opponent's email
-3. They'll receive an invitation to accept
 
 Thanks for playing!`;
 

@@ -78,43 +78,49 @@ export default function ActionButtons({
 
   // Accept pending score - show reason prominently with strong visual indicator
   if (type === 'accept_score' && pendingScore) {
-    // Extract the scoring reason from the full reason string
-    const reasonText = pendingScore.reason?.replace(/^(You played |Computer plays )[^-]+ - /, '') || '';
+    // Extract card and scoring reason from the full reason string
+    // Format: "Computer plays J♦ - pair for 2" or "You played 5♠ - fifteen for 2"
+    const cardMatch = pendingScore.reason?.match(/^(?:You played |Computer plays )([^-]+)/);
+    const cardPlayed = cardMatch ? cardMatch[1].trim() : null;
+    const reasonText = pendingScore.reason?.replace(/^(You played |Computer plays )[^-]+ - /, '') || pendingScore.reason || '';
     const isPlayerScore = pendingScore.player === 'player';
 
     return (
-      <div className="flex flex-col items-center gap-3">
-        {/* Prominent banner */}
+      <div className="flex flex-col items-center gap-2">
+        {/* Card played + score banner - compact layout */}
         <div className={`
-          w-full py-2 px-4 rounded-lg text-center
+          w-full py-2 px-3 rounded-lg
           ${isPlayerScore ? 'bg-green-600/30 border-2 border-green-500' : 'bg-blue-600/30 border-2 border-blue-500'}
-          animate-pulse
         `}>
-          <div className="text-xl font-bold text-white">
-            {isPlayerScore ? '🎉 You scored!' : '💻 Computer scored!'}
-          </div>
-          <div className={`text-lg font-semibold ${isPlayerScore ? 'text-green-300' : 'text-blue-300'}`}>
-            +{pendingScore.points} points - {reasonText}
+          <div className="flex items-center justify-center gap-3">
+            {/* Show the card that was played */}
+            {cardPlayed && (
+              <div className="bg-white text-black px-2 py-1 rounded font-bold text-lg shadow-md">
+                {cardPlayed}
+              </div>
+            )}
+            <div className="text-center">
+              <div className="text-sm text-white">
+                {isPlayerScore ? 'You played' : 'Computer played'}
+              </div>
+              <div className={`text-lg font-bold ${isPlayerScore ? 'text-green-300' : 'text-blue-300'}`}>
+                +{pendingScore.points} pts - {reasonText}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Prominent Accept button */}
+        {/* Accept button */}
         <Button
           onClick={handlers.acceptScoreAndContinue}
           className={`
-            px-8 py-4 text-xl font-bold rounded-lg
+            px-6 py-3 text-lg font-bold rounded-lg
             ${isPlayerScore ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}
-            shadow-lg transform hover:scale-105 transition-all
-            border-2 border-white/30
+            shadow-lg border-2 border-white/30
           `}
         >
-          ✓ Tap to Accept {pendingScore.points} Points
+          ✓ Accept {pendingScore.points} Points
         </Button>
-
-        {/* Helper text */}
-        <div className="text-sm text-gray-400 animate-bounce">
-          👆 Tap the button above to continue
-        </div>
       </div>
     );
   }

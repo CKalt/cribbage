@@ -46,9 +46,9 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="w-96 p-10 bg-white rounded shadow-md">
-        <h1 className="text-xl text-center mb-5 text-gray-800">Forgot Password</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-green-900">
+      <div className="w-96 p-10 bg-green-800 rounded-lg shadow-xl border border-green-700">
+        <h1 className="text-2xl font-bold text-center mb-6 text-white">Forgot Password</h1>
         {!codeSent ? (
           <form onSubmit={forgotPassword} className="flex flex-col">
             <input
@@ -57,34 +57,34 @@ export default function ForgotPassword() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mb-2 p-2.5 border border-gray-300 rounded text-base text-gray-800"
+              className="mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-            <button type="submit" className="mt-2 p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600 cursor-pointer">
+            <button type="submit" className="mt-2 p-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-500 cursor-pointer transition-colors">
               Send Code
             </button>
-            <Link href="/login" className="text-blue-500 text-sm text-center mt-4 hover:underline">
+            <Link href="/login" className="text-green-300 text-sm text-center mt-4 hover:text-green-200 hover:underline">
               Back to Login
             </Link>
           </form>
         ) : (
           <div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-green-200 mb-4">
               A verification code has been sent to your email. Please check your inbox and spam folder.
             </p>
             <Link href={`/reset-password?email=${encodeURIComponent(email)}`}>
-              <button className="w-full p-2.5 bg-blue-500 text-white rounded text-base hover:bg-blue-600 cursor-pointer">
+              <button className="w-full p-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-500 cursor-pointer transition-colors">
                 Enter Code
               </button>
             </Link>
-            <button onClick={resendCode} className="w-full mt-2 text-blue-500 text-sm hover:underline cursor-pointer">
+            <button onClick={resendCode} className="w-full mt-2 text-green-300 text-sm hover:text-green-200 hover:underline cursor-pointer">
               Resend Code
             </button>
-            {codeResent && <p className="text-green-500 mt-2 text-sm">Code has been resent successfully!</p>}
+            {codeResent && <p className="text-green-400 mt-2 text-sm">Code has been resent successfully!</p>}
           </div>
         )}
-        {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
+        {error && <p className="text-red-400 mt-4 text-sm bg-red-900/30 p-2 rounded">{error}</p>}
       </div>
-      <div className="text-gray-400 text-sm mt-5">
+      <div className="text-green-400 text-sm mt-5">
         Cribbage Game
       </div>
     </div>

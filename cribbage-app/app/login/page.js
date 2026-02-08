@@ -80,12 +80,13 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="mb-3 p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <PasswordInput
             value={password}
             placeholder="Password"
             onChange={(e) => setPassword(e.target.value)}
+            className="p-3 border border-green-600 rounded-lg text-base text-gray-800 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <button type="submit" className="mt-5 p-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-500 cursor-pointer transition-colors">
             Log in
