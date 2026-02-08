@@ -36,10 +36,10 @@
   - [ ] [6.1: Manual testing of single-player with animations](#61-manual-testing-of-single-player-with-animations-👤)
   - [ ] [6.2: Manual testing of multiplayer functionality](#62-manual-testing-of-multiplayer-functionality-👤)
   - [ ] [6.3: Manual testing of bug fixes](#63-manual-testing-of-bug-fixes-👤)
-- [ ] [Phase 7: Git Add & Commit](#phase-7-git-add--commit) 🤖
-  - [ ] [7.1: Git add all changed files and commit](#71-git-add-all-changed-files-and-commit-🤖)
-- [ ] [Phase 8: Push & Deploy to Beta](#phase-8-push--deploy-to-beta) 🤖👤
-  - [ ] [8.1: Push to multiplayer branch and deploy to beta](#81-push-to-multiplayer-branch-and-deploy-to-beta-🤖👤)
+- [x] [Phase 7: Git Add & Commit](#phase-7-git-add--commit) 🤖
+  - [x] [7.1: Git add all changed files and commit](#71-git-add-all-changed-files-and-commit-🤖)
+- [x] [Phase 8: Push & Deploy to Beta](#phase-8-push--deploy-to-beta) 🤖👤
+  - [x] [8.1: Push to multiplayer branch and deploy to beta](#81-push-to-multiplayer-branch-and-deploy-to-beta-🤖👤)
 
 ---
 
@@ -516,6 +516,8 @@ Git add each file individually (no wildcards, no `-A`):
 - `lib/version.js`
 - `CLAUDE.md` (if updated)
 
+**✅ Completed 2026-02-08:** All 19 files staged and committed as `6b334ab` — "feat: merge single-player animations and polish from main into multiplayer" (19 files changed, 1888 insertions, 277 deletions).
+
 [Back to TOC](#table-of-contents)
 
 ---
@@ -529,6 +531,8 @@ Push to `multiplayer` branch, then deploy to beta:
 ssh -A -i ~/.ssh/chriskoin2-key-pair.pem ec2-user@cribbage.chrisk.com \
   "cd cribbage-beta && git pull && cd cribbage-app && rm -rf .next && npm run build && pm2 restart cribbage-beta"
 ```
+
+**✅ Completed 2026-02-08:** Pushed to origin/multiplayer and deployed to beta.cribbage.chrisk.com. Build compiled successfully in 15.5s. PM2 restarted cribbage-beta process.
 
 [Back to TOC](#table-of-contents)
 
