@@ -790,6 +790,8 @@ export default function CribbageGame({ onLogout }) {
     setComputerDiscardCards(discards);
     setComputerDiscardDone(false);
     setCribCardsInPile(0);
+    setCribRevealPhase('idle');
+    setCribRevealedCards([]);
     setDeck(currentDeck.slice(12));
     setCrib([]);
     setSelectedCards([]);
@@ -2653,7 +2655,7 @@ export default function CribbageGame({ onLogout }) {
                 {/* Computer hand / Crib (when computer is dealer) - positioned above play area */}
                 {(() => {
                   const showCribHere = gameState === 'counting' && dealer === 'computer' &&
-                    (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
+                    handsCountedThisRound >= 2 && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
                   const handHighlighted = !showCribHere && gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
                     ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'));
                   const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
@@ -2774,9 +2776,9 @@ export default function CribbageGame({ onLogout }) {
                 {/* Player hand / Crib (when player is dealer) */}
                 {(() => {
                   const showCribHere = gameState === 'counting' && dealer === 'player' &&
-                    (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
+                    handsCountedThisRound >= 2 && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
                   // Hide player's hand during crib counting when computer is dealer (crib shown in computer section)
-                  if (!showCribHere && gameState === 'counting' && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done')) return null;
+                  if (!showCribHere && gameState === 'counting' && handsCountedThisRound >= 2 && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done')) return null;
                   const handHighlighted = !showCribHere && (
                     (gameState === 'cribSelect') ||
                     (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
