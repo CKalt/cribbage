@@ -409,7 +409,14 @@ export default function CribbageGame({ onLogout }) {
       let correctCounterIsComputer;
       let correctCountingTurn;
 
-      if (hands === 0) {
+      if (hands >= 3) {
+        // All counting done but deal didn't fire (e.g. page refreshed during timeout)
+        // A useEffect will detect this and trigger the next deal
+        console.log(`[Resume] handsCountedThisRound=${hands}, all counting complete - useEffect will deal next hand`);
+        setCountingTurn('');
+        setCounterIsComputer(null);
+        setMessage('Hand complete - Dealing next hand...');
+      } else if (hands === 0) {
         // Non-dealer counts first
         correctCounterIsComputer = (dlr === 'player');
         correctCountingTurn = (dlr === 'player') ? 'computer' : 'player';
@@ -423,34 +430,36 @@ export default function CribbageGame({ onLogout }) {
         correctCountingTurn = 'crib';
       }
 
-      // Override with correct values if they don't match
-      if (correctCounterIsComputer !== undefined && correctCounterIsComputer !== restored.counterIsComputer) {
+      // Override with correct values if they don't match (skip if hands >= 3, already handled)
+      if (hands < 3 && correctCounterIsComputer !== undefined && correctCounterIsComputer !== restored.counterIsComputer) {
         console.log(`[Resume] Fixing counterIsComputer: ${restored.counterIsComputer} → ${correctCounterIsComputer}`);
         setCounterIsComputer(correctCounterIsComputer);
       }
-      if (correctCountingTurn !== undefined && correctCountingTurn !== restored.countingTurn) {
+      if (hands < 3 && correctCountingTurn !== undefined && correctCountingTurn !== restored.countingTurn) {
         console.log(`[Resume] Fixing countingTurn: ${restored.countingTurn} → ${correctCountingTurn}`);
         setCountingTurn(correctCountingTurn);
       }
 
-      // Fix the message to match the current counting state
-      // Use correctCounterIsComputer if we fixed it, otherwise use restored value
-      const isComputerCounting = correctCounterIsComputer !== undefined ? correctCounterIsComputer : restored.counterIsComputer;
-      const turn = correctCountingTurn !== undefined ? correctCountingTurn : restored.countingTurn;
+      // Fix the message to match the current counting state (skip if hands >= 3, already handled)
+      if (hands < 3) {
+        // Use correctCounterIsComputer if we fixed it, otherwise use restored value
+        const isComputerCounting = correctCounterIsComputer !== undefined ? correctCounterIsComputer : restored.counterIsComputer;
+        const turn = correctCountingTurn !== undefined ? correctCountingTurn : restored.countingTurn;
 
-      if (isComputerCounting) {
-        // Computer's turn to count
-        if (turn === 'crib') {
-          setMessage('Computer counts the crib');
+        if (isComputerCounting) {
+          // Computer's turn to count
+          if (turn === 'crib') {
+            setMessage('Computer counts the crib');
+          } else {
+            setMessage(hands === 0 ? 'Computer counts their hand (non-dealer)' : 'Computer counts their hand (dealer)');
+          }
         } else {
-          setMessage(hands === 0 ? 'Computer counts their hand (non-dealer)' : 'Computer counts their hand (dealer)');
-        }
-      } else {
-        // Player's turn to count
-        if (turn === 'crib') {
-          setMessage('Count your crib');
-        } else {
-          setMessage(hands === 0 ? 'Count your hand (non-dealer)' : 'Count your hand (dealer)');
+          // Player's turn to count
+          if (turn === 'crib') {
+            setMessage('Count your crib');
+          } else {
+            setMessage(hands === 0 ? 'Count your hand (non-dealer)' : 'Count your hand (dealer)');
+          }
         }
       }
       console.log(`[Resume] Set counting message for hands=${hands}, turn=${turn}, isComputer=${isComputerCounting}`);
@@ -2009,6 +2018,22 @@ export default function CribbageGame({ onLogout }) {
       };
     }
   }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn]);
+
+  // Recovery: if all 3 hands counted but still in counting state, deal next hand
+  // This handles the case where the game was saved/restored after counting finished
+  // but before the deal-next-hand timeout fired
+  useEffect(() => {
+    if (gameState === 'counting' && handsCountedThisRound >= 3) {
+      console.log(`[Recovery] handsCountedThisRound=${handsCountedThisRound} in counting state - dealing next hand`);
+      const timer = setTimeout(() => {
+        setDealer(prev => prev === 'player' ? 'computer' : 'player');
+        const newDeck = shuffleDeck(createDeck());
+        setDeck(newDeck);
+        dealHands(newDeck);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, handsCountedThisRound]);
 
   // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
   // Single source of truth for what action the user should take
