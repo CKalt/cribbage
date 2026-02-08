@@ -4,31 +4,31 @@
 
 - [Overview](#overview)
 - [Problem Statement](#problem-statement)
-- [ ] [Phase 1: Early Computer Decision & State Setup](#phase-1-early-computer-decision--state-setup) 🤖
-  - [ ] [1.1: Move computerSelectCrib call into dealHands](#11-move-computerselectcrib-call-into-dealhands-🤖)
-  - [ ] [1.2: Add new state variables for discard tracking](#12-add-new-state-variables-for-discard-tracking-🤖)
-  - [ ] [1.3: Random moment selection on each deal](#13-random-moment-selection-on-each-deal-🤖)
-- [ ] [Phase 2: Progressive Crib Pile Rendering](#phase-2-progressive-crib-pile-rendering) 🤖
-  - [ ] [2.1: Replace static 4-card pile with dynamic pile based on card count](#21-replace-static-4-card-pile-with-dynamic-pile-based-on-card-count-🤖)
-  - [ ] [2.2: Add crib pile placeholder showing empty crib location](#22-add-crib-pile-placeholder-showing-empty-crib-location-🤖)
-- [ ] [Phase 3: Face-Down Flying Card Support](#phase-3-face-down-flying-card-support) 🤖
-  - [ ] [3.1: Add faceDown prop to FlyingCard component](#31-add-facedown-prop-to-flyingcard-component-🤖)
-- [ ] [Phase 4: Computer Discard Animation](#phase-4-computer-discard-animation) 🤖
-  - [ ] [4.1: Create animateComputerDiscard function](#41-create-animatecomputerdiscard-function-🤖)
-  - [ ] [4.2: Update computer hand display to reflect post-discard count](#42-update-computer-hand-display-to-reflect-post-discard-count-🤖)
-- [ ] [Phase 5: Moment Triggers](#phase-5-moment-triggers) 🤖
-  - [ ] [5.1: Moment 1 — Shortly after dealing](#51-moment-1--shortly-after-dealing-🤖)
-  - [ ] [5.2: Moment 2 — When player selects first card](#52-moment-2--when-player-selects-first-card-🤖)
-  - [ ] [5.3: Moment 3 — When player selects second card](#53-moment-3--when-player-selects-second-card-🤖)
-  - [ ] [5.4: Moment 4 — Simultaneously with player's discard](#54-moment-4--simultaneously-with-players-discard-🤖)
-  - [ ] [5.5: Moment 5 — After player's discard completes](#55-moment-5--after-players-discard-completes-🤖)
-- [ ] [Phase 6: Adjust Player Discard Flow](#phase-6-adjust-player-discard-flow) 🤖
-  - [ ] [6.1: Update applyCribDiscard to use pre-computed computer discards](#61-update-applycribdiscard-to-use-pre-computed-computer-discards-🤖)
-  - [ ] [6.2: Build crib from stored discards instead of computing on-the-fly](#62-build-crib-from-stored-discards-instead-of-computing-on-the-fly-🤖)
-- [ ] [Phase 7: Build, Commit & Deploy](#phase-7-build-commit--deploy) 🤖👤
-  - [ ] [7.1: Build and verify](#71-build-and-verify-🤖)
-  - [ ] [7.2: Git add and commit](#72-git-add-and-commit-🤖)
-  - [ ] [7.3: Push and deploy to production](#73-push-and-deploy-to-production-🤖👤)
+- [x] [Phase 1: Early Computer Decision & State Setup](#phase-1-early-computer-decision--state-setup) 🤖
+  - [x] [1.1: Move computerSelectCrib call into dealHands](#11-move-computerselectcrib-call-into-dealhands-🤖)
+  - [x] [1.2: Add new state variables for discard tracking](#12-add-new-state-variables-for-discard-tracking-🤖)
+  - [x] [1.3: Random moment selection on each deal](#13-random-moment-selection-on-each-deal-🤖)
+- [x] [Phase 2: Progressive Crib Pile Rendering](#phase-2-progressive-crib-pile-rendering) 🤖
+  - [x] [2.1: Replace static 4-card pile with dynamic pile based on card count](#21-replace-static-4-card-pile-with-dynamic-pile-based-on-card-count-🤖)
+  - [x] [2.2: Add crib pile placeholder showing empty crib location](#22-add-crib-pile-placeholder-showing-empty-crib-location-🤖)
+- [x] [Phase 3: Face-Down Flying Card Support](#phase-3-face-down-flying-card-support) 🤖
+  - [x] [3.1: Add faceDown prop to FlyingCard component](#31-add-facedown-prop-to-flyingcard-component-🤖)
+- [x] [Phase 4: Computer Discard Animation](#phase-4-computer-discard-animation) 🤖
+  - [x] [4.1: Create animateComputerDiscard function](#41-create-animatecomputerdiscard-function-🤖)
+  - [x] [4.2: Update computer hand display to reflect post-discard count](#42-update-computer-hand-display-to-reflect-post-discard-count-🤖)
+- [x] [Phase 5: Moment Triggers](#phase-5-moment-triggers) 🤖
+  - [x] [5.1: Moment 1 — Shortly after dealing](#51-moment-1--shortly-after-dealing-🤖)
+  - [x] [5.2: Moment 2 — When player selects first card](#52-moment-2--when-player-selects-first-card-🤖)
+  - [x] [5.3: Moment 3 — When player selects second card](#53-moment-3--when-player-selects-second-card-🤖)
+  - [x] [5.4: Moment 4 — Simultaneously with player's discard](#54-moment-4--simultaneously-with-players-discard-🤖)
+  - [x] [5.5: Moment 5 — After player's discard completes](#55-moment-5--after-players-discard-completes-🤖)
+- [x] [Phase 6: Adjust Player Discard Flow](#phase-6-adjust-player-discard-flow) 🤖
+  - [x] [6.1: Update applyCribDiscard to use pre-computed computer discards](#61-update-applycribdiscard-to-use-pre-computed-computer-discards-🤖)
+  - [x] [6.2: Build crib from stored discards instead of computing on-the-fly](#62-build-crib-from-stored-discards-instead-of-computing-on-the-fly-🤖)
+- [x] [Phase 7: Build, Commit & Deploy](#phase-7-build-commit--deploy) 🤖👤
+  - [x] [7.1: Build and verify](#71-build-and-verify-🤖)
+  - [x] [7.2: Git add and commit](#72-git-add-and-commit-🤖)
+  - [x] [7.3: Push and deploy to production](#73-push-and-deploy-to-production-🤖👤)
 - [ ] [Phase 8: Manual Testing](#phase-8-manual-testing) 👤
 
 ---
