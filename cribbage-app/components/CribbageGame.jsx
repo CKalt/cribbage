@@ -153,6 +153,9 @@ export default function CribbageGame({ onLogout }) {
   const [cribCardsInPile, setCribCardsInPile] = useState(0);
   const [computerDiscardMoment, setComputerDiscardMoment] = useState(null);
 
+  // Cards currently flying to crib (hidden from hand during animation)
+  const [discardingCards, setDiscardingCards] = useState([]);
+
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
   const [cribRevealedCards, setCribRevealedCards] = useState([]);
@@ -1030,12 +1033,15 @@ export default function CribbageGame({ onLogout }) {
 
     // Find the selected card elements by looking for cards with the cyan selection ring
     const cardElements = document.querySelectorAll('[class*="ring-cyan"]');
+    // Target: crib pile (shown next to dealer's hand)
     const endRect = cribPileRef.current?.getBoundingClientRect() ||
+      (dealer === 'computer' ? computerHandRef : null)?.current?.getBoundingClientRect() ||
       { top: dealer === 'computer' ? 100 : 500, left: window.innerWidth / 2 - 20 };
 
     // After all animations complete, finalize
     const finalize = () => {
       setFlyingCard(null);
+      setDiscardingCards([]);
       applyCribDiscard();
     };
 
@@ -1054,12 +1060,16 @@ export default function CribbageGame({ onLogout }) {
       const startRect1 = cardElements[0].getBoundingClientRect();
       const startRect2 = cardElements[1].getBoundingClientRect();
 
+      // Hide selected cards from hand immediately — flying card replaces them visually
+      setDiscardingCards([...selectedCards]);
+
       // Moment 4: Interleave - player card 1, computer cards, player card 2
       if (computerDiscardMoment === 4 && !computerDiscardDone) {
         setFlyingCard({
           card: selectedCards[0],
           startRect: startRect1,
           endRect,
+          faceDown: true,
           onComplete: () => {
             setCribCardsInPile(prev => prev + 1);
             animateComputerDiscard(() => {
@@ -1067,6 +1077,7 @@ export default function CribbageGame({ onLogout }) {
                 card: selectedCards[1],
                 startRect: startRect2,
                 endRect,
+                faceDown: true,
                 onComplete: () => {
                   setCribCardsInPile(prev => prev + 1);
                   finalize();
@@ -1081,12 +1092,14 @@ export default function CribbageGame({ onLogout }) {
           card: selectedCards[0],
           startRect: startRect1,
           endRect,
+          faceDown: true,
           onComplete: () => {
             setCribCardsInPile(prev => prev + 1);
             setFlyingCard({
               card: selectedCards[1],
               startRect: startRect2,
               endRect,
+              faceDown: true,
               onComplete: () => {
                 setCribCardsInPile(prev => prev + 1);
                 afterPlayerDiscard();
@@ -1364,7 +1377,18 @@ export default function CribbageGame({ onLogout }) {
     } else {
       setMessage(`Computer plays ${card.rank}${card.suit} (count: ${newCount})`);
 
-      if (playerPlayHand.length > 0) {
+      // If player already said Go, computer keeps playing this round
+      if (lastGoPlayer === 'player') {
+        const computerCanStillPlay = newComputerPlayHand.some(c => newCount + c.value <= 31);
+        if (computerCanStillPlay) {
+          // Computer keeps playing (currentPlayer stays 'computer', useEffect will fire again)
+        } else {
+          // Computer can't play either — award last card point
+          setCurrentPlayer('player');
+          setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
+          setMessage(`Computer plays ${card.rank}${card.suit} (count: ${newCount}) - 1 for last card - Click Accept`);
+        }
+      } else if (playerPlayHand.length > 0) {
         setCurrentPlayer('player');
       } else {
         const canContinue = newComputerPlayHand.some(c => newCount + c.value <= 31);
@@ -1508,7 +1532,20 @@ export default function CribbageGame({ onLogout }) {
       setMessage('You get 1 point for last card - Click Accept');
     } else {
       setMessage(`You played ${card.rank}${card.suit} (count: ${newCount})`);
-      setCurrentPlayer('computer');
+
+      // If computer already said Go, player keeps playing this round
+      if (lastGoPlayer === 'computer') {
+        const playerCanStillPlay = newPlayerPlayHand.some(c => newCount + c.value <= 31);
+        if (playerCanStillPlay) {
+          setCurrentPlayer('player');
+        } else {
+          // Player can't play either — award last card point, then count resets
+          setPendingScore({ player: 'player', points: 1, reason: 'One for last card' });
+          setMessage(`You played ${card.rank}${card.suit} (count: ${newCount}) - 1 for last card - Click Accept`);
+        }
+      } else {
+        setCurrentPlayer('computer');
+      }
     }
   };
 
@@ -2826,30 +2863,78 @@ export default function CribbageGame({ onLogout }) {
                   </div>
                 )}
 
-                {/* Computer hand - positioned above play area */}
-                <div className={`mb-6 p-2 rounded ${
-                  gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
-                  ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
-                    ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
-                }`}>
-                  <div className="text-sm mb-2">Computer's Hand: {gameState === 'play' ? `${computerPlayHand.length} cards` : ''}</div>
-                  <div ref={computerHandRef} className="flex flex-wrap gap-2">
-                    {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
-                      gameState === 'play' ? computerPlayHand :
-                      computerHand).map((card, idx) => (
-                      <PlayingCard
-                        key={idx}
-                        card={card}
-                        faceDown={gameState !== 'counting' && gameState !== 'gameOver'}
-                        revealed={gameState === 'counting' || gameState === 'gameOver'}
-                        highlighted={
-                          gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
-                          ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'))
-                        }
-                      />
-                    ))}
+                {/* Computer hand / Crib (when computer is dealer) - positioned above play area */}
+                {(() => {
+                  const showCribHere = gameState === 'counting' && dealer === 'computer' &&
+                    handsCountedThisRound >= 2 && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
+                  const handHighlighted = !showCribHere && gameState === 'counting' && counterIsComputer && computerClaimedScore !== null &&
+                    ((handsCountedThisRound === 0 && dealer === 'player') || (handsCountedThisRound === 1 && dealer === 'computer'));
+                  const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
+                    counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2;
+                  // Keep border visible during entire crib reveal so the box never disappears
+                  const showBorder = handHighlighted || cribHighlighted || showCribHere;
+                  return (
+                  <div className={`mb-6 p-2 rounded ${
+                    showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                  }`}>
+                    <div className="text-sm mb-2">
+                      {showCribHere ? "Crib (Computer's):" : `Computer's Hand: ${gameState === 'play' ? `${computerPlayHand.length} cards` : ''}`}
+                    </div>
+                    <div className="flex items-center justify-center gap-8">
+                      {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
+                        const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
+                        return (
+                        <div ref={cribPileRef} className={`flex flex-col items-center transition-opacity duration-300 ${cribRevealPhase === 'revealing' ? 'opacity-60' : ''}`}>
+                          <div className="relative w-12 h-16">
+                            {pileCount === 0 ? (
+                              <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
+                                <span className="text-[10px] text-green-600">Crib</span>
+                              </div>
+                            ) : (
+                              <>
+                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
+                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
+                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
+                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                              </>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-4">Crib</div>
+                        </div>
+                        );
+                      })()}
+                      <div className="grid">
+                        {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
+                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                          {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
+                            gameState === 'play' ? computerPlayHand :
+                            gameState === 'cribSelect' && computerDiscardDone && computerKeptHand ? computerKeptHand :
+                            computerHand).map((card, idx) => (
+                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                              <PlayingCard
+                                card={card}
+                                faceDown={gameState !== 'counting' && gameState !== 'gameOver'}
+                                revealed={gameState === 'counting' || gameState === 'gameOver'}
+                                highlighted={handHighlighted}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {/* Crib cards - same grid cell so cell expands to fit both */}
+                        {showCribHere && (
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
+                            {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
+                              <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                                <PlayingCard card={card} highlighted={cribHighlighted} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                  );
+                })()}
 
                 {/* Play area with separate stacks */}
                 {gameState === 'play' && (
@@ -2859,44 +2944,28 @@ export default function CribbageGame({ onLogout }) {
                       {/* Computer's played cards */}
                       <div className="mb-3">
                         <div className="text-xs mb-1">Computer's plays:</div>
-                        <div ref={computerPlayAreaRef} className="flex flex-wrap gap-1 min-h-[40px]">
+                        <div ref={computerPlayAreaRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-2 min-h-[40px]">
                           {computerPlayedCards.map((card, idx) => (
-                            <PlayedCard key={idx} card={card} className={landingIsComputer && idx === landingCardIndex ? 'animate-[cardLand_0.3s_ease-out]' : ''} />
+                            <div key={idx} className={idx === landingCardIndex && landingIsComputer ? 'animate-[cardLand_0.3s_ease-out]' : ''} style={{ marginTop: idx % 2 === 1 ? '3px' : '0' }}>
+                              <PlayedCard card={card} />
+                            </div>
                           ))}
                         </div>
                       </div>
                       {/* Player's played cards */}
                       <div>
                         <div className="text-xs mb-1">Your plays:</div>
-                        <div ref={playerPlayAreaRef} className="flex flex-wrap gap-1 min-h-[40px]">
+                        <div ref={playerPlayAreaRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-2 min-h-[40px]">
                           {playerPlayedCards.map((card, idx) => (
-                            <PlayedCard key={idx} card={card} className={!landingIsComputer && idx === landingCardIndex ? 'animate-[cardLand_0.3s_ease-out]' : ''} />
+                            <div
+                              key={idx}
+                              className={idx === landingCardIndex && !landingIsComputer ? 'animate-[cardLand_0.3s_ease-out]' : ''}
+                              style={{ marginTop: idx % 2 === 1 ? '3px' : '0' }}
+                            >
+                              <PlayedCard card={card} />
+                            </div>
                           ))}
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Crib pile - shows progressive face-down cards during discard phase */}
-                {gameState === 'cribSelect' && cribCardsInPile > 0 && (
-                  <div className="text-center mb-4">
-                    <div className="text-xs text-gray-400 mb-1">Crib</div>
-                    <div ref={cribPileRef} className="flex justify-center gap-1">
-                      {Array.from({ length: cribCardsInPile }).map((_, idx) => (
-                        <div key={idx} className="bg-blue-900 border-2 border-blue-700 text-blue-300 rounded p-1 w-8 h-12 flex items-center justify-center font-bold text-sm">
-                          ?
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Empty crib pile ref target when no cards yet */}
-                {gameState === 'cribSelect' && cribCardsInPile === 0 && (
-                  <div className="text-center mb-4">
-                    <div className="text-xs text-gray-400 mb-1">Crib</div>
-                    <div ref={cribPileRef} className="flex justify-center gap-1 min-h-[48px]">
-                      <div className="border-2 border-dashed border-gray-600 rounded w-8 h-12 flex items-center justify-center text-gray-600 text-xs">
                       </div>
                     </div>
                   </div>
@@ -2915,100 +2984,96 @@ export default function CribbageGame({ onLogout }) {
 
                 {/* Pending score indicator (button in sticky bar) */}
 
-                {/* Player hand */}
-                <div className={`mb-6 p-2 rounded ${
-                  (gameState === 'cribSelect') ||
-                  (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
-                  (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
-                   ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
-                    ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
-                }`}>
-                  <div className="text-sm mb-2">Your Hand: ({gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)</div>
-                  <div ref={playerHandContainerRef} className="flex flex-wrap gap-2">
-                    {(gameState === 'cribSelect' ? playerHand :
-                      gameState === 'play' ? playerPlayHand :
-                      playerHand).map((card, idx) => (
-                      <PlayingCard
-                        key={idx}
-                        card={card}
-                        selected={selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
-                        disabled={
-                          (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
-                          (gameState === 'cribSelect' && playerHand.length !== 6)
-                        }
-                        highlighted={
-                          (gameState === 'cribSelect') ||
-                          (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
-                          (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
-                           ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
-                        }
-                        onClick={(e) => {
-                          if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
-                          else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card, e);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Crib pile during reveal animation (face-down cards shrinking as they fly out) */}
-                {gameState === 'counting' && cribRevealPhase === 'revealing' && (
-                  <div className="text-center mb-4">
-                    <div className="text-xs text-gray-400 mb-1">Crib</div>
-                    <div ref={cribPileRef} className="flex justify-center gap-1">
-                      {Array.from({ length: Math.max(0, crib.length - cribRevealedCards.length) }).map((_, idx) => (
-                        <div key={idx} className="bg-blue-900 border-2 border-blue-700 text-blue-300 rounded p-1 w-8 h-12 flex items-center justify-center font-bold text-sm">
-                          ?
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Crib display during counting — shows revealed cards during animation, full crib when done */}
-                {gameState === 'counting' && (cribRevealPhase !== 'idle') && (
-                  (cribRevealPhase === 'revealing' && cribRevealedCards.length > 0) ||
-                  cribRevealPhase === 'done'
-                ) && (
+                {/* Player hand / Crib (when player is dealer) */}
+                {(() => {
+                  const showCribHere = gameState === 'counting' && dealer === 'player' &&
+                    handsCountedThisRound >= 2 && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
+                  // Hide player's hand during crib counting when computer is dealer (crib shown in computer section)
+                  if (!showCribHere && gameState === 'counting' && handsCountedThisRound >= 2 && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done')) return null;
+                  const handHighlighted = !showCribHere && (
+                    (gameState === 'cribSelect') ||
+                    (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
+                    (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
+                     ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
+                  );
+                  const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
+                    !counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2;
+                  const showBorder = handHighlighted || cribHighlighted || showCribHere;
+                  return (
                   <div className={`mb-6 p-2 rounded ${
-                    cribRevealPhase === 'done' && (
-                      (counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
-                      (!counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2 && dealer === 'player')
-                    ) ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                    showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
-                    <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
-                    <div ref={cribDisplayRef} className="flex flex-wrap gap-2">
-                      {(cribRevealPhase === 'done' ? crib : cribRevealedCards).map((card, idx) => (
-                        <div key={idx} className={`bg-white rounded border border-gray-300 shadow-sm p-2 text-xl font-bold ${
-                          card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
-                        } ${
-                          cribRevealPhase === 'done' && (
-                            (counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2 && dealer === 'computer') ||
-                            (!counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2 && dealer === 'player')
-                          ) ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''
-                        }`}>
-                          {card.rank}{card.suit}
+                    <div className="text-sm mb-2">
+                      {showCribHere ? "Crib (Yours):" : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
+                    </div>
+                    <div className="flex items-center justify-center gap-8">
+                      <div className="grid">
+                        {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
+                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                          {(gameState === 'cribSelect' ? playerHand :
+                            gameState === 'play' ? playerPlayHand :
+                            playerHand).map((card, idx) => {
+                            const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
+                            return (
+                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0', ...(isBeingDiscarded ? { visibility: 'hidden' } : {}) }}>
+                              <PlayingCard
+                                card={card}
+                                selected={!showCribHere && !isBeingDiscarded && selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
+                                disabled={
+                                  showCribHere ||
+                                  (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
+                                  (gameState === 'cribSelect' && playerHand.length !== 6)
+                                }
+                                highlighted={handHighlighted}
+                                onClick={(e) => {
+                                  if (showCribHere) return;
+                                  if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
+                                  else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card, e);
+                                }}
+                              />
+                            </div>
+                            );
+                          })}
                         </div>
-                      ))}
+                        {/* Crib cards - same grid cell so cell expands to fit both */}
+                        {showCribHere && (
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
+                            {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
+                              <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                                <PlayingCard card={card} highlighted={cribHighlighted} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
+                        const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
+                        return (
+                        <div ref={cribPileRef} className={`flex flex-col items-center ${cribRevealPhase === 'revealing' ? 'transition-opacity duration-300 opacity-60' : ''}`}>
+                          <div className="relative w-12 h-16">
+                            {pileCount === 0 ? (
+                              <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
+                                <span className="text-[10px] text-green-600">Crib</span>
+                              </div>
+                            ) : (
+                              <>
+                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
+                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
+                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
+                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                              </>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-4">Crib</div>
+                        </div>
+                        );
+                      })()}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
-                {/* Legacy crib display for handsCountedThisRound === 3 (crib already counted, showing result) */}
-                {gameState === 'counting' && cribRevealPhase === 'idle' && pendingCountContinue && handsCountedThisRound === 3 && (
-                  <div className="mb-6 p-2 rounded">
-                    <div className="text-sm mb-2">Crib ({dealer === 'player' ? 'Yours' : "Computer's"}):</div>
-                    <div className="flex flex-wrap gap-2">
-                      {crib.map((card, idx) => (
-                        <div key={idx} className={`bg-white rounded border border-gray-300 shadow-sm p-2 text-xl font-bold ${
-                          card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-black'
-                        }`}>
-                          {card.rank}{card.suit}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Crib is now displayed inline in the hand sections above */}
 
                 {/* Counting input - Score selector grid */}
                 {gameState === 'counting' && !actualScore && !pendingScore && !computerClaimedScore &&
@@ -3281,6 +3346,7 @@ export default function CribbageGame({ onLogout }) {
       {/* Flying card animation overlay */}
       {flyingCard && (
         <FlyingCard
+          key={`${flyingCard.card.rank}${flyingCard.card.suit}${flyingCard.faceDown ? '-fd' : ''}${flyingCard.className || ''}`}
           card={flyingCard.card}
           startRect={flyingCard.startRect}
           endRect={flyingCard.endRect}
