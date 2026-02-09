@@ -1,19 +1,19 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b01-20260207';
-export const RELEASE_NOTE = `Cribbage v0.3.0 — Animations & Polish! 🎴
+export const APP_VERSION = 'v0.3.1-b02-20260208';
+export const RELEASE_NOTE = `Cribbage v0.3.1 — Multiplayer UX Overhaul! 🎮
 
 NEW in this version:
-- Card flight animations during pegging
-- Computer discard animation with random timing
-- Crib reveal animation (cards fly one-by-one)
-- Landing pulse effects on played cards
-- Progressive crib pile display
-- Auth page styling refresh (green theme)
-- Bug fixes: dealer alternation, counting recovery, double-deal prevention
-
-Multiplayer features still available:
-- Challenge friends to real-time cribbage games
-- Invite players by email
+- Multiplayer now matches single-player experience
+- Opponent hand display (face-down during play, face-up during counting)
+- Progressive crib pile visualization
+- Card flight animations for discard, pegging, and crib reveal
+- Separate play area stacks (your plays vs opponent's plays)
+- Yellow glow highlights during counting phase
+- Cut card shown alongside hand during counting
+- Score breakdown display after verification
+- Landing pulse animation on played cards
+- Run detection in multiplayer pegging (was missing!)
+- Layout reordered to match single-player visual hierarchy
 
 Thanks for playing!`;
 

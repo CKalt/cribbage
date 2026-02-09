@@ -4,7 +4,7 @@
  */
 
 import { createDeck, shuffleDeck } from './deck';
-import { calculateHandScore } from './scoring';
+import { calculateHandScore, calculatePeggingScore } from './scoring';
 import { rankOrder } from './constants';
 
 /**
@@ -553,45 +553,9 @@ export function processPlay(gameState, playerKey, card) {
   // Reset opponent's Go since a card was played
   playState[opponentSaidKey] = null;
 
-  // Calculate pegging points
-  let points = 0;
-  let pointsDesc = [];
-
-  // 15
-  if (playState.currentCount === 15) {
-    points += 2;
-    pointsDesc.push('15 for 2');
-  }
-
-  // 31
-  if (playState.currentCount === 31) {
-    points += 2;
-    pointsDesc.push('31 for 2');
-  }
-
-  // Pairs
-  const roundCards = playState.roundCards;
-  if (roundCards.length >= 2) {
-    const lastCards = roundCards.slice(-4).reverse();
-    let pairCount = 0;
-    for (let i = 1; i < lastCards.length; i++) {
-      if (lastCards[i].rank === card.rank) {
-        pairCount++;
-      } else {
-        break;
-      }
-    }
-    if (pairCount === 1) {
-      points += 2;
-      pointsDesc.push('pair for 2');
-    } else if (pairCount === 2) {
-      points += 6;
-      pointsDesc.push('three of a kind for 6');
-    } else if (pairCount === 3) {
-      points += 12;
-      pointsDesc.push('four of a kind for 12');
-    }
-  }
+  // Calculate pegging points using shared scoring function (includes 15s, 31s, pairs, AND runs)
+  const { score: points, reason: pointsReason } = calculatePeggingScore(playState.roundCards, playState.currentCount);
+  const pointsDesc = pointsReason ? pointsReason.split(' and ') : [];
 
   // Record card play in history
   peggingHistory.push({
