@@ -75,6 +75,7 @@ export default function CribbageGame({ onLogout }) {
 
   // Selection state
   const [selectedCards, setSelectedCards] = useState([]);
+  const [discardingCards, setDiscardingCards] = useState([]);
 
   // Play phase state
   const [playerPlayHand, setPlayerPlayHand] = useState([]);
@@ -973,6 +974,9 @@ export default function CribbageGame({ onLogout }) {
       return;
     }
 
+    // Hide selected cards from hand during animation
+    setDiscardingCards([...selectedCards]);
+
     // Find the selected card elements by looking for cards with the cyan selection ring
     const cardElements = document.querySelectorAll('[class*="ring-cyan"]');
     // Target: crib pile (shown next to dealer's hand)
@@ -983,6 +987,7 @@ export default function CribbageGame({ onLogout }) {
     // After all animations complete, finalize
     const finalize = () => {
       setFlyingCard(null);
+      setDiscardingCards([]);
       applyCribDiscard();
     };
 
@@ -2815,11 +2820,13 @@ export default function CribbageGame({ onLogout }) {
                         <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
-                            playerHand).map((card, idx) => (
-                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                            playerHand).map((card, idx) => {
+                            const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
+                            return (
+                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0', ...(isBeingDiscarded ? { visibility: 'hidden' } : {}) }}>
                               <PlayingCard
                                 card={card}
-                                selected={!showCribHere && selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
+                                selected={!showCribHere && !isBeingDiscarded && selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
                                 disabled={
                                   showCribHere ||
                                   (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
@@ -2833,7 +2840,8 @@ export default function CribbageGame({ onLogout }) {
                                 }}
                               />
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
