@@ -1,5 +1,5 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b03-20260210';
+export const APP_VERSION = 'v0.3.1-b04-20260210';
 export const RELEASE_NOTE = `Cribbage v0.3.1 — Multiplayer UX Overhaul! 🎮
 
 NEW in this version:
