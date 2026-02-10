@@ -466,6 +466,20 @@ export default function CribbageGame({ onLogout }) {
         }
       }
       console.log(`[Resume] Set counting message for hands=${hands}, turn=${turn}, isComputer=${isComputerCounting}`);
+
+      // Clear stale actualScore and pendingCountContinue from a previous count sub-phase.
+      // These are set during submitPlayerCount and cleared in proceedAfterPlayerCount.
+      // If the game was saved between those two calls (e.g. player submitted count but
+      // didn't click Continue before closing), actualScore persists and blocks the
+      // ScoreSelector from showing on the next count sub-phase.
+      if (hands < 3 && !restored.pendingCountContinue) {
+        // No pending acknowledgment → actualScore is stale from a completed count
+        if (restored.actualScore) {
+          console.log(`[Resume] Clearing stale actualScore from previous count`);
+          setActualScore(null);
+          setShowBreakdown(false);
+        }
+      }
     }
 
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
