@@ -939,8 +939,8 @@ export default function MultiplayerGame({ gameId, onExit }) {
               const cribHighlighted = showCribHere && cribRevealPhase === 'done' && ctx?.iAmCounter !== true;
 
               return (
-                <div className={`mb-4 max-w-2xl w-full p-2 rounded ${
-                  opponentHighlighted || cribHighlighted ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                <div className={`mb-4 max-w-2xl w-full p-3 rounded-lg ${
+                  opponentHighlighted || cribHighlighted ? 'bg-yellow-900/30 border-2 border-yellow-500' : 'bg-gray-800/60 border border-gray-700/50'
                 }`}>
                   <div className="text-sm mb-2 text-gray-400">
                     {showCribHere ? `Crib (${opponent?.username}'s):` : `${opponent?.username}'s Hand:`}
@@ -1188,15 +1188,19 @@ export default function MultiplayerGame({ gameId, onExit }) {
               const ctx = isCounting ? getCountingContext() : null;
               const myPlayHand = gs?.playState?.[`${myKey}PlayHand`] || [];
               const handToShow = phase === GAME_PHASE.PLAYING ? myPlayHand : getMyHand();
-              const playerHighlighted = isCounting && ctx?.isCountingMyHand && !ctx?.waitingForVerification;
               const showCribHere = isCounting && isDealer && ctx?.isCountingCrib && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
+              const playerHighlighted = !showCribHere && (
+                (phase === GAME_PHASE.DISCARDING && !hasDiscarded()) ||
+                (phase === GAME_PHASE.PLAYING && isMyTurn && !gs?.pendingPeggingScore) ||
+                (isCounting && ctx?.isCountingMyHand && !ctx?.waitingForVerification)
+              );
               const cribHighlighted = showCribHere && cribRevealPhase === 'done' && !ctx?.waitingForVerification;
               const showBorder = playerHighlighted || cribHighlighted || showCribHere;
               const hasPending = !!gs?.pendingPeggingScore;
 
               return (
-                <div className={`mb-4 max-w-2xl w-full p-2 rounded ${
-                  showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
+                <div className={`mb-4 max-w-2xl w-full p-3 rounded-lg ${
+                  showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : 'bg-gray-800/60 border border-gray-700/50'
                 }`}>
                   <div className="text-sm mb-2 text-gray-400">
                     {showCribHere ? 'Crib (Yours):' : `Your Hand${phase === GAME_PHASE.PLAYING ? ` (${myPlayHand.length} remaining)` : ''}:`}

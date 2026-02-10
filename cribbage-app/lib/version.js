@@ -1,5 +1,5 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b02-20260208';
+export const APP_VERSION = 'v0.3.1-b03-20260210';
 export const RELEASE_NOTE = `Cribbage v0.3.1 — Multiplayer UX Overhaul! 🎮
 
 NEW in this version:
@@ -8,7 +8,8 @@ NEW in this version:
 - Progressive crib pile visualization
 - Card flight animations for discard, pegging, and crib reveal
 - Separate play area stacks (your plays vs opponent's plays)
-- Yellow glow highlights during counting phase
+- Yellow glow highlights during counting and active phases
+- Card groups now have visible container boxes
 - Cut card shown alongside hand during counting
 - Score breakdown display after verification
 - Landing pulse animation on played cards
