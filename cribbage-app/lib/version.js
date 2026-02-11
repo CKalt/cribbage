@@ -1,10 +1,10 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b121-20260211';
+export const APP_VERSION = 'v0.2.1-b122-20260211';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Multiplayer beta is live! Try it from the main menu.
 - Cards now fly from your hand to the play area during pegging!
+- Fixed card layout on small mobile screens.
 
 Thanks for your feedback - it helps make the game better!`;
 
