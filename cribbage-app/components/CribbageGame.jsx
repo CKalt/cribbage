@@ -2413,6 +2413,18 @@ export default function CribbageGame({ onLogout }) {
                         Start New Game
                       </Button>
                     )}
+
+                    {/* Multiplayer beta banner */}
+                    <div className="mt-6 p-4 rounded-lg bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/50 text-sm">
+                      <div className="text-purple-300 font-bold text-base mb-1">Multiplayer is here!</div>
+                      <div className="text-gray-300 mb-2">
+                        Challenge your friends to real-time cribbage matches — play from anywhere, on any device.
+                        Try it now on our beta site!
+                      </div>
+                      <a href="https://beta.cribbage.chrisk.com" className="inline-block mt-1 px-4 py-2 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold no-underline transition-colors">
+                        Try Multiplayer Beta
+                      </a>
+                    </div>
                   </>
                 )}
               </div>
