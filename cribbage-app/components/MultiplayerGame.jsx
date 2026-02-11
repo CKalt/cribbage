@@ -945,13 +945,13 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   <div className="text-sm mb-2 text-gray-400">
                     {showCribHere ? `Crib (${opponent?.username}'s):` : `${opponent?.username}'s Hand:`}
                   </div>
-                  <div className="flex items-center justify-center gap-6">
+                  <div className="flex items-center justify-center gap-2 sm:gap-4">
                     {/* Crib pile next to opponent's hand if opponent is dealer */}
                     {!isDealer && !showCribHere && renderCribPile()}
 
-                    <div className="grid">
+                    <div className="grid min-w-0">
                       {/* Hand cards */}
-                      <div ref={opponentHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                      <div ref={opponentHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-4 sm:[&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                         {showOpponentFaceUp() ? (
                           // During counting: show face-up
                           getOpponentHand().map((card, idx) => (
@@ -1205,10 +1205,10 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   <div className="text-sm mb-2 text-gray-400">
                     {showCribHere ? 'Crib (Yours):' : `Your Hand${phase === GAME_PHASE.PLAYING ? ` (${myPlayHand.length} remaining)` : ''}:`}
                   </div>
-                  <div className="flex items-center justify-center gap-6">
-                    <div className="grid">
+                  <div className="flex items-center justify-center gap-2 sm:gap-4">
+                    <div className="grid min-w-0">
                       {/* Hand cards */}
-                      <div ref={playerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                      <div ref={playerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-4 sm:[&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
                         {handToShow.map((card, idx) => {
                           const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
                           const isSelected = selectedCards.some(c => c.suit === card.suit && c.rank === card.rank);
