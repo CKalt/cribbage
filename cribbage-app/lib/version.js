@@ -1,10 +1,10 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b122-20260211';
+export const APP_VERSION = 'v0.2.1-b123-20260213';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Card suits now always visible — rank and suit stacked vertically like real cards.
 - Cards now fly from your hand to the play area during pegging!
-- Fixed card layout on small mobile screens.
 
 Thanks for your feedback - it helps make the game better!`;
 

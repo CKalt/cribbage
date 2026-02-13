@@ -2714,7 +2714,7 @@ export default function CribbageGame({ onLogout }) {
                       })()}
                       <div className="grid min-w-0">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-4 sm:[&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                             gameState === 'play' ? computerPlayHand :
                             gameState === 'cribSelect' && computerDiscardDone && computerKeptHand ? computerKeptHand :
@@ -2818,7 +2818,7 @@ export default function CribbageGame({ onLogout }) {
                     <div className="flex items-center justify-center gap-2 sm:gap-4">
                       <div className="grid min-w-0">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-4 sm:[&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
                             playerHand).map((card, idx) => {
