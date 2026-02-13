@@ -74,6 +74,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const dealer = gs?.dealer;
   const isDealer = myKey === dealer;
   const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
+  const opponentName = opponent?.email || opponent?.username || 'Opponent';
 
   // Handle forfeit
   const handleForfeit = async () => {
@@ -498,7 +499,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
         // Show announcement
         setLastPlayAnnouncement({
           card: newestCard,
-          player: opponent?.username || 'Opponent',
+          player: opponentName,
         });
         setTimeout(() => setLastPlayAnnouncement(null), 2500);
       } else {
@@ -599,7 +600,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
           )}
         </div>
         <div className="text-white text-xl">
-          Final Score: You {gameState?.myScore} - {gameState?.opponentScore} {opponent?.username}
+          Final Score: You {gameState?.myScore} - {gameState?.opponentScore} {opponentName}
         </div>
         <Button onClick={onExit} className="bg-blue-600 hover:bg-blue-700 text-lg px-6 py-3">
           Back to Menu
@@ -650,9 +651,9 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
     let phaseLabel;
     if (countPhase === 'nonDealer') {
-      phaseLabel = isDealer ? `${opponent?.username}'s Hand` : 'Your Hand';
+      phaseLabel = isDealer ? `${opponentName}'s Hand` : 'Your Hand';
     } else if (countPhase === 'dealer') {
-      phaseLabel = isDealer ? 'Your Hand' : `${opponent?.username}'s Hand`;
+      phaseLabel = isDealer ? 'Your Hand' : `${opponentName}'s Hand`;
     } else if (countPhase === 'crib') {
       phaseLabel = 'Crib';
     }
@@ -715,7 +716,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${opponentConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
           <div className="text-white">
-            <span className="font-medium">{opponent?.username || 'Opponent'}</span>
+            <span className="font-medium">{opponentName}</span>
             <span className="text-gray-400 ml-2">({gameState?.opponentScore || 0} pts)</span>
           </div>
         </div>
@@ -792,7 +793,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
                   {/* Opponent's cut */}
                   <div className="text-center">
-                    <div className="text-sm text-blue-400 mb-2 font-medium">{opponent?.username || 'Opponent'}'s Cut</div>
+                    <div className="text-sm text-blue-400 mb-2 font-medium">{opponentName}'s Cut</div>
                     {cutForDealerState.opponentCut ? (
                       <DeckCut
                         disabled={true}
@@ -828,7 +829,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                     </div>
                     <div className="flex items-center text-gray-400 text-2xl font-bold">vs</div>
                     <div>
-                      <div className="text-sm text-blue-400 mb-1">{opponent?.username}</div>
+                      <div className="text-sm text-blue-400 mb-1">{opponentName}</div>
                       <div className={`w-16 h-24 bg-white rounded-lg shadow-lg flex items-center justify-center text-xl font-bold border-2 ${
                         !iAmDealer ? 'border-yellow-400 ring-2 ring-yellow-400/50' : 'border-blue-400'
                       } ${
@@ -843,7 +844,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   </div>
 
                   <div className="text-yellow-400 text-lg font-bold mb-4">
-                    {iAmDealer ? 'You deal!' : `${opponent?.username} deals!`}
+                    {iAmDealer ? 'You deal!' : `${opponentName} deals!`}
                   </div>
 
                   {/* Action buttons based on role */}
@@ -859,7 +860,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
                   {myAck && !bothAcknowledged && (
                     <div className="text-gray-400">
-                      Waiting for {opponent?.username} to confirm...
+                      Waiting for {opponentName} to confirm...
                     </div>
                   )}
 
@@ -875,7 +876,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
                   {bothAcknowledged && !iAmDealer && (
                     <div className="text-gray-400">
-                      Waiting for {opponent?.username} to deal...
+                      Waiting for {opponentName} to deal...
                     </div>
                   )}
                 </div>
@@ -902,7 +903,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                 playerScore={gameState?.myScore || 0}
                 computerScore={gameState?.opponentScore || 0}
                 playerLabel="You"
-                opponentLabel={opponent?.username || 'Opp'}
+                opponentLabel={opponentName}
               />
             </div>
 
@@ -910,7 +911,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
             <div className="text-center mb-4 max-w-2xl w-full">
               {dealer && (
                 <div className="text-sm text-yellow-400 mb-2">
-                  Dealer: {isDealer ? 'You' : opponent?.username}
+                  Dealer: {isDealer ? 'You' : opponentName}
                 </div>
               )}
               {gs?.cutCard && (
@@ -922,13 +923,19 @@ export default function MultiplayerGame({ gameId, onExit }) {
             </div>
 
             {/* Turn indicator */}
-            <div className={`mb-4 px-6 py-2 rounded-full text-sm font-bold ${
-              isMyTurn
-                ? 'bg-green-600 text-white animate-pulse'
-                : 'bg-gray-700 text-gray-300'
-            }`}>
-              {isMyTurn ? "Your Turn" : `Waiting for ${opponent?.username || 'opponent'}...`}
-            </div>
+            {(() => {
+              const discardingNeedAction = phase === GAME_PHASE.DISCARDING && !hasDiscarded();
+              const showYourTurn = isMyTurn || discardingNeedAction;
+              return (
+                <div className={`mb-4 px-6 py-2 rounded-full text-sm font-bold ${
+                  showYourTurn
+                    ? 'bg-green-600 text-white animate-pulse'
+                    : 'bg-gray-700 text-gray-300'
+                }`}>
+                  {showYourTurn ? "Your Turn" : `Waiting for ${opponentName}...`}
+                </div>
+              );
+            })()}
 
             {/* Opponent's hand + Crib pile (if opponent is dealer) */}
             {(phase === GAME_PHASE.DISCARDING || phase === GAME_PHASE.CUT || phase === GAME_PHASE.PLAYING || phase === GAME_PHASE.COUNTING) && (() => {
@@ -943,7 +950,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   opponentHighlighted || cribHighlighted ? 'bg-yellow-900/30 border-2 border-yellow-500' : 'bg-gray-800/60 border border-gray-700/50'
                 }`}>
                   <div className="text-sm mb-2 text-gray-400">
-                    {showCribHere ? `Crib (${opponent?.username}'s):` : `${opponent?.username}'s Hand:`}
+                    {showCribHere ? `Crib (${opponentName}'s):` : `${opponentName}'s Hand:`}
                   </div>
                   <div className="flex items-center justify-center gap-2 sm:gap-4">
                     {/* Crib pile next to opponent's hand if opponent is dealer */}
@@ -1010,7 +1017,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                     animate-pulse
                   `}>
                     <div className="text-xl font-bold text-white">
-                      {isMyScore ? 'You scored!' : `${opponent?.username} scored!`}
+                      {isMyScore ? 'You scored!' : `${opponentName} scored!`}
                     </div>
                     <div className={`text-lg font-semibold ${isMyScore ? 'text-green-300' : 'text-blue-300'}`}>
                       +{pending.points} points - {pending.reason}
@@ -1034,7 +1041,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                     </div>
                   ) : (
                     <div className="text-center mt-3 text-gray-400">
-                      Waiting for {opponent?.username} to accept...
+                      Waiting for {opponentName} to accept...
                     </div>
                   )}
                 </div>
@@ -1082,7 +1089,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   <div className="bg-green-700 rounded p-4 mb-3">
                     {/* Opponent's played cards */}
                     <div className="mb-3">
-                      <div className="text-xs mb-1 text-gray-300">{opponent?.username}'s plays:</div>
+                      <div className="text-xs mb-1 text-gray-300">{opponentName}'s plays:</div>
                       <div ref={opponentPlayAreaRef} className="flex flex-wrap justify-center [&>*:not(:first-child)]:-ml-2 min-h-[32px]">
                         {displayOppCards.map((card, idx) => {
                           const globalIdx = allPlayedCards.findIndex(c => c.rank === card.rank && c.suit === card.suit && c.playedBy === opponentKey);
@@ -1123,7 +1130,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   {opponentSaidGo && (
                     <div className="text-center mb-3">
                       <div className="inline-block bg-orange-600/80 text-white px-4 py-2 rounded-full text-sm font-bold">
-                        {opponent?.username} said "Go" — play if you can!
+                        {opponentName} said "Go" — play if you can!
                       </div>
                     </div>
                   )}
@@ -1134,12 +1141,12 @@ export default function MultiplayerGame({ gameId, onExit }) {
             {/* Message area */}
             {phase === GAME_PHASE.DISCARDING && !hasDiscarded() && (
               <div className="text-center text-yellow-400 mb-3 max-w-2xl w-full">
-                Select 2 cards for {isDealer ? 'your crib' : `${opponent?.username}'s crib`}
+                Select 2 cards for {isDealer ? 'your crib' : `${opponentName}'s crib`}
               </div>
             )}
             {phase === GAME_PHASE.DISCARDING && hasDiscarded() && (
               <div className="text-center text-green-400 mb-3 max-w-2xl w-full">
-                Discarded. Waiting for {opponent?.username}...
+                Discarded. Waiting for {opponentName}...
               </div>
             )}
             {phase === GAME_PHASE.CUT && (
@@ -1154,7 +1161,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   </Button>
                 ) : (
                   <div className="text-gray-400">
-                    Waiting for {opponent?.username} to cut...
+                    Waiting for {opponentName} to cut...
                   </div>
                 )}
               </div>
@@ -1301,7 +1308,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   {waitingForVerification && !iAmCounter && isMyTurn ? (
                     <div className="mb-4 text-center">
                       <div className="text-white mb-2">
-                        {opponent?.username} claims <span className="text-yellow-400 font-bold text-xl">{claimedScore}</span> points
+                        {opponentName} claims <span className="text-yellow-400 font-bold text-xl">{claimedScore}</span> points
                       </div>
 
                       {/* Show the hand being counted so verifier can check */}
@@ -1344,7 +1351,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                     </div>
                   ) : waitingForVerification && iAmCounter ? (
                     <div className="text-gray-400 text-center mb-4">
-                      You claimed {claimedScore} points. Waiting for {opponent?.username} to verify...
+                      You claimed {claimedScore} points. Waiting for {opponentName} to verify...
                     </div>
                   ) : iAmCounter && isMyTurn ? (
                     /* ScoreSelector for the counter */
@@ -1388,7 +1395,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                     </div>
                   ) : (
                     <div className="text-gray-400 text-center mb-4">
-                      Waiting for {opponent?.username} to count...
+                      Waiting for {opponentName} to count...
                     </div>
                   )}
 
@@ -1399,7 +1406,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                       {handsScored.map((scored, idx) => {
                         const isMyHand = scored.player === myKey;
                         const label = scored.phase === 'crib' ? 'Crib' :
-                                      (isMyHand ? 'Your Hand' : `${opponent?.username}'s Hand`);
+                                      (isMyHand ? 'Your Hand' : `${opponentName}'s Hand`);
                         return (
                           <div key={idx} className="mb-3">
                             <div className={`font-medium ${isMyHand ? 'text-green-400' : 'text-gray-300'}`}>
@@ -1440,7 +1447,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                           <div className="text-white font-bold mb-2">Pegging History:</div>
                           {gs.peggingHistory.map((event, idx) => {
                             const isMe = event.player === myKey;
-                            const name = isMe ? 'You' : (opponent?.username || 'Opp');
+                            const name = isMe ? 'You' : (opponentName);
 
                             if (event.type === 'play') {
                               return (
@@ -1467,7 +1474,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                           <div className="mt-2 pt-2 border-t border-gray-600 text-sm">
                             <span className="text-green-400">Your pegging: {gs?.peggingPoints?.[myKey] || 0}</span>
                             {' | '}
-                            <span className="text-blue-400">{opponent?.username}: {gs?.peggingPoints?.[opponentKey] || 0}</span>
+                            <span className="text-blue-400">{opponentName}: {gs?.peggingPoints?.[opponentKey] || 0}</span>
                           </div>
                         </div>
                       )}
