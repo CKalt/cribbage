@@ -1,19 +1,42 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function GlobalError({ error, reset }) {
-  useEffect(() => {
-    const reloadKey = 'chunk-error-reload';
-    const lastReload = sessionStorage.getItem(reloadKey);
-    const now = Date.now();
+  const [errorInfo, setErrorInfo] = useState(null);
 
-    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-      sessionStorage.setItem(reloadKey, now.toString());
-      window.location.href = '/login?_cb=' + Date.now();
-      return;
-    }
+  useEffect(() => {
+    const info = {
+      message: error?.message || 'Unknown error',
+      name: error?.name || 'Error',
+      stack: error?.stack?.split('\n').slice(0, 5).join('\n') || '',
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      timestamp: new Date().toISOString(),
+      isGlobal: true,
+    };
+    setErrorInfo(info);
+
+    fetch('/api/client-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(info),
+    }).catch(() => {});
   }, [error]);
+
+  const handleGoToLogin = () => {
+    try {
+      localStorage.removeItem('isLoggedIn');
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('CognitoIdentityServiceProvider')) {
+          localStorage.removeItem(key);
+        }
+      });
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      sessionStorage.clear();
+    } catch (e) {}
+    window.location.href = '/login?_cb=' + Date.now();
+  };
 
   return (
     <html lang="en">
@@ -33,7 +56,7 @@ export default function GlobalError({ error, reset }) {
               This usually happens after an update. Please log in again.
             </p>
             <button
-              onClick={() => window.location.href = '/login?_cb=' + Date.now()}
+              onClick={handleGoToLogin}
               style={{
                 backgroundColor: '#16a34a',
                 color: 'white',
@@ -47,6 +70,22 @@ export default function GlobalError({ error, reset }) {
             >
               Go to Login
             </button>
+            {errorInfo && (
+              <div style={{
+                marginTop: '1rem',
+                textAlign: 'left',
+                backgroundColor: 'rgba(0,0,0,0.4)',
+                padding: '0.75rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.75rem',
+                color: '#9ca3af',
+                overflow: 'auto',
+                maxHeight: '10rem',
+              }}>
+                <div><strong>Error:</strong> {errorInfo.name}: {errorInfo.message}</div>
+                {errorInfo.stack && <pre style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>{errorInfo.stack}</pre>}
+              </div>
+            )}
           </div>
         </div>
       </body>
