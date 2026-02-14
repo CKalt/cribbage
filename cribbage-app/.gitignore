@@ -46,5 +46,13 @@ next-env.d.ts
 # bug reports (contain user data)
 /bug-reports
 
-# user game data (dml-ast files)
-/data/*.json
+# user game data
+/data/
+
+# playwright / test artifacts
+/playwright-report/
+/test-results/
+/test-bin/screenshots/
+/test-bin/seo-audit-results/
+/test-bin/test-bin/
+/test-bin/test-state.json
