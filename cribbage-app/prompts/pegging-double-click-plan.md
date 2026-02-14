@@ -11,11 +11,13 @@
   - [ ] [1.4: Update gameActions.js for new action type](#14-update-gameactionsjs-for-new-action-type-🤖)
   - [ ] [1.5: Wire up useRequiredAction for confirm_play](#15-wire-up-userequiredaction-for-confirm_play-🤖)
   - [ ] [1.6: Clear pegging selection on phase/turn changes](#16-clear-pegging-selection-on-phaseturn-changes-🤖)
+  - [ ] [1.7: Show inline tooltip above selected card](#17-show-inline-tooltip-above-selected-card-🤖)
 - [ ] [Phase 2: Multiplayer — Select-Then-Play for Pegging](#phase-2-multiplayer--select-then-play-for-pegging) 🤖
   - [ ] [2.1: Add pegging selection state to MultiplayerGame.jsx](#21-add-pegging-selection-state-to-multiplayergamejsx-🤖)
   - [ ] [2.2: Change card onClick during play phase to select instead of play](#22-change-card-onclick-during-play-phase-to-select-instead-of-play-🤖)
   - [ ] [2.3: Add "Play Card" button to multiplayer UI](#23-add-play-card-button-to-multiplayer-ui-🤖)
   - [ ] [2.4: Clear pegging selection on phase/turn changes](#24-clear-pegging-selection-on-phaseturn-changes-🤖)
+  - [ ] [2.5: Show inline tooltip above selected card](#25-show-inline-tooltip-above-selected-card-🤖)
 - [ ] [Phase 3: Build, Version Bump & Commit](#phase-3-build-version-bump--commit) 🤖
   - [ ] [3.1: Run npm run build and fix any errors](#31-run-npm-run-build-and-fix-any-errors-🤖)
   - [ ] [3.2: Bump version in lib/version.js](#32-bump-version-in-libversionjs-🤖)
@@ -43,7 +45,8 @@ During the pegging (play) phase, a single tap on a card immediately plays it wit
 2. **Second tap** on the raised card → card is played (flies to play area)
 3. **Tap a different card** → selection switches to the new card
 4. **"Play Card" button** appears in the action bar when a card is selected (alternative to tapping the raised card)
-5. Only **one card** can be selected at a time (unlike discard which allows two)
+5. **Inline tooltip** appears directly above the raised card: "Click again to play, or another card to select"
+6. Only **one card** can be selected at a time (unlike discard which allows two)
 
 **Key constraint:** The animation source rect must come from the selected card's DOM position, so the flight animation still works correctly.
 
@@ -245,6 +248,37 @@ useEffect(() => {
 
 ---
 
+### 1.7: Show inline tooltip above selected card 🤖
+
+**File:** `components/CribbageGame.jsx`
+
+When a card is selected during pegging (`peggingSelectedCard !== null`), render a small tooltip message directly above the raised card. This gives the player clear guidance without requiring them to look at the action bar.
+
+**Implementation:** In the player hand rendering loop, when the current card matches `peggingSelectedCard`, wrap the card `<div>` with a `relative` container and add an absolutely-positioned tooltip above it:
+
+```jsx
+{gameState === 'play' && peggingSelectedCard &&
+ peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
+  <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap
+    bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10">
+    Click again to play, or another card to select
+  </div>
+)}
+```
+
+The wrapping div for each card must have `className="relative"` added so the tooltip positions correctly above it.
+
+**Key details:**
+- Tooltip uses `absolute -top-10` to sit above the card (which is already raised via `-translate-y-2`)
+- `left-1/2 -translate-x-1/2` centers the tooltip over the card
+- `whitespace-nowrap` prevents the text from wrapping
+- `z-10` ensures it renders above neighboring cards
+- Styled to match the game's dark theme with a subtle cyan border matching the selection glow
+
+[Back to TOC](#table-of-contents)
+
+---
+
 ## Phase 2: Multiplayer — Select-Then-Play for Pegging
 
 ### 2.1: Add pegging selection state to MultiplayerGame.jsx 🤖
@@ -361,6 +395,28 @@ Also clear when a pending pegging score appears (detected via polling).
 
 ---
 
+### 2.5: Show inline tooltip above selected card 🤖
+
+**File:** `components/MultiplayerGame.jsx`
+
+Same tooltip as single-player (step 1.7). In the player hand rendering loop, when the current card matches `peggingSelectedCard`, add the absolutely-positioned tooltip above the card:
+
+```jsx
+{phase === GAME_PHASE.PLAYING && peggingSelectedCard &&
+ peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
+  <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap
+    bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10">
+    Click again to play, or another card to select
+  </div>
+)}
+```
+
+Ensure the card's wrapper `<div>` has `className="relative"` so the tooltip positions correctly.
+
+[Back to TOC](#table-of-contents)
+
+---
+
 ## Phase 3: Build, Version Bump & Commit
 
 ### 3.1: Run npm run build and fix any errors 🤖
@@ -409,8 +465,9 @@ Since both single-player and multiplayer are affected:
 
 **Single-player pegging:**
 - [ ] Tap a card → card rises with cyan glow (NOT immediately played)
+- [ ] Tooltip "Click again to play, or another card to select" appears above raised card
 - [ ] Tap the raised card again → card flies to play area and is played
-- [ ] Tap a different card while one is raised → selection switches
+- [ ] Tap a different card while one is raised → selection switches, tooltip moves
 - [ ] "Play Card" button appears in action bar when card is selected
 - [ ] Tap "Play Card" button → card flies to play area and is played
 - [ ] Unplayable cards (would exceed 31) → cannot be selected
@@ -422,6 +479,7 @@ Since both single-player and multiplayer are affected:
 
 **Multiplayer pegging:**
 - [ ] Same tap-to-select, tap-again-to-play flow
+- [ ] Tooltip appears above selected card
 - [ ] "Play Card" button works
 - [ ] Selection clears when opponent's turn
 - [ ] Selection clears on phase change
