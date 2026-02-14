@@ -25,11 +25,11 @@ export default function PlayingCard({
 
   const isRed = card.suit === '♥' || card.suit === '♦';
 
-  // Size classes
+  // Size classes - min-w ensures cards aren't squeezed below readable width
   const sizeClasses = {
-    sm: 'p-1 text-sm',
-    md: 'p-2 text-xl',
-    lg: 'p-3 text-3xl'
+    sm: 'px-1 py-0.5 text-xs min-w-[1.5rem]',
+    md: 'px-2 py-1 text-lg min-w-[2.25rem]',
+    lg: 'px-2 py-1.5 text-xl min-w-[2.5rem]'
   };
 
   // Face-down card (unknown) - slightly narrower than original w-12 to fit 6 on mobile
@@ -44,10 +44,11 @@ export default function PlayingCard({
   // Revealed card (computer's cards during counting - white bg like player cards)
   if (revealed) {
     return (
-      <div className={`bg-white rounded border border-gray-300 shadow-sm ${sizeClasses[size]} font-bold ${
+      <div className={`shrink-0 bg-white rounded border border-gray-300 shadow-sm ${sizeClasses[size]} font-bold flex flex-col items-center leading-tight ${
         isRed ? 'text-red-600' : 'text-black'
       } ${highlighted ? 'ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50' : ''}`}>
-        {card.rank}{card.suit}
+        <span>{card.rank}</span>
+        <span>{card.suit}</span>
       </div>
     );
   }
@@ -57,14 +58,15 @@ export default function PlayingCard({
     <div
       onClick={disabled ? undefined : onClick}
       className={`
-        bg-white rounded border border-gray-300 shadow-sm ${sizeClasses[size]} font-bold cursor-pointer transition-all
+        shrink-0 bg-white rounded border border-gray-300 shadow-sm ${sizeClasses[size]} font-bold flex flex-col items-center leading-tight cursor-pointer transition-all
         ${selected ? 'ring-4 ring-cyan-400 shadow-lg shadow-cyan-400/50 -translate-y-2 scale-110' : ''}
         ${highlighted && !selected ? 'ring-2 ring-yellow-400/50' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
         ${isRed ? 'text-red-600' : 'text-black'}
       `}
     >
-      {card.rank}{card.suit}
+      <span>{card.rank}</span>
+      <span>{card.suit}</span>
     </div>
   );
 }
@@ -78,10 +80,11 @@ export function PlayedCard({ card, className = '' }) {
   const isRed = card.suit === '♥' || card.suit === '♦';
 
   return (
-    <div className={`bg-white rounded border border-gray-300 shadow-sm p-1 text-sm font-bold ${
+    <div className={`shrink-0 bg-white rounded border border-gray-300 shadow-sm px-1 py-0.5 text-xs min-w-[1.5rem] font-bold flex flex-col items-center leading-tight ${
       isRed ? 'text-red-600' : 'text-black'
     } ${className}`}>
-      {card.rank}{card.suit}
+      <span>{card.rank}</span>
+      <span>{card.suit}</span>
     </div>
   );
 }
@@ -101,10 +104,11 @@ export function LargeCard({ card, placeholder = false }) {
   const isRed = card.suit === '♥' || card.suit === '♦';
 
   return (
-    <div className={`inline-block bg-white rounded p-3 text-3xl font-bold ${
+    <div className={`shrink-0 inline-block bg-white rounded px-3 py-2 text-2xl font-bold flex flex-col items-center leading-tight ${
       isRed ? 'text-red-600' : 'text-black'
     }`}>
-      {card.rank}{card.suit}
+      <span>{card.rank}</span>
+      <span>{card.suit}</span>
     </div>
   );
 }
@@ -118,10 +122,11 @@ export function CutCard({ card }) {
   const isRed = card.suit === '♥' || card.suit === '♦';
 
   return (
-    <div className={`inline-block bg-white rounded p-2 text-2xl font-bold ${
+    <div className={`shrink-0 inline-block bg-white rounded px-2 py-1 text-xl font-bold flex flex-col items-center leading-tight ${
       isRed ? 'text-red-600' : 'text-black'
     }`}>
-      {card.rank}{card.suit}
+      <span>{card.rank}</span>
+      <span>{card.suit}</span>
     </div>
   );
 }

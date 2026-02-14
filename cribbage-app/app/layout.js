@@ -13,8 +13,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Cribbage",
-  description: "Classic cribbage card game",
+  title: "Cribbage - Free Online Cribbage Card Game",
+  description: "Play cribbage online for free. Classic card game with pegging, hand counting, muggins rule, and smart computer opponent. No download required - play in your browser.",
+  metadataBase: new URL('https://cribbage.chrisk.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Cribbage - Free Online Cribbage Card Game',
+    description: 'Play cribbage online for free. Classic card game with pegging, hand counting, and smart computer opponent.',
+    url: 'https://cribbage.chrisk.com',
+    siteName: 'Cribbage',
+    type: 'website',
+    locale: 'en_US',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }) {
