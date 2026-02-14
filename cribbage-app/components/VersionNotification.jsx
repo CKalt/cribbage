@@ -51,7 +51,7 @@ export default function VersionNotification() {
             // Prevent infinite reload loop — only auto-reload if we haven't in the last 10s
             if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
               sessionStorage.setItem(reloadKey, now.toString());
-              window.location.reload();
+              window.location.href = window.location.pathname + '?_cb=' + Date.now();
               return;
             }
             // If we already reloaded recently and still mismatched, show modal as fallback
@@ -91,7 +91,7 @@ export default function VersionNotification() {
   };
 
   const handleUpgrade = () => {
-    window.location.reload();
+    window.location.href = window.location.pathname + '?_cb=' + Date.now();
   };
 
   if (!modalState) {

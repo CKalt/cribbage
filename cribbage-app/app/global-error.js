@@ -19,7 +19,7 @@ export default function GlobalError({ error, reset }) {
 
       if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
         sessionStorage.setItem(reloadKey, now.toString());
-        window.location.reload();
+        window.location.href = window.location.pathname + '?_cb=' + Date.now();
         return;
       }
     }
@@ -43,7 +43,7 @@ export default function GlobalError({ error, reset }) {
               This usually happens after an update. Tap the button below to reload.
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => window.location.href = window.location.pathname + '?_cb=' + Date.now()}
               style={{
                 backgroundColor: '#16a34a',
                 color: 'white',

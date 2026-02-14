@@ -21,7 +21,7 @@ export default function Error({ error, reset }) {
 
       if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
         sessionStorage.setItem(reloadKey, now.toString());
-        window.location.reload();
+        window.location.href = window.location.pathname + '?_cb=' + Date.now();
         return;
       }
     }
@@ -35,7 +35,7 @@ export default function Error({ error, reset }) {
           This usually happens after an update. Tap the button below to reload.
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => window.location.href = window.location.pathname + '?_cb=' + Date.now()}
           className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg"
         >
           Reload App
