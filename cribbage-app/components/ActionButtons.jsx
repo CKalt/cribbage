@@ -125,6 +125,18 @@ export default function ActionButtons({
     );
   }
 
+  // Confirm pegging play (card selected, tap to play)
+  if (type === 'confirm_play') {
+    return (
+      <Button
+        onClick={handlers.confirmPeggingPlay}
+        className="bg-green-600 hover:bg-green-700 px-6 py-3"
+      >
+        Play Card
+      </Button>
+    );
+  }
+
   // Confirm crib discard
   if (type === 'confirm_discard') {
     return (

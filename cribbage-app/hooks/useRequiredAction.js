@@ -30,12 +30,14 @@ export function useRequiredAction(gameState, handlers) {
     gameState.currentCount,
     gameState.cutResultReady,
     gameState.dealer,
+    gameState.peggingSelectedCard,
   ]);
 
   // Map action types to their handlers
   const handler = useMemo(() => {
     const handlerMap = {
       confirm_discard: handlers.discardToCrib,
+      confirm_play: handlers.confirmPeggingPlay,
       accept_score: handlers.acceptScoreAndContinue,
       continue: handlers.handleCountContinue,
       say_go: handlers.playerGo,

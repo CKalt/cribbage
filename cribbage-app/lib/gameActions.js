@@ -10,7 +10,8 @@ export const GAME_ACTIONS = {
   cutForStarter: { type: 'cut_starter', label: 'Tap to cut starter' },
   cribSelect: { type: 'select_cards', label: null }, // No button, user selects cards
   cribSelect_ready: { type: 'confirm_discard', label: 'Discard to Crib' },
-  play_player_turn: { type: 'play_card', label: null }, // No button, user clicks card
+  play_player_turn: { type: 'play_card', label: null }, // No button, user clicks card to select
+  play_player_selected: { type: 'confirm_play', label: 'Play Card' }, // Card selected, confirm play
   play_player_go: { type: 'say_go', label: 'Say "Go"' },
   play_accept_score: { type: 'accept_score', label: 'Accept Points' },
   play_waiting: { type: 'wait', label: null },
@@ -95,6 +96,9 @@ export function getRequiredAction(state) {
       if (!canPlay) {
         return { ...GAME_ACTIONS.play_player_go };
       }
+      if (state.peggingSelectedCard) {
+        return { ...GAME_ACTIONS.play_player_selected };
+      }
       return { ...GAME_ACTIONS.play_player_turn };
 
     case 'counting':
@@ -164,6 +168,7 @@ export function getRequiredAction(state) {
 export function actionRequiresButton(action) {
   const buttonTypes = [
     'confirm_discard',
+    'confirm_play',
     'accept_score',
     'say_go',
     'continue',
