@@ -1,9 +1,10 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b124-20260213';
+export const APP_VERSION = 'v0.2.1-b125-20260214';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
 - Fixed card readability on mobile — cards now have minimum sizes and won't get squeezed.
+- Crib pile no longer overlaps hand cards on small screens.
 - Card suits now always visible — rank and suit stacked vertically like real cards.
 
 Thanks for your feedback - it helps make the game better!`;
