@@ -19,10 +19,18 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
   const [showAdminCancel, setShowAdminCancel] = useState(false);
   const [selectedCards, setSelectedCards] = useState([]);
+  const [peggingSelectedCard, setPeggingSelectedCard] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastPlayAnnouncement, setLastPlayAnnouncement] = useState(null);
   const [cutForDealerState, setCutForDealerState] = useState({ myCut: null, opponentCut: null, result: null });
   const [showPeggingSummary, setShowPeggingSummary] = useState(false);
+
+  // Clear pegging selection when not in play phase or not my turn
+  useEffect(() => {
+    if (phase !== GAME_PHASE.PLAYING || !isMyTurn) {
+      setPeggingSelectedCard(null);
+    }
+  }, [phase, isMyTurn]);
 
   // Animation state
   const [flyingCard, setFlyingCard] = useState(null);
@@ -1169,9 +1177,29 @@ export default function MultiplayerGame({ gameId, onExit }) {
             {phase === GAME_PHASE.PLAYING && isMyTurn && !gs?.pendingPeggingScore && (
               <div className="text-center mb-3 max-w-2xl w-full">
                 {canPlayAnyCard() ? (
-                  <div className="text-yellow-400">
-                    Tap a highlighted card to play it
-                  </div>
+                  peggingSelectedCard ? (
+                    <div className="space-y-2">
+                      <div className="text-cyan-400">
+                        Tap the raised card again or press Play
+                      </div>
+                      <Button
+                        onClick={() => {
+                          const selectedEl = document.querySelector('[class*="ring-cyan-400"]');
+                          if (selectedEl && peggingSelectedCard) {
+                            handlePlayCard(peggingSelectedCard, { currentTarget: selectedEl });
+                            setPeggingSelectedCard(null);
+                          }
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3"
+                      >
+                        Play Card
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-yellow-400">
+                      Tap a card to select it
+                    </div>
+                  )
                 ) : (
                   <div className="space-y-2">
                     <div className="text-red-400">
@@ -1224,12 +1252,22 @@ export default function MultiplayerGame({ gameId, onExit }) {
                           return (
                             <div
                               key={`${card.rank}${card.suit}`}
+                              className="relative"
                               data-selected={isSelected ? 'true' : 'false'}
                               style={{ marginTop: idx % 2 === 1 ? '4px' : '0', ...(isBeingDiscarded ? { visibility: 'hidden' } : {}) }}
                             >
+                              {phase === GAME_PHASE.PLAYING && peggingSelectedCard &&
+                               peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10">
+                                  Click again to play, or another card to select
+                                </div>
+                              )}
                               <PlayingCard
                                 card={card}
-                                selected={phase === GAME_PHASE.DISCARDING && !hasDiscarded() && isSelected}
+                                selected={
+                                  (phase === GAME_PHASE.DISCARDING && !hasDiscarded() && isSelected) ||
+                                  (phase === GAME_PHASE.PLAYING && peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit)
+                                }
                                 highlighted={
                                   playerHighlighted ||
                                   (phase === GAME_PHASE.PLAYING && isMyTurn && playable && !hasPending)
@@ -1244,7 +1282,13 @@ export default function MultiplayerGame({ gameId, onExit }) {
                                   if (phase === GAME_PHASE.DISCARDING && !hasDiscarded()) {
                                     handleCardClick(card);
                                   } else if (phase === GAME_PHASE.PLAYING && isMyTurn && !hasPending) {
-                                    handlePlayCard(card, e);
+                                    if (!isCardPlayable(card)) return;
+                                    if (peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit) {
+                                      handlePlayCard(card, e);
+                                      setPeggingSelectedCard(null);
+                                    } else {
+                                      setPeggingSelectedCard(card);
+                                    }
                                   }
                                 }}
                               />

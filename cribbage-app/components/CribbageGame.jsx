@@ -86,6 +86,15 @@ export default function CribbageGame({ onLogout }) {
 
   // Selection state
   const [selectedCards, setSelectedCards] = useState([]);
+  const [peggingSelectedCard, setPeggingSelectedCard] = useState(null);
+  const [discardingCards, setDiscardingCards] = useState([]);
+
+  // Clear pegging selection when not in play phase or not player's turn
+  useEffect(() => {
+    if (gameState !== 'play' || currentPlayer !== 'player' || pendingScore) {
+      setPeggingSelectedCard(null);
+    }
+  }, [gameState, currentPlayer, pendingScore]);
 
   // Play phase state
   const [playerPlayHand, setPlayerPlayHand] = useState([]);
@@ -152,9 +161,6 @@ export default function CribbageGame({ onLogout }) {
   const [computerDiscardDone, setComputerDiscardDone] = useState(false);
   const [cribCardsInPile, setCribCardsInPile] = useState(0);
   const [computerDiscardMoment, setComputerDiscardMoment] = useState(null);
-
-  // Cards currently flying to crib (hidden from hand during animation)
-  const [discardingCards, setDiscardingCards] = useState([]);
 
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
@@ -1597,6 +1603,35 @@ export default function CribbageGame({ onLogout }) {
     }
   };
 
+  // Confirm pegging play via "Play Card" button (finds selected card's DOM position for animation)
+  const confirmPeggingPlay = () => {
+    if (!peggingSelectedCard) return;
+    const selectedEl = document.querySelector('[class*="ring-cyan-400"]');
+    const startRect = selectedEl?.getBoundingClientRect();
+    const areaRect = playerPlayAreaRef.current?.getBoundingClientRect();
+    if (startRect && areaRect) {
+      const endRect = {
+        top: areaRect.top,
+        left: areaRect.left + areaRect.width / 2 - startRect.width / 2,
+        width: areaRect.width,
+        height: areaRect.height,
+      };
+      setFlyingCard({
+        card: peggingSelectedCard,
+        startRect,
+        endRect,
+        isComputer: false,
+        onComplete: () => {
+          setFlyingCard(null);
+          applyPlayerPlay(peggingSelectedCard);
+        },
+      });
+    } else {
+      applyPlayerPlay(peggingSelectedCard);
+    }
+    setPeggingSelectedCard(null);
+  };
+
   // Player says go
   const playerGo = () => {
     if (currentPlayer !== 'player' || pendingScore) return;
@@ -2152,6 +2187,7 @@ export default function CribbageGame({ onLogout }) {
     currentCount,
     cutResultReady,
     dealer,
+    peggingSelectedCard,
   };
 
   const actionHandlers = {
@@ -2163,6 +2199,7 @@ export default function CribbageGame({ onLogout }) {
     acceptComputerCount,
     objectToComputerCount,
     handleMugginsPreferenceChoice,
+    confirmPeggingPlay,
   };
 
   const requiredAction = useRequiredAction(gameStateForAction, actionHandlers);
@@ -3030,10 +3067,19 @@ export default function CribbageGame({ onLogout }) {
                             playerHand).map((card, idx) => {
                             const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
                             return (
-                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0', ...(isBeingDiscarded ? { visibility: 'hidden' } : {}) }}>
+                            <div key={idx} className="relative" style={{ marginTop: idx % 2 === 1 ? '4px' : '0', ...(isBeingDiscarded ? { visibility: 'hidden' } : {}) }}>
+                              {gameState === 'play' && peggingSelectedCard &&
+                               peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10">
+                                  Click again to play, or another card to select
+                                </div>
+                              )}
                               <PlayingCard
                                 card={card}
-                                selected={!showCribHere && !isBeingDiscarded && selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)}
+                                selected={
+                                  (!showCribHere && !isBeingDiscarded && selectedCards.some(c => c.rank === card.rank && c.suit === card.suit)) ||
+                                  (gameState === 'play' && peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit)
+                                }
                                 disabled={
                                   showCribHere ||
                                   (gameState === 'play' && (currentCount + card.value > 31 || currentPlayer !== 'player' || pendingScore)) ||
@@ -3043,7 +3089,15 @@ export default function CribbageGame({ onLogout }) {
                                 onClick={(e) => {
                                   if (showCribHere) return;
                                   if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
-                                  else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) playerPlay(card, e);
+                                  else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) {
+                                    if (currentCount + card.value > 31) return;
+                                    if (peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit) {
+                                      playerPlay(card, e);
+                                      setPeggingSelectedCard(null);
+                                    } else {
+                                      setPeggingSelectedCard(card);
+                                    }
+                                  }
                                 }}
                               />
                             </div>

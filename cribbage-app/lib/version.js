@@ -1,16 +1,13 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b09-20260214';
+export const APP_VERSION = 'v0.3.1-b10-20260214';
 export const RELEASE_NOTE = `Cribbage v0.3.1 — Multiplayer UX Overhaul! 🎮
 
 NEW in this version:
-- Fixed card readability on mobile — cards now have minimum sizes and won't get squeezed
-- Crib pile no longer overlaps hand cards on small screens
+- Pegging now uses select-then-play: tap a card to select it, tap again to play
+- No more accidental card plays from fat-finger taps!
+- Fixed card readability on mobile — cards have minimum sizes and won't get squeezed
 - Multiplayer now matches single-player experience
-- Opponent hand display (face-down during play, face-up during counting)
-- Progressive crib pile visualization
 - Card flight animations for discard, pegging, and crib reveal
-- Separate play area stacks (your plays vs opponent's plays)
-- Yellow glow highlights during counting and active phases
 - Run detection in multiplayer pegging (was missing!)
 
 Thanks for playing!`;
