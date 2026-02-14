@@ -78,13 +78,6 @@ export default function CribbageGame({ onLogout }) {
   const [peggingSelectedCard, setPeggingSelectedCard] = useState(null);
   const [discardingCards, setDiscardingCards] = useState([]);
 
-  // Clear pegging selection when not in play phase or not player's turn
-  useEffect(() => {
-    if (gameState !== 'play' || currentPlayer !== 'player' || pendingScore) {
-      setPeggingSelectedCard(null);
-    }
-  }, [gameState, currentPlayer, pendingScore]);
-
   // Play phase state
   const [playerPlayHand, setPlayerPlayHand] = useState([]);
   const [computerPlayHand, setComputerPlayHand] = useState([]);
@@ -121,6 +114,13 @@ export default function CribbageGame({ onLogout }) {
 
   // Scoring state
   const [pendingScore, setPendingScore] = useState(null);
+
+  // Clear pegging selection when not in play phase or not player's turn
+  useEffect(() => {
+    if (gameState !== 'play' || currentPlayer !== 'player' || pendingScore) {
+      setPeggingSelectedCard(null);
+    }
+  }, [gameState, currentPlayer, pendingScore]);
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
