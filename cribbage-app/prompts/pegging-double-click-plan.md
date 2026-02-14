@@ -4,26 +4,26 @@
 
 - [Overview](#overview)
 - [Problem Statement](#problem-statement)
-- [ ] [Phase 1: Single-Player — Select-Then-Play for Pegging](#phase-1-single-player--select-then-play-for-pegging) 🤖
-  - [ ] [1.1: Add pegging selection state to CribbageGame.jsx](#11-add-pegging-selection-state-to-cribbagegamejsx-🤖)
-  - [ ] [1.2: Change card onClick during play phase to select instead of play](#12-change-card-onclick-during-play-phase-to-select-instead-of-play-🤖)
-  - [ ] [1.3: Add "Play Card" button to ActionButtons.jsx](#13-add-play-card-button-to-actionbuttonsjsx-🤖)
-  - [ ] [1.4: Update gameActions.js for new action type](#14-update-gameactionsjs-for-new-action-type-🤖)
-  - [ ] [1.5: Wire up useRequiredAction for confirm_play](#15-wire-up-userequiredaction-for-confirm_play-🤖)
-  - [ ] [1.6: Clear pegging selection on phase/turn changes](#16-clear-pegging-selection-on-phaseturn-changes-🤖)
-  - [ ] [1.7: Show inline tooltip above selected card](#17-show-inline-tooltip-above-selected-card-🤖)
-- [ ] [Phase 2: Multiplayer — Select-Then-Play for Pegging](#phase-2-multiplayer--select-then-play-for-pegging) 🤖
-  - [ ] [2.1: Add pegging selection state to MultiplayerGame.jsx](#21-add-pegging-selection-state-to-multiplayergamejsx-🤖)
-  - [ ] [2.2: Change card onClick during play phase to select instead of play](#22-change-card-onclick-during-play-phase-to-select-instead-of-play-🤖)
-  - [ ] [2.3: Add "Play Card" button to multiplayer UI](#23-add-play-card-button-to-multiplayer-ui-🤖)
-  - [ ] [2.4: Clear pegging selection on phase/turn changes](#24-clear-pegging-selection-on-phaseturn-changes-🤖)
-  - [ ] [2.5: Show inline tooltip above selected card](#25-show-inline-tooltip-above-selected-card-🤖)
-- [ ] [Phase 3: Build, Version Bump & Commit](#phase-3-build-version-bump--commit) 🤖
-  - [ ] [3.1: Run npm run build and fix any errors](#31-run-npm-run-build-and-fix-any-errors-🤖)
-  - [ ] [3.2: Bump version in lib/version.js](#32-bump-version-in-libversionjs-🤖)
-  - [ ] [3.3: Git add and commit](#33-git-add-and-commit-🤖)
-- [ ] [Phase 4: Deploy & Test](#phase-4-deploy--test) 🤖👤
-  - [ ] [4.1: Deploy to both production and beta](#41-deploy-to-both-production-and-beta-🤖)
+- [x] [Phase 1: Single-Player — Select-Then-Play for Pegging](#phase-1-single-player--select-then-play-for-pegging) 🤖
+  - [x] [1.1: Add pegging selection state to CribbageGame.jsx](#11-add-pegging-selection-state-to-cribbagegamejsx-🤖)
+  - [x] [1.2: Change card onClick during play phase to select instead of play](#12-change-card-onclick-during-play-phase-to-select-instead-of-play-🤖)
+  - [x] [1.3: Add "Play Card" button to ActionButtons.jsx](#13-add-play-card-button-to-actionbuttonsjsx-🤖)
+  - [x] [1.4: Update gameActions.js for new action type](#14-update-gameactionsjs-for-new-action-type-🤖)
+  - [x] [1.5: Wire up useRequiredAction for confirm_play](#15-wire-up-userequiredaction-for-confirm_play-🤖)
+  - [x] [1.6: Clear pegging selection on phase/turn changes](#16-clear-pegging-selection-on-phaseturn-changes-🤖)
+  - [x] [1.7: Show inline tooltip above selected card](#17-show-inline-tooltip-above-selected-card-🤖)
+- [x] [Phase 2: Multiplayer — Select-Then-Play for Pegging](#phase-2-multiplayer--select-then-play-for-pegging) 🤖
+  - [x] [2.1: Add pegging selection state to MultiplayerGame.jsx](#21-add-pegging-selection-state-to-multiplayergamejsx-🤖)
+  - [x] [2.2: Change card onClick during play phase to select instead of play](#22-change-card-onclick-during-play-phase-to-select-instead-of-play-🤖)
+  - [x] [2.3: Add "Play Card" button to multiplayer UI](#23-add-play-card-button-to-multiplayer-ui-🤖)
+  - [x] [2.4: Clear pegging selection on phase/turn changes](#24-clear-pegging-selection-on-phaseturn-changes-🤖)
+  - [x] [2.5: Show inline tooltip above selected card](#25-show-inline-tooltip-above-selected-card-🤖)
+- [x] [Phase 3: Build, Version Bump & Commit](#phase-3-build-version-bump--commit) 🤖
+  - [x] [3.1: Run npm run build and fix any errors](#31-run-npm-run-build-and-fix-any-errors-🤖)
+  - [x] [3.2: Bump version in lib/version.js](#32-bump-version-in-libversionjs-🤖)
+  - [x] [3.3: Git add and commit](#33-git-add-and-commit-🤖)
+- [x] [Phase 4: Deploy & Test](#phase-4-deploy--test) 🤖👤
+  - [x] [4.1: Deploy to both production and beta](#41-deploy-to-both-production-and-beta-🤖)
   - [ ] [4.2: Manual testing checklist](#42-manual-testing-checklist-👤)
 
 ---
