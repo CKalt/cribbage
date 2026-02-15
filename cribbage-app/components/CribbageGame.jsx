@@ -2706,19 +2706,6 @@ export default function CribbageGame({ onLogout }) {
                   Dealer: {dealer === 'player' ? 'You' : 'Computer'}
                 </div>
 
-                {/* Deck pile during deal animation */}
-                {gameState === 'dealing' && (
-                  <div className="flex justify-center mb-4">
-                    <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
-                      {Array.from({ length: Math.min(3, Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length)) }).map((_, i) => (
-                        <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
-                          style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Cut card */}
                 {cutCard && (
                   <div className="text-center mb-4">
@@ -2855,6 +2842,22 @@ export default function CribbageGame({ onLogout }) {
                       {showCribHere ? "Crib (Computer's):" : gameState === 'dealing' ? "Computer's Hand:" : `Computer's Hand: ${gameState === 'play' ? `${computerPlayHand.length} cards` : ''}`}
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+                      {/* Deck pile when computer is dealer */}
+                      {dealer === 'computer' && gameState === 'dealing' && (() => {
+                        const remaining = Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length);
+                        return remaining > 0 ? (
+                        <div className="flex flex-col items-center">
+                          <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+                            {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
+                              <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
+                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
+                              />
+                            ))}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-4">Deck</div>
+                        </div>
+                        ) : null;
+                      })()}
                       {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
@@ -3056,6 +3059,22 @@ export default function CribbageGame({ onLogout }) {
                           </div>
                         )}
                       </div>
+                      {/* Deck pile when player is dealer */}
+                      {dealer === 'player' && gameState === 'dealing' && (() => {
+                        const remaining = Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length);
+                        return remaining > 0 ? (
+                        <div className="flex flex-col items-center">
+                          <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+                            {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
+                              <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
+                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
+                              />
+                            ))}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-4">Deck</div>
+                        </div>
+                        ) : null;
+                      })()}
                       {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
