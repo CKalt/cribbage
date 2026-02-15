@@ -3303,6 +3303,7 @@ export default function CribbageGame({ onLogout }) {
                 acceptComputerCount,
                 objectToComputerCount,
                 handleMugginsPreferenceChoice,
+                confirmPeggingPlay,
                 proceedAfterCut: () => {}, // TODO: implement if needed
               }}
               pendingScore={pendingScore}
