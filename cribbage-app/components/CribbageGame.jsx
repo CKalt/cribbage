@@ -644,6 +644,10 @@ export default function CribbageGame({ onLogout }) {
     setCribRevealPhase('revealing');
     setCribRevealedCards([]);
     setMessage('Turning over the crib...');
+    // Pre-set counting state so ScoreSelector/verification UI renders (invisible)
+    // and reserves layout space BEFORE animation starts — prevents layout shift
+    setCountingTurn('crib');
+    setCounterIsComputer(dealer === 'computer');
 
     // Wait for re-render so layout is stable, then start flying cards
     requestAnimationFrame(() => {
@@ -657,8 +661,7 @@ export default function CribbageGame({ onLogout }) {
   const revealNextCribCard = (index) => {
     if (index >= crib.length) {
       setCribRevealPhase('done');
-      setCountingTurn('crib');
-      setCounterIsComputer(dealer === 'computer');
+      // countingTurn and counterIsComputer already set in startCribReveal
       setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
       return;
     }
@@ -2065,7 +2068,8 @@ export default function CribbageGame({ onLogout }) {
                                !actualScore &&
                                computerClaimedScore === null &&
                                !isProcessingCount &&
-                               handsCountedThisRound < 3;
+                               handsCountedThisRound < 3 &&
+                               cribRevealPhase !== 'revealing';
 
     addDebugLog(`useEffect check - shouldCount: ${shouldComputerCount}, counterIsComputer: ${counterIsComputer}, ` +
                 `handsCountedThisRound: ${handsCountedThisRound}, state: ${gameState}, pendingScore: ${!!pendingScore}, ` +
@@ -2082,7 +2086,7 @@ export default function CribbageGame({ onLogout }) {
         clearTimeout(timer);
       };
     }
-  }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn]);
+  }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn, cribRevealPhase]);
 
   // Recovery: if game was restored with all 3 hands counted, deal next hand.
   // Uses needsRecoveryDealRef (set ONLY in restore code) to avoid firing during
@@ -2943,7 +2947,7 @@ export default function CribbageGame({ onLogout }) {
                 {/* Counting input - Score selector grid */}
                 {gameState === 'counting' && !actualScore && !pendingScore && !computerClaimedScore &&
                  counterIsComputer === false && (
-                  <div className="mb-4">
+                  <div className={`mb-4 ${cribRevealPhase === 'revealing' ? 'invisible' : ''}`}>
                     <ScoreSelector onSelect={(score) => submitPlayerCount(score)} />
                   </div>
                 )}
