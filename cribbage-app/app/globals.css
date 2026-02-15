@@ -169,3 +169,24 @@
   pointer-events: none;
   animation: cribCardFly 350ms ease-out forwards;
 }
+
+/* Deal animation: card flies from deck pile to hand position */
+@keyframes dealCardFly {
+  0% { transform: translate(0, 0) scale(0.8); opacity: 0.8; }
+  50% { transform: translate(calc(var(--fly-x) * 0.5), calc(var(--fly-y) * 0.5 - 15px)) scale(1); opacity: 1; }
+  100% { transform: translate(var(--fly-x), var(--fly-y)) scale(1); opacity: 1; }
+}
+.flying-card-deal {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  animation: dealCardFly 250ms ease-out forwards;
+}
+
+/* Card flip reveal: scaleX collapses then expands to show face */
+@keyframes cardFlipReveal {
+  0% { transform: scaleX(1); }
+  50% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+.card-flip-reveal { animation: cardFlipReveal 400ms ease-in-out forwards; }

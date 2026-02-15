@@ -1,11 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b134-20260215';
+export const APP_VERSION = 'v0.2.1-b135-20260215';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Last playable card during pegging auto-plays with a single tap — no need for double-tap.
-- Fixed crib counting panel not appearing after game resume.
-- Crib reveal animation no longer jumps when count panel appears.
+- Cards now deal one-by-one from a center deck with flight animation
+- Player's cards flip face-up after all 12 cards are dealt
+- Non-dealer receives cards first (proper cribbage convention)
 
 Thanks for your feedback - it helps make the game better!`;
 
