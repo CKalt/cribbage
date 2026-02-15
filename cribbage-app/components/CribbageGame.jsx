@@ -368,6 +368,24 @@ export default function CribbageGame({ onLogout }) {
     isLoadingGame, createCurrentSnapshot, saveGameState, actualScore,
   ]);
 
+  // Recovery deal: if restored with counting already complete, deal next hand after delay
+  useEffect(() => {
+    if (needsRecoveryDealRef.current && gameState === 'counting') {
+      needsRecoveryDealRef.current = false;
+      const timer = setTimeout(() => {
+        setMessage('Hand complete - Dealing next hand...');
+        setTimeout(() => {
+          const newDealer = dealer === 'player' ? 'computer' : 'player';
+          setDealer(newDealer);
+          const newDeck = shuffleDeck(createDeck());
+          setDeck(newDeck);
+          dealHands(newDeck, newDealer);
+        }, 1500);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState]);
+
   // Resume a saved game
   const resumeGame = useCallback(() => {
     if (!savedGameData) return;
@@ -812,7 +830,9 @@ export default function CribbageGame({ onLogout }) {
   };
 
   // Deal hands — sets up state then kicks off deal animation
-  const dealHands = (currentDeck) => {
+  // currentDealer: pass explicitly when dealer was just changed via setDealer (stale closure)
+  const dealHands = (currentDeck, currentDealer) => {
+    const activeDealer = currentDealer || dealer;
     needsRecoveryDealRef.current = false;
     const playerCards = currentDeck.slice(0, 6);
     const computerCards = currentDeck.slice(6, 12);
@@ -822,7 +842,7 @@ export default function CribbageGame({ onLogout }) {
     }
 
     // Computer decides its discard at deal time (enables independent animation timing)
-    const kept = computerSelectCrib(computerCards, dealer === 'computer');
+    const kept = computerSelectCrib(computerCards, activeDealer === 'computer');
     const discards = computerCards.filter(card =>
       !kept.some(c => c.rank === card.rank && c.suit === card.suit)
     );
@@ -866,13 +886,14 @@ export default function CribbageGame({ onLogout }) {
     // Wait for DOM to render deck pile and hand containers, then start dealing
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        setTimeout(() => dealNextCard(0, playerCards, computerCards), 300);
+        setTimeout(() => dealNextCard(0, playerCards, computerCards, activeDealer), 300);
       });
     });
   };
 
   // Recursively deal cards one at a time with flight animation
-  const dealNextCard = (index, playerCards, computerCards) => {
+  // currentDealer passed explicitly to avoid stale closure on subsequent hands
+  const dealNextCard = (index, playerCards, computerCards, currentDealer) => {
     if (index >= 12) {
       setDealPhase('flipping');
       startDealFlip(0);
@@ -880,11 +901,11 @@ export default function CribbageGame({ onLogout }) {
     }
 
     // Non-dealer receives first card (even indices), dealer gets odd indices
-    const isForPlayer = (dealer === 'computer') ? (index % 2 === 0) : (index % 2 === 1);
+    const isForPlayer = (currentDealer === 'computer') ? (index % 2 === 0) : (index % 2 === 1);
     const targetCards = isForPlayer ? playerCards : computerCards;
     // Which slot (0-5) in that player's hand?
-    const playerDealtSoFar = Math.floor((index + (dealer === 'computer' ? 1 : 0)) / 2);
-    const computerDealtSoFar = Math.floor((index + (dealer === 'computer' ? 0 : 1)) / 2);
+    const playerDealtSoFar = Math.floor((index + (currentDealer === 'computer' ? 1 : 0)) / 2);
+    const computerDealtSoFar = Math.floor((index + (currentDealer === 'computer' ? 0 : 1)) / 2);
     const slot = isForPlayer ? playerDealtSoFar : computerDealtSoFar;
     const card = targetCards[slot];
 
@@ -922,7 +943,7 @@ export default function CribbageGame({ onLogout }) {
         }
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            setTimeout(() => dealNextCard(index + 1, playerCards, computerCards), 80);
+            setTimeout(() => dealNextCard(index + 1, playerCards, computerCards, currentDealer), 80);
           });
         });
       }
@@ -1868,10 +1889,11 @@ export default function CribbageGame({ onLogout }) {
       setTimeout(() => {
         setMessage('Hand complete - Dealing next hand...');
         setTimeout(() => {
-          setDealer(dealer === 'player' ? 'computer' : 'player');
+          const newDealer = dealer === 'player' ? 'computer' : 'player';
+          setDealer(newDealer);
           const newDeck = shuffleDeck(createDeck());
           setDeck(newDeck);
-          dealHands(newDeck);
+          dealHands(newDeck, newDealer);
         }, 1500);
       }, 100);
     } else if (newHandsCountedThisRound === 1) {
@@ -2003,10 +2025,11 @@ export default function CribbageGame({ onLogout }) {
       setMessage('Hand complete - Dealing next hand...');
 
       setTimeout(() => {
-        setDealer(dealer === 'player' ? 'computer' : 'player');
+        const newDealer = dealer === 'player' ? 'computer' : 'player';
+        setDealer(newDealer);
         const newDeck = shuffleDeck(createDeck());
         setDeck(newDeck);
-        dealHands(newDeck);
+        dealHands(newDeck, newDealer);
       }, 1500);
     } else if (newHandsCountedThisRound === 1) {
       addDebugLog(`First count done, dealer (${dealer}) counts hand next`);
@@ -2112,10 +2135,11 @@ export default function CribbageGame({ onLogout }) {
           setTimeout(() => {
             setMessage('Hand complete - Dealing next hand...');
             setTimeout(() => {
-              setDealer(dealer === 'player' ? 'computer' : 'player');
+              const newDealer = dealer === 'player' ? 'computer' : 'player';
+              setDealer(newDealer);
               const newDeck = shuffleDeck(createDeck());
               setDeck(newDeck);
-              dealHands(newDeck);
+              dealHands(newDeck, newDealer);
             }, 1500);
           }, 100);
         } else if (newHandsCountedThisRound === 1) {
