@@ -358,7 +358,7 @@ export default function CribbageGame({ onLogout }) {
   }, [
     gameState, playerScore, computerScore, playerHand, computerHand,
     crib, cutCard, allPlayedCards, handsCountedThisRound, dealer,
-    isLoadingGame, createCurrentSnapshot, saveGameState,
+    isLoadingGame, createCurrentSnapshot, saveGameState, actualScore,
   ]);
 
   // Resume a saved game
@@ -440,6 +440,10 @@ export default function CribbageGame({ onLogout }) {
         correctCounterIsComputer = (dlr === 'computer');
         correctCountingTurn = 'crib';
         setCribRevealPhase('done');
+        // Clear stale actualScore from previous count so ScoreSelector renders
+        setActualScore(null);
+        setComputerClaimedScore(null);
+        setPendingScore(null);
       }
 
       // Override with correct values if they don't match (skip if hands >= 3, already handled)
@@ -2891,7 +2895,12 @@ export default function CribbageGame({ onLogout }) {
                                   if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
                                   else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) {
                                     if (currentCount + card.value > 31) return;
-                                    if (peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit) {
+                                    // Auto-play with single click when only one playable card remains
+                                    const playableCards = playerPlayHand.filter(c => currentCount + c.value <= 31);
+                                    if (playableCards.length === 1) {
+                                      playerPlay(card, e);
+                                      setPeggingSelectedCard(null);
+                                    } else if (peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit) {
                                       playerPlay(card, e);
                                       setPeggingSelectedCard(null);
                                     } else {

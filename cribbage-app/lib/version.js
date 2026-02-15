@@ -1,11 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b132-20260214';
+export const APP_VERSION = 'v0.2.1-b133-20260215';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Pegging now uses select-then-play: tap a card to select it, tap again to play.
-- No more accidental card plays from "fat finger" taps!
-- Fixed card readability on mobile — cards have minimum sizes and won't get squeezed.
+- Last playable card during pegging auto-plays with a single tap — no need for double-tap.
+- Fixed crib counting panel not appearing after game resume.
+- Crib reveal animation no longer jumps when count panel appears.
 
 Thanks for your feedback - it helps make the game better!`;
 
