@@ -181,6 +181,11 @@ export default function BugReportViewer({
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start gap-2">
+                        {report.refNum && (
+                          <span className="text-blue-400 font-bold text-sm flex-shrink-0">
+                            #{report.refNum}
+                          </span>
+                        )}
                         <span className="text-gray-400 text-xs">
                           {formatDate(report.timestamp)}
                         </span>
