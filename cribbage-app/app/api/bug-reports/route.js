@@ -44,6 +44,7 @@ export async function GET(request) {
 
       userReports.push({
         id: report.id,
+        refNum: report.refNum,
         filename: file,
         timestamp: report.timestamp,
         type: report.type,

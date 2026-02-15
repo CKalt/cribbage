@@ -41,9 +41,20 @@ export default function VersionNotification() {
             hasReleaseNote: !!data.releaseNote
           });
 
-          // If server has a newer version than client, show upgrade prompt
+          // If server has a newer version than client, force reload immediately
+          // Don't show a modal — old JS chunks may crash before user can tap "Upgrade"
           if (data.version && data.version !== APP_VERSION) {
-            console.log('Showing NEW VERSION AVAILABLE modal');
+            console.log('Version mismatch, forcing reload:', data.version, '!=', APP_VERSION);
+            const reloadKey = 'version-mismatch-reload';
+            const lastReload = sessionStorage.getItem(reloadKey);
+            const now = Date.now();
+            // Prevent infinite reload loop — only auto-reload if we haven't in the last 10s
+            if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+              sessionStorage.setItem(reloadKey, now.toString());
+              window.location.href = window.location.pathname + '?_cb=' + Date.now();
+              return;
+            }
+            // If we already reloaded recently and still mismatched, show modal as fallback
             setModalState({ version: data.version, releaseNote: data.releaseNote, isNewLoad: false });
           }
           // If versions match but user hasn't seen this version's release notes, show "What's New"
@@ -80,7 +91,7 @@ export default function VersionNotification() {
   };
 
   const handleUpgrade = () => {
-    window.location.reload();
+    window.location.href = window.location.pathname + '?_cb=' + Date.now();
   };
 
   if (!modalState) {

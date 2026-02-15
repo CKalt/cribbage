@@ -89,13 +89,6 @@ export default function CribbageGame({ onLogout }) {
   const [peggingSelectedCard, setPeggingSelectedCard] = useState(null);
   const [discardingCards, setDiscardingCards] = useState([]);
 
-  // Clear pegging selection when not in play phase or not player's turn
-  useEffect(() => {
-    if (gameState !== 'play' || currentPlayer !== 'player' || pendingScore) {
-      setPeggingSelectedCard(null);
-    }
-  }, [gameState, currentPlayer, pendingScore]);
-
   // Play phase state
   const [playerPlayHand, setPlayerPlayHand] = useState([]);
   const [computerPlayHand, setComputerPlayHand] = useState([]);
@@ -132,6 +125,13 @@ export default function CribbageGame({ onLogout }) {
 
   // Scoring state
   const [pendingScore, setPendingScore] = useState(null);
+
+  // Clear pegging selection when not in play phase or not player's turn
+  useEffect(() => {
+    if (gameState !== 'play' || currentPlayer !== 'player' || pendingScore) {
+      setPeggingSelectedCard(null);
+    }
+  }, [gameState, currentPlayer, pendingScore]);
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
@@ -407,7 +407,7 @@ export default function CribbageGame({ onLogout }) {
   }, [
     gameState, playerScore, computerScore, playerHand, computerHand,
     crib, cutCard, allPlayedCards, handsCountedThisRound, dealer,
-    isLoadingGame, createCurrentSnapshot, saveGameState,
+    isLoadingGame, createCurrentSnapshot, saveGameState, actualScore,
   ]);
 
   // Recovery deal: if restored with counting already complete, deal next hand after delay
@@ -493,6 +493,11 @@ export default function CribbageGame({ onLogout }) {
         // Dealer counts crib third
         correctCounterIsComputer = (dlr === 'computer');
         correctCountingTurn = 'crib';
+        setCribRevealPhase('done');
+        // Clear stale actualScore from previous count so ScoreSelector renders
+        setActualScore(null);
+        setComputerClaimedScore(null);
+        setPendingScore(null);
       }
 
       // Override with correct values if they don't match
@@ -716,6 +721,10 @@ export default function CribbageGame({ onLogout }) {
     setCribRevealPhase('revealing');
     setCribRevealedCards([]);
     setMessage('Turning over the crib...');
+    // Pre-set counting state so ScoreSelector/verification UI renders (invisible)
+    // and reserves layout space BEFORE animation starts — prevents layout shift
+    setCountingTurn('crib');
+    setCounterIsComputer(dealer === 'computer');
 
     // Wait for re-render so layout is stable, then start flying cards
     requestAnimationFrame(() => {
@@ -729,8 +738,7 @@ export default function CribbageGame({ onLogout }) {
   const revealNextCribCard = (index) => {
     if (index >= crib.length) {
       setCribRevealPhase('done');
-      setCountingTurn('crib');
-      setCounterIsComputer(dealer === 'computer');
+      // countingTurn and counterIsComputer already set in startCribReveal
       setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
       return;
     }
@@ -2150,7 +2158,8 @@ export default function CribbageGame({ onLogout }) {
                                !actualScore &&
                                computerClaimedScore === null &&
                                !isProcessingCount &&
-                               handsCountedThisRound < 3;
+                               handsCountedThisRound < 3 &&
+                               cribRevealPhase !== 'revealing';
 
     addDebugLog(`useEffect check - shouldCount: ${shouldComputerCount}, counterIsComputer: ${counterIsComputer}, ` +
                 `handsCountedThisRound: ${handsCountedThisRound}, state: ${gameState}, pendingScore: ${!!pendingScore}, ` +
@@ -2167,7 +2176,7 @@ export default function CribbageGame({ onLogout }) {
         clearTimeout(timer);
       };
     }
-  }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn]);
+  }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn, cribRevealPhase]);
 
   // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
   // Single source of truth for what action the user should take
@@ -3091,7 +3100,12 @@ export default function CribbageGame({ onLogout }) {
                                   if (gameState === 'cribSelect' && playerHand.length === 6) toggleCardSelection(card);
                                   else if (gameState === 'play' && currentPlayer === 'player' && !pendingScore) {
                                     if (currentCount + card.value > 31) return;
-                                    if (peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit) {
+                                    // Auto-play with single click when only one playable card remains
+                                    const playableCards = playerPlayHand.filter(c => currentCount + c.value <= 31);
+                                    if (playableCards.length === 1) {
+                                      playerPlay(card, e);
+                                      setPeggingSelectedCard(null);
+                                    } else if (peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit) {
                                       playerPlay(card, e);
                                       setPeggingSelectedCard(null);
                                     } else {
@@ -3147,7 +3161,7 @@ export default function CribbageGame({ onLogout }) {
                 {/* Counting input - Score selector grid */}
                 {gameState === 'counting' && !actualScore && !pendingScore && !computerClaimedScore &&
                  counterIsComputer === false && (
-                  <div className="mb-4">
+                  <div className={`mb-4 ${cribRevealPhase === 'revealing' ? 'invisible' : ''}`}>
                     <ScoreSelector onSelect={(score) => submitPlayerCount(score)} />
                   </div>
                 )}
