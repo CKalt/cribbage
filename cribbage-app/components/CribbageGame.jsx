@@ -2729,6 +2729,9 @@ export default function CribbageGame({ onLogout }) {
                 ? `@${user.attributes.preferred_username}`
                 : user?.attributes?.email?.split('@')[0] || ''}
             </div>
+            {user?.attributes?.email && (
+              <div className="text-center text-gray-500 text-[10px] mt-0.5">{user.attributes.email}</div>
+            )}
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
