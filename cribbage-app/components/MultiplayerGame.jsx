@@ -25,13 +25,6 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [cutForDealerState, setCutForDealerState] = useState({ myCut: null, opponentCut: null, result: null });
   const [showPeggingSummary, setShowPeggingSummary] = useState(false);
 
-  // Clear pegging selection when not in play phase or not my turn
-  useEffect(() => {
-    if (phase !== GAME_PHASE.PLAYING || !isMyTurn) {
-      setPeggingSelectedCard(null);
-    }
-  }, [phase, isMyTurn]);
-
   // Animation state
   const [flyingCard, setFlyingCard] = useState(null);
   const [discardingCards, setDiscardingCards] = useState([]);
@@ -83,6 +76,13 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const isDealer = myKey === dealer;
   const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
   const opponentName = opponent?.email || opponent?.username || 'Opponent';
+
+  // Clear pegging selection when not in play phase or not my turn
+  useEffect(() => {
+    if (phase !== GAME_PHASE.PLAYING || !isMyTurn) {
+      setPeggingSelectedCard(null);
+    }
+  }, [phase, isMyTurn]);
 
   // Handle forfeit
   const handleForfeit = async () => {

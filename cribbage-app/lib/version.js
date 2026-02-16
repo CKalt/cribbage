@@ -1,5 +1,5 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b13-20260215';
+export const APP_VERSION = 'v0.3.1-b14-20260216';
 export const RELEASE_NOTE = `Cribbage v0.3.1 — Deal Animation! 🃏
 
 NEW in this version:
