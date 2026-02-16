@@ -37,6 +37,12 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // idle, revealing, done
   const [cribRevealedCards, setCribRevealedCards] = useState([]);
 
+  // Deal animation state
+  const [dealPhase, setDealPhase] = useState('idle');               // 'idle' | 'dealing' | 'flipping'
+  const [dealtMyCards, setDealtMyCards] = useState([]);              // cards landed in my hand
+  const [dealtOpponentCards, setDealtOpponentCards] = useState([]);  // cards landed in opponent hand
+  const [dealFlipIndex, setDealFlipIndex] = useState(-1);           // which of my cards is flipping (-1 = none)
+
   // Refs for animation positions
   const playerHandRef = useRef(null);
   const opponentHandRef = useRef(null);
@@ -44,6 +50,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const opponentPlayAreaRef = useRef(null);
   const cribPileRef = useRef(null);
   const cribDisplayRef = useRef(null);
+  const deckPileRef = useRef(null);
 
   // Tracking refs for detecting state changes via polling
   const prevPlayedCountRef = useRef(0);
@@ -76,6 +83,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const isDealer = myKey === dealer;
   const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
   const opponentName = opponent?.email || opponent?.username || 'Opponent';
+  const isDealAnimating = dealPhase !== 'idle';
 
   // Clear pegging selection when not in play phase or not my turn
   useEffect(() => {
@@ -471,6 +479,21 @@ export default function MultiplayerGame({ gameId, onExit }) {
     }
   }, [gs?.round]);
 
+  // Detect phase transition to DISCARDING → trigger deal animation
+  useEffect(() => {
+    if (phase === GAME_PHASE.DISCARDING &&
+        prevPhaseRef.current &&
+        prevPhaseRef.current !== GAME_PHASE.DISCARDING &&
+        dealPhase === 'idle') {
+      const myDiscards = (gs?.[`${myKey}Discards`] || []).length;
+      const oppDiscards = (gs?.[`${opponentKey}Discards`] || []).length;
+      if (myDiscards === 0 && oppDiscards === 0) {
+        startDealAnimation();
+      }
+    }
+    prevPhaseRef.current = phase;
+  }, [phase]);
+
   // Detect new cards played (opponent plays arrive via polling) and animate
   useEffect(() => {
     const playedCards = gs?.playState?.playedCards || [];
@@ -572,6 +595,93 @@ export default function MultiplayerGame({ gameId, onExit }) {
       setCribRevealedCards(cribCards);
       setCribRevealPhase('done');
     }
+  };
+
+  // Deal animation functions
+  const startDealAnimation = () => {
+    setDealPhase('dealing');
+    setDealtMyCards([]);
+    setDealtOpponentCards([]);
+    setDealFlipIndex(-1);
+
+    const currentIsDealer = isDealer;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => dealNextCard(0, currentIsDealer), 300);
+      });
+    });
+  };
+
+  const dealNextCard = (index, currentIsDealer) => {
+    if (index >= 12) {
+      setDealPhase('flipping');
+      startDealFlip(0);
+      return;
+    }
+
+    // Non-dealer receives first card (even indices), dealer gets odd
+    const isForMe = currentIsDealer ? (index % 2 === 1) : (index % 2 === 0);
+    const myDealtSoFar = Math.floor((index + (currentIsDealer ? 0 : 1)) / 2);
+    const oppDealtSoFar = Math.floor((index + (currentIsDealer ? 1 : 0)) / 2);
+    const slot = isForMe ? myDealtSoFar : oppDealtSoFar;
+
+    const card = isForMe ? (getMyHand()[slot] || { rank: '?', suit: '?' }) : { rank: '?', suit: '?' };
+
+    const sourceRect = deckPileRef.current?.getBoundingClientRect();
+    const handContainer = isForMe ? playerHandRef.current : opponentHandRef.current;
+    const targetEl = handContainer?.children[slot];
+    const targetRect = targetEl?.getBoundingClientRect();
+
+    if (!sourceRect || !targetRect) {
+      finishDealAnimation();
+      return;
+    }
+
+    setFlyingCard({
+      card,
+      startRect: {
+        top: sourceRect.top,
+        left: sourceRect.left,
+        width: targetRect.width,
+        height: targetRect.height,
+      },
+      endRect: {
+        top: targetRect.top,
+        left: targetRect.left,
+      },
+      faceDown: true,
+      className: 'flying-card-deal',
+      onComplete: () => {
+        setFlyingCard(null);
+        if (isForMe) {
+          setDealtMyCards(prev => [...prev, card]);
+        } else {
+          setDealtOpponentCards(prev => [...prev, card]);
+        }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setTimeout(() => dealNextCard(index + 1, currentIsDealer), 80);
+          });
+        });
+      }
+    });
+  };
+
+  const startDealFlip = (index) => {
+    if (index >= 6) {
+      setTimeout(() => finishDealAnimation(), 300);
+      return;
+    }
+    setDealFlipIndex(index);
+    setTimeout(() => startDealFlip(index + 1), 80);
+  };
+
+  const finishDealAnimation = () => {
+    setDealPhase('idle');
+    setDealFlipIndex(-1);
+    setDealtMyCards([]);
+    setDealtOpponentCards([]);
   };
 
   if (loading) {
@@ -705,6 +815,25 @@ export default function MultiplayerGame({ gameId, onExit }) {
           )}
         </div>
         <div className="text-[10px] text-gray-400 mt-4">Crib</div>
+      </div>
+    );
+  };
+
+  // Render deck pile during deal animation
+  const renderDeckPile = () => {
+    const remaining = Math.max(0, 12 - dealtMyCards.length - dealtOpponentCards.length);
+    if (remaining <= 0) return null;
+
+    return (
+      <div className="flex flex-col items-center">
+        <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+          {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
+            <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
+              style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
+            />
+          ))}
+        </div>
+        <div className="text-[10px] text-gray-400 mt-4">Deck</div>
       </div>
     );
   };
@@ -932,6 +1061,13 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
             {/* Turn indicator */}
             {(() => {
+              if (isDealAnimating) {
+                return (
+                  <div className="mb-4 px-6 py-2 rounded-full text-sm font-bold bg-yellow-600 text-white animate-pulse">
+                    Dealing...
+                  </div>
+                );
+              }
               const discardingNeedAction = phase === GAME_PHASE.DISCARDING && !hasDiscarded();
               const showYourTurn = isMyTurn || discardingNeedAction;
               return (
@@ -961,8 +1097,8 @@ export default function MultiplayerGame({ gameId, onExit }) {
                     {showCribHere ? `Crib (${opponentName}'s):` : `${opponentName}'s Hand:`}
                   </div>
                   <div className="flex items-center justify-center gap-2 sm:gap-4">
-                    {/* Crib pile next to opponent's hand if opponent is dealer */}
-                    {!isDealer && !showCribHere && renderCribPile()}
+                    {/* Crib pile next to opponent's hand if opponent is dealer (deck pile during deal animation) */}
+                    {!isDealer && !showCribHere && (isDealAnimating ? renderDeckPile() : renderCribPile())}
 
                     <div className="grid min-w-0">
                       {/* Hand cards */}
@@ -982,7 +1118,10 @@ export default function MultiplayerGame({ gameId, onExit }) {
                         ) : (
                           // During play/discard: show face-down
                           Array.from({ length: getOpponentCardCount() }).map((_, idx) => (
-                            <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
+                            <div key={idx} style={{
+                              marginTop: idx % 2 === 1 ? '4px' : '0',
+                              ...(isDealAnimating && idx >= dealtOpponentCards.length ? { visibility: 'hidden' } : {})
+                            }}>
                               <PlayingCard card={{ rank: '?', suit: '?' }} faceDown={true} />
                             </div>
                           ))
@@ -1147,12 +1286,12 @@ export default function MultiplayerGame({ gameId, onExit }) {
             })()}
 
             {/* Message area */}
-            {phase === GAME_PHASE.DISCARDING && !hasDiscarded() && (
+            {phase === GAME_PHASE.DISCARDING && !hasDiscarded() && !isDealAnimating && (
               <div className="text-center text-yellow-400 mb-3 max-w-2xl w-full">
                 Select 2 cards for {isDealer ? 'your crib' : `${opponentName}'s crib`}
               </div>
             )}
-            {phase === GAME_PHASE.DISCARDING && hasDiscarded() && (
+            {phase === GAME_PHASE.DISCARDING && hasDiscarded() && !isDealAnimating && (
               <div className="text-center text-green-400 mb-3 max-w-2xl w-full">
                 Discarded. Waiting for {opponentName}...
               </div>
@@ -1224,7 +1363,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
               const myPlayHand = gs?.playState?.[`${myKey}PlayHand`] || [];
               const handToShow = phase === GAME_PHASE.PLAYING ? myPlayHand : getMyHand();
               const showCribHere = isCounting && isDealer && ctx?.isCountingCrib && (cribRevealPhase === 'revealing' || cribRevealPhase === 'done');
-              const playerHighlighted = !showCribHere && (
+              const playerHighlighted = !showCribHere && !isDealAnimating && (
                 (phase === GAME_PHASE.DISCARDING && !hasDiscarded()) ||
                 (phase === GAME_PHASE.PLAYING && isMyTurn && !gs?.pendingPeggingScore) ||
                 (isCounting && ctx?.isCountingMyHand && !ctx?.waitingForVerification)
@@ -1248,13 +1387,20 @@ export default function MultiplayerGame({ gameId, onExit }) {
                           const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
                           const isSelected = selectedCards.some(c => c.suit === card.suit && c.rank === card.rank);
                           const playable = phase === GAME_PHASE.PLAYING ? isCardPlayable(card) : true;
+                          const isDealHidden = isDealAnimating && idx >= dealtMyCards.length;
+                          const isFlipping = dealPhase === 'flipping' && idx <= dealFlipIndex;
+                          const isDealFaceDown = isDealAnimating && !isFlipping;
 
                           return (
                             <div
                               key={`${card.rank}${card.suit}`}
-                              className="relative"
+                              className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`}
                               data-selected={isSelected ? 'true' : 'false'}
-                              style={{ marginTop: idx % 2 === 1 ? '4px' : '0', ...(isBeingDiscarded ? { visibility: 'hidden' } : {}) }}
+                              style={{
+                                marginTop: idx % 2 === 1 ? '4px' : '0',
+                                ...(isBeingDiscarded ? { visibility: 'hidden' } : {}),
+                                ...(isDealHidden ? { visibility: 'hidden' } : {})
+                              }}
                             >
                               {phase === GAME_PHASE.PLAYING && peggingSelectedCard &&
                                peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
@@ -1264,21 +1410,23 @@ export default function MultiplayerGame({ gameId, onExit }) {
                               )}
                               <PlayingCard
                                 card={card}
-                                selected={
+                                faceDown={isDealFaceDown}
+                                selected={!isDealAnimating && (
                                   (phase === GAME_PHASE.DISCARDING && !hasDiscarded() && isSelected) ||
                                   (phase === GAME_PHASE.PLAYING && peggingSelectedCard && peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit)
-                                }
-                                highlighted={
+                                )}
+                                highlighted={!isDealAnimating && (
                                   playerHighlighted ||
                                   (phase === GAME_PHASE.PLAYING && isMyTurn && playable && !hasPending)
-                                }
+                                )}
                                 disabled={
+                                  isDealAnimating ||
                                   isCounting ||
                                   (phase === GAME_PHASE.PLAYING && (!isMyTurn || !playable || hasPending)) ||
                                   (phase === GAME_PHASE.DISCARDING && hasDiscarded()) ||
                                   submitting
                                 }
-                                onClick={(e) => {
+                                onClick={isDealAnimating ? undefined : (e) => {
                                   if (phase === GAME_PHASE.DISCARDING && !hasDiscarded()) {
                                     handleCardClick(card);
                                   } else if (phase === GAME_PHASE.PLAYING && isMyTurn && !hasPending) {
@@ -1308,8 +1456,8 @@ export default function MultiplayerGame({ gameId, onExit }) {
                       )}
                     </div>
 
-                    {/* Crib pile next to player's hand if player is dealer */}
-                    {isDealer && !showCribHere && renderCribPile()}
+                    {/* Crib pile next to player's hand if player is dealer (deck pile during deal animation) */}
+                    {isDealer && !showCribHere && (isDealAnimating ? renderDeckPile() : renderCribPile())}
 
                     {/* Cut card shown alongside during counting */}
                     {isCounting && gs?.cutCard && !showCribHere && (
@@ -1321,7 +1469,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   </div>
 
                   {/* Discard button */}
-                  {phase === GAME_PHASE.DISCARDING && !hasDiscarded() && (
+                  {phase === GAME_PHASE.DISCARDING && !hasDiscarded() && !isDealAnimating && (
                     <div className="text-center mt-3">
                       <Button
                         onClick={handleDiscard}

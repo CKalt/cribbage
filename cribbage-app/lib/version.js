@@ -1,12 +1,13 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b14-20260216';
-export const RELEASE_NOTE = `Cribbage v0.3.1 — Deal Animation! 🃏
+export const APP_VERSION = 'v0.3.1-b15-20260215';
+export const RELEASE_NOTE = `Cribbage v0.3.1 — Multiplayer Deal Animation! 🃏
 
 NEW in this version:
-- Cards deal from the dealer's side of the table (not center)
-- Non-dealer receives first card, dealer gets last card
-- Player's cards flip face-up after all 12 cards are dealt
+- Multiplayer: cards now deal one-at-a-time with animation
+- Cards fly from deck pile alternating non-dealer/dealer
+- Player's cards flip face-up after all 12 land
 - Deck pile shrinks as cards fly out
+- "Dealing..." indicator shown during animation
 
 Thanks for playing!`;
 
