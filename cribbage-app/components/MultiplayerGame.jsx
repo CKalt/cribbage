@@ -24,6 +24,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [lastPlayAnnouncement, setLastPlayAnnouncement] = useState(null);
   const [cutForDealerState, setCutForDealerState] = useState({ myCut: null, opponentCut: null, result: null });
   const [showPeggingSummary, setShowPeggingSummary] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   // Animation state
   const [flyingCard, setFlyingCard] = useState(null);
@@ -848,7 +849,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
   return (
     <div className="h-screen bg-green-800 flex flex-col">
-      {/* Top bar - Opponent info */}
+      {/* Top bar - Opponent info + menu */}
       <div className="bg-gray-900 p-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${opponentConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
@@ -857,28 +858,62 @@ export default function MultiplayerGame({ gameId, onExit }) {
             <span className="text-gray-400 ml-2">({gameState?.opponentScore || 0} pts)</span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-gray-400 text-sm">{userEmail}</span>
-          {isAdmin && (
-            <button
-              onClick={() => setShowAdminCancel(true)}
-              className="text-yellow-400 hover:text-yellow-300 text-sm font-bold"
-            >
-              Cancel Game
-            </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="bg-green-700 hover:bg-green-600 text-white w-10 h-10 rounded-lg text-xl font-bold shadow-lg border border-green-600 transition-colors flex items-center justify-center"
+          >
+            ⋮
+          </button>
+          {showMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowMenu(false)}
+              />
+              <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden">
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowForfeitConfirm(true);
+                  }}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Forfeit
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowAdminCancel(true);
+                    }}
+                    className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Cancel Game
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    onExit();
+                  }}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Exit
+                </button>
+              </div>
+            </>
           )}
-          <button
-            onClick={() => setShowForfeitConfirm(true)}
-            className="text-red-400 hover:text-red-300 text-sm"
-          >
-            Forfeit
-          </button>
-          <button
-            onClick={onExit}
-            className="text-gray-400 hover:text-white text-sm"
-          >
-            Exit
-          </button>
         </div>
       </div>
 
@@ -1102,7 +1137,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
 
                     <div className="grid min-w-0">
                       {/* Hand cards */}
-                      <div ref={opponentHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-4 sm:[&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                      <div ref={opponentHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                         {showOpponentFaceUp() ? (
                           // During counting: show face-up
                           getOpponentHand().map((card, idx) => (
@@ -1382,7 +1417,7 @@ export default function MultiplayerGame({ gameId, onExit }) {
                   <div className="flex items-center justify-center gap-2 sm:gap-4">
                     <div className="grid min-w-0">
                       {/* Hand cards */}
-                      <div ref={playerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-4 sm:[&>*:not(:first-child)]:-ml-3 ${showCribHere ? 'invisible' : ''}`}>
+                      <div ref={playerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                         {handToShow.map((card, idx) => {
                           const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
                           const isSelected = selectedCards.some(c => c.suit === card.suit && c.rank === card.rank);

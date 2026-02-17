@@ -1,13 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b15-20260215';
-export const RELEASE_NOTE = `Cribbage v0.3.1 — Multiplayer Deal Animation! 🃏
+export const APP_VERSION = 'v0.3.1-b16-20260216';
+export const RELEASE_NOTE = `Cribbage v0.3.1 — Mobile UI Fixes 📱
 
 NEW in this version:
-- Multiplayer: cards now deal one-at-a-time with animation
-- Cards fly from deck pile alternating non-dealer/dealer
-- Player's cards flip face-up after all 12 land
-- Deck pile shrinks as cards fly out
-- "Dealing..." indicator shown during animation
+- Multiplayer: compact 3-dot menu replaces overflow top bar
+- Cards no longer overlap too much on mobile
+- Deal card animation for multiplayer
 
 Thanks for playing!`;
 
