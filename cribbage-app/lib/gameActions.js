@@ -105,7 +105,11 @@ export function getRequiredAction(state) {
       // Priority order matters here - check most specific conditions first
 
       // 1. Player needs to acknowledge their count result
-      if (pendingCountContinue) {
+      // Require actualScore to also be set — pendingCountContinue is always set
+      // alongside actualScore during normal gameplay. If pendingCountContinue is
+      // set but actualScore is null, it's stale from a previous count sub-phase
+      // that was cleared during game restore (bug #77).
+      if (pendingCountContinue && actualScore) {
         return {
           ...GAME_ACTIONS.counting_player_continue,
           pendingCountContinue,

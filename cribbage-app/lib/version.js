@@ -1,10 +1,10 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b139-20260218';
+export const APP_VERSION = 'v0.2.1-b140-20260218';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
 - Fixed: Score entry panel reliably appears when it's your turn to count
-- Stale "Continue" button from previous count no longer blocks score entry
+- Defense-in-depth fix: Continue button cannot appear without a submitted score
 - Crib pile stack disappears cleanly when crib cards are revealed
 
 Thanks for your feedback - it helps make the game better!`;
