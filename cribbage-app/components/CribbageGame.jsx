@@ -477,6 +477,15 @@ export default function CribbageGame({ onLogout }) {
         setPendingScore(null);
       }
 
+      // Clear stale pendingCountContinue from previous count sub-phase.
+      // Points are already applied; the acknowledgment is only UI and is not
+      // meaningful after a page refresh/restore. If left set, it takes priority
+      // over the ScoreSelector in getRequiredAction() and shows a Continue button
+      // instead of the score entry grid (bug #77).
+      if (hands < 3) {
+        setPendingCountContinue(null);
+      }
+
       // Override with correct values if they don't match (skip if hands >= 3, already handled)
       if (hands < 3 && correctCounterIsComputer !== undefined && correctCounterIsComputer !== restored.counterIsComputer) {
         console.log(`[Resume] Fixing counterIsComputer: ${restored.counterIsComputer} → ${correctCounterIsComputer}`);
@@ -512,11 +521,10 @@ export default function CribbageGame({ onLogout }) {
       console.log(`[Resume] Set counting message for hands=${hands}, turn=${turn}, isComputer=${isComputerCounting}`);
 
       // Clear stale score state from a previous count sub-phase when it's the player's
-      // turn to count and there's no pending acknowledgment. This prevents actualScore
-      // or computerClaimedScore from blocking the ScoreSelector.
-      // Note: only clear when it's the player's turn — the computer's turn legitimately
-      // has actualScore + computerClaimedScore set while waiting for player to accept/reject.
-      if (hands < 3 && !restored.pendingCountContinue && correctCounterIsComputer === false) {
+      // turn to count. This prevents actualScore or computerClaimedScore from blocking
+      // the ScoreSelector. Only clear for the player's turn — the computer's turn
+      // legitimately has these set while waiting for player to accept/reject.
+      if (hands < 3 && correctCounterIsComputer === false) {
         if (restored.actualScore) {
           console.log(`[Resume] Clearing stale actualScore from previous count`);
           setActualScore(null);
