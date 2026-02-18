@@ -511,17 +511,20 @@ export default function CribbageGame({ onLogout }) {
       }
       console.log(`[Resume] Set counting message for hands=${hands}, turn=${turn}, isComputer=${isComputerCounting}`);
 
-      // Clear stale actualScore and pendingCountContinue from a previous count sub-phase.
-      // These are set during submitPlayerCount and cleared in proceedAfterPlayerCount.
-      // If the game was saved between those two calls (e.g. player submitted count but
-      // didn't click Continue before closing), actualScore persists and blocks the
-      // ScoreSelector from showing on the next count sub-phase.
-      if (hands < 3 && !restored.pendingCountContinue) {
-        // No pending acknowledgment → actualScore is stale from a completed count
+      // Clear stale score state from a previous count sub-phase when it's the player's
+      // turn to count and there's no pending acknowledgment. This prevents actualScore
+      // or computerClaimedScore from blocking the ScoreSelector.
+      // Note: only clear when it's the player's turn — the computer's turn legitimately
+      // has actualScore + computerClaimedScore set while waiting for player to accept/reject.
+      if (hands < 3 && !restored.pendingCountContinue && correctCounterIsComputer === false) {
         if (restored.actualScore) {
           console.log(`[Resume] Clearing stale actualScore from previous count`);
           setActualScore(null);
           setShowBreakdown(false);
+        }
+        if (restored.computerClaimedScore) {
+          console.log(`[Resume] Clearing stale computerClaimedScore`);
+          setComputerClaimedScore(null);
         }
       }
     }
@@ -529,7 +532,12 @@ export default function CribbageGame({ onLogout }) {
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
     if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
     if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
-    if (restored.pendingScore !== undefined) setPendingScore(restored.pendingScore);
+    // Don't restore pendingScore during counting phase — it's a pegging concept
+    // and would block ScoreSelector from appearing (line 532 previously overrode
+    // the clearing done by the counting validation block at line 477)
+    if (restored.pendingScore !== undefined && restored.gameState !== 'counting') {
+      setPendingScore(restored.pendingScore);
+    }
 
     // Store as last saved state
     lastSavedStateRef.current = savedGameData;
@@ -2882,10 +2890,10 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         ) : null;
                       })()}
-                      {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
+                      {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (() => {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
-                        <div ref={cribPileRef} className={`flex flex-col items-center transition-opacity duration-300 ${cribRevealPhase === 'revealing' ? 'opacity-60' : ''}`}>
+                        <div ref={cribPileRef} className="flex flex-col items-center">
                           <div className="relative w-12 h-16">
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
@@ -3099,10 +3107,10 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         ) : null;
                       })()}
-                      {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
+                      {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && handsCountedThisRound < 2 && (() => {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
-                        <div ref={cribPileRef} className={`flex flex-col items-center ${cribRevealPhase === 'revealing' ? 'transition-opacity duration-300 opacity-60' : ''}`}>
+                        <div ref={cribPileRef} className="flex flex-col items-center">
                           <div className="relative w-12 h-16">
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
