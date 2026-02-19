@@ -437,6 +437,7 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerClaimedScore !== undefined) setComputerClaimedScore(restored.computerClaimedScore);
     if (restored.actualScore !== undefined) setActualScore(restored.actualScore);
     if (restored.pendingCountContinue !== undefined) setPendingCountContinue(restored.pendingCountContinue);
+    console.log('[Restore] Generic restore: actualScore=', restored.actualScore, 'computerClaimedScore=', restored.computerClaimedScore, 'pendingCountContinue=', restored.pendingCountContinue, 'gameState=', restored.gameState, 'counterIsComputer=', restored.counterIsComputer, 'handsCountedThisRound=', restored.handsCountedThisRound);
     if (restored.computerKeptHand !== undefined) setComputerKeptHand(restored.computerKeptHand);
     if (restored.computerDiscardCards !== undefined) setComputerDiscardCards(restored.computerDiscardCards);
     if (restored.computerDiscardDone !== undefined) setComputerDiscardDone(restored.computerDiscardDone);
@@ -2254,6 +2255,22 @@ export default function CribbageGame({ onLogout }) {
     }
   });
 
+  // Recovery: clear stale actualScore/computerClaimedScore when it's the player's
+  // turn to count but these values are left over from a previous count sub-phase.
+  // This catches the edge case where auto-save fires during the muggins timeout
+  // (5 seconds) capturing intermediate state, then the game is restored with
+  // actualScore still set — which blocks ScoreSelector from appearing (bug #77).
+  useEffect(() => {
+    if (gameState === 'counting' && counterIsComputer === false &&
+        actualScore && !pendingCountContinue && !showCelebration) {
+      console.log('[Recovery] Clearing stale actualScore during player counting turn',
+        { actualScore, computerClaimedScore, handsCountedThisRound, counterIsComputer });
+      setActualScore(null);
+      setComputerClaimedScore(null);
+      setShowBreakdown(false);
+    }
+  }, [gameState, counterIsComputer, actualScore, pendingCountContinue, showCelebration]);
+
   // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
   // Single source of truth for what action the user should take
   const gameStateForAction = {
@@ -2559,6 +2576,9 @@ export default function CribbageGame({ onLogout }) {
           <CardHeader>
             <CardTitle className="text-3xl text-center">Cribbage</CardTitle>
             <div className="text-center text-green-600 text-xs">{APP_VERSION}</div>
+            {user?.attributes?.email && (
+              <div className="text-center text-green-400 text-xs mt-0.5">{user.attributes.email}</div>
+            )}
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -3145,7 +3165,11 @@ export default function CribbageGame({ onLogout }) {
                 {/* Crib is now displayed inline in the hand sections above */}
 
                 {/* Counting input - Score selector grid */}
-                {gameState === 'counting' && !actualScore && !pendingScore && !computerClaimedScore &&
+                {/* Show ScoreSelector when: it's the player's turn to count AND either
+                    actualScore hasn't been set yet (normal) OR actualScore is stale from
+                    a previous count sub-phase (pendingCountContinue is null — during normal
+                    gameplay they're always set together in the same React batch). Bug #77. */}
+                {gameState === 'counting' && (!actualScore || !pendingCountContinue) && !pendingScore && !computerClaimedScore &&
                  counterIsComputer === false && (
                   <div className={`mb-4 ${cribRevealPhase === 'revealing' ? 'invisible' : ''}`}>
                     <ScoreSelector onSelect={(score) => submitPlayerCount(score)} />
@@ -3183,10 +3207,16 @@ export default function CribbageGame({ onLogout }) {
                   </div>
                 )}
 
-                {/* Score breakdown - only show after player decides (when computer counting) or always (when player counting) */}
+                {/* Score breakdown - show when:
+                    - Computer counting and player has accepted/objected
+                    - Player counting and has submitted (pendingCountContinue set)
+                    Don't show stale breakdown from a previous count sub-phase (bug #77) */}
                 <ScoreBreakdown
                   actualScore={actualScore}
-                  show={gameState === 'counting' && (!counterIsComputer || playerMadeCountDecision)}
+                  show={gameState === 'counting' && (
+                    (counterIsComputer && playerMadeCountDecision) ||
+                    (!counterIsComputer && pendingCountContinue)
+                  )}
                 />
 
                 {/* Continue button moved to sticky bar */}

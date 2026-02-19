@@ -142,15 +142,11 @@ export function getRequiredAction(state) {
       }
 
       // 4. Player needs to enter their count
-      if (!actualScore) {
-        return { ...GAME_ACTIONS.counting_player_input };
-      }
-
-      // 5. Fallback - should have pendingCountContinue set, but just in case
-      return {
-        ...GAME_ACTIONS.counting_player_continue,
-        fallback: true,
-      };
+      // Always show ScoreSelector when it's the player's turn and no pendingCountContinue.
+      // A stale actualScore (from a previous count sub-phase captured by auto-save during
+      // the muggins timeout window) must NOT block the ScoreSelector (bug #77).
+      // The recovery useEffect in CribbageGame.jsx will clear the stale actualScore.
+      return { ...GAME_ACTIONS.counting_player_input };
 
     case 'gameOver':
       return { ...GAME_ACTIONS.gameOver };

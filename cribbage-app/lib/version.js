@@ -1,11 +1,12 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b140-20260218';
+export const APP_VERSION = 'v0.2.1-b141-20260219';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Fixed: Score entry panel reliably appears when it's your turn to count
-- Defense-in-depth fix: Continue button cannot appear without a submitted score
-- Crib pile stack disappears cleanly when crib cards are revealed
+- Fixed: Score entry panel now always appears when it's your turn to count (bug #77/79)
+- Fixed: Stale score breakdown from previous count no longer blocks score entry
+- Fixed: Email address restored to top of screen (bug #78)
+- Runtime recovery clears stale state from muggins timeout auto-save edge case
 
 Thanks for your feedback - it helps make the game better!`;
 
