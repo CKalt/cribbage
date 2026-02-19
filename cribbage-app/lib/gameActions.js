@@ -130,8 +130,11 @@ export function getRequiredAction(state) {
           };
         }
         // If actualScore is still set from player's previous count (restored game scenario),
-        // show Continue button to clear it so computer can proceed
-        if (actualScore) {
+        // show Continue button to clear it so computer can proceed.
+        // IMPORTANT: Only when playerMadeCountDecision is false (restored game default).
+        // When playerMadeCountDecision is true, a muggins timeout is handling the
+        // transition — showing Continue here causes a race condition (bug #80).
+        if (actualScore && !playerMadeCountDecision) {
           return {
             ...GAME_ACTIONS.counting_player_continue,
             restoredGameRecovery: true,

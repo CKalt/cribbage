@@ -393,10 +393,18 @@ export default function CribbageGame({ onLogout }) {
     const restored = deserializeGameState(savedGameData);
     if (!restored) return;
 
-    // If restored during deal animation, skip to cribSelect
+    // If restored during deal animation, skip to cribSelect.
+    // Also clear stale counting fields from previous hand — the race condition
+    // in bug #80 can leave counterIsComputer/countingTurn set when a new deal fires.
     if (restored.gameState === 'dealing') {
       restored.gameState = 'cribSelect';
       restored.message = 'Select 2 cards for the crib';
+      restored.counterIsComputer = null;
+      restored.countingTurn = '';
+      restored.handsCountedThisRound = 0;
+      restored.actualScore = null;
+      restored.computerClaimedScore = null;
+      restored.pendingCountContinue = null;
     }
 
     // Restore all persisted state
@@ -1862,8 +1870,12 @@ export default function CribbageGame({ onLogout }) {
     }
 
     // Fallback: derive next step from current state (handles restored games)
-    // If actualScore is set, player already submitted - proceed to next count
-    if (actualScore && gameState === 'counting') {
+    // If actualScore is set, player already submitted - proceed to next count.
+    // IMPORTANT: Do NOT fire this fallback when counterIsComputer is true — that means
+    // the computer's counting flow (e.g. muggins 5-second timeout) is handling the
+    // transition. Allowing the fallback to fire here causes a race condition where BOTH
+    // the fallback and the timeout advance the game simultaneously (bug #80).
+    if (actualScore && gameState === 'counting' && !counterIsComputer) {
       const nextHandsCount = handsCountedThisRound + 1;
       addDebugLog(`Fallback continue: actualScore set, proceeding with handsCountedThisRound=${nextHandsCount}`);
       setActualScore(null);

@@ -1,12 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b141-20260219';
+export const APP_VERSION = 'v0.2.1-b142-20260219';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Fixed: Score entry panel now always appears when it's your turn to count (bug #77/79)
-- Fixed: Stale score breakdown from previous count no longer blocks score entry
-- Fixed: Email address restored to top of screen (bug #78)
-- Runtime recovery clears stale state from muggins timeout auto-save edge case
+- Fixed: Race condition during muggins overcount no longer corrupts game state (bug #80)
+- Fixed: Continue button no longer appears during muggins 5-second review period
+- Defensive: Restore from stuck "dealing" state clears stale counting fields
 
 Thanks for your feedback - it helps make the game better!`;
 
