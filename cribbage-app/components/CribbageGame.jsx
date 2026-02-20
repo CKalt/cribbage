@@ -3425,7 +3425,7 @@ export default function CribbageGame({ onLogout }) {
 
                 {/* Personal message modal */}
                 {personalMessage && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
                     <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-yellow-500 max-h-[80vh] overflow-y-auto">
                       <h2 className="text-xl font-bold text-yellow-400 mb-3">{personalMessage.title}</h2>
                       <div className="text-gray-300 text-sm mb-4 whitespace-pre-line leading-relaxed">
