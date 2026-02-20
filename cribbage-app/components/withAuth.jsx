@@ -46,6 +46,19 @@ export default function withAuth(WrappedComponent) {
       if (!loading) {
         validateAuth();
       }
+
+      // Safety timeout — if validation hangs for 8 seconds, redirect to login
+      const timeout = setTimeout(() => {
+        if (isValidating) {
+          console.warn('Auth validation timed out — redirecting to login');
+          destroyCookie(null, 'token', { path: '/' });
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('isLoggedIn');
+          }
+          router.replace('/login');
+        }
+      }, 8000);
+      return () => clearTimeout(timeout);
     }, [loading, router]);
 
     if (loading || isValidating) {
