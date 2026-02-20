@@ -2043,7 +2043,12 @@ export default function CribbageGame({ onLogout }) {
 
     let claimed = score;
     const profile = DIFFICULTY_PROFILES[aiDifficulty] || DIFFICULTY_PROFILES.normal;
-    if (Math.random() < profile.countingErrorRate && score > 0) {
+    if (profile.overcountRate && Math.random() < profile.overcountRate && score > 0) {
+      // Expert: deliberate overcount bluff (always claims MORE)
+      const bluff = Math.ceil(Math.random() * profile.overcountRange);
+      claimed = score + bluff;
+      addDebugLog(`Computer bluffing overcount: actual ${score}, claiming ${claimed}`);
+    } else if (Math.random() < profile.countingErrorRate && score > 0) {
       const error = Math.random() < 0.5 ? -profile.countingErrorRange : profile.countingErrorRange;
       claimed = Math.max(0, score + error);
       addDebugLog(`Computer making counting error: actual ${score}, claiming ${claimed}`);
@@ -2726,7 +2731,7 @@ export default function CribbageGame({ onLogout }) {
                             <li>Optimal discards via expected value</li>
                             <li>Evaluates all 46 possible cuts</li>
                             <li>Smarter pegging with count control</li>
-                            <li>Never miscounts hands</li>
+                            <li>May bluff overcounts (muggins trap!)</li>
                           </ul>
                         </div>
                       )}
