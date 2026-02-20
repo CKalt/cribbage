@@ -604,9 +604,8 @@ export default function CribbageGame({ onLogout }) {
     if (restored.pendingScore !== undefined && restored.gameState !== 'counting') {
       setPendingScore(restored.pendingScore);
     }
-    if (restored.aiDifficulty) {
-      setAiDifficulty(restored.aiDifficulty);
-    }
+    // Don't restore aiDifficulty from saved game — use the player's
+    // current menu selection. They just had a chance to change it.
 
     // Store as last saved state
     lastSavedStateRef.current = savedGameData;
