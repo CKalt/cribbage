@@ -372,15 +372,11 @@ export default function CribbageGame({ onLogout }) {
 
     // Message for Shawn (and Chris preview)
     if ((email === 'shawnbourne@sympatico.ca' || email === 'chris@chrisk.com') && !seen['shawn-expert-apology']) {
-      // Delay slightly so it doesn't collide with the version notification
-      const timer = setTimeout(() => {
-        setPersonalMessage({
-          id: 'shawn-expert-apology',
-          title: 'Hey Shawn!',
-          body: `First — we owe you an apology! We were rolling out some new features earlier and accidentally caused a login issue that may have disrupted your experience. We're truly sorry about that and it's been fixed.\n\nNow for the good news — congratulations on your amazing performance! Your win record is truly impressive and has been the benchmark we measure the AI against.\n\nWe've been working hard to make the computer more competitive. We just launched Expert Mode, where the AI evaluates every possible cut card to find optimal discards, plays smarter during pegging, and may even try to bluff overcounts to test your muggins skills.\n\nYou can switch between Normal and Expert at any time from the ⋮ menu — no need to start a new game. We hope you enjoy the challenge!\n\nYour feedback has been invaluable in making the game better for everyone. Thank you for playing!`,
-        });
-      }, 3000);
-      return () => clearTimeout(timer);
+      setPersonalMessage({
+        id: 'shawn-expert-apology',
+        title: 'Hey Shawn!',
+        body: `First — we owe you an apology! We were rolling out some new features earlier and accidentally caused a login issue that may have disrupted your experience. We're truly sorry about that and it's been fixed.\n\nNow for the good news — congratulations on your amazing performance! Your win record is truly impressive and has been the benchmark we measure the AI against.\n\nWe've been working hard to make the computer more competitive. We just launched Expert Mode, where the AI evaluates every possible cut card to find optimal discards, plays smarter during pegging, and may even try to bluff overcounts to test your muggins skills.\n\nYou can switch between Normal and Expert at any time from the ⋮ menu — no need to start a new game. We hope you enjoy the challenge!\n\nYour feedback has been invaluable in making the game better for everyone. Thank you for playing!`,
+      });
     }
   }, [user]);
 
