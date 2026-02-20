@@ -10,16 +10,21 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let settled = false;
+
     const currentUser = userPool.getCurrentUser();
     if (currentUser) {
       currentUser.getSession((err, session) => {
+        if (settled) return;
         if (err || !session || !session.isValid()) {
           setUser(null);
+          settled = true;
           setLoading(false);
           return;
         }
 
         currentUser.getUserAttributes((attrErr, attributes) => {
+          if (settled) return;
           if (!attrErr && attributes) {
             const userAttributes = {};
             attributes.forEach((attr) => {
@@ -28,12 +33,25 @@ export function AuthProvider({ children }) {
             currentUser.attributes = userAttributes;
           }
           setUser(currentUser);
+          settled = true;
           setLoading(false);
         });
       });
     } else {
+      settled = true;
       setLoading(false);
     }
+
+    // Safety timeout — if Cognito calls hang, unblock the app after 6 seconds
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        console.warn('Auth context timed out — treating as unauthenticated');
+        settled = true;
+        setUser(null);
+        setLoading(false);
+      }
+    }, 6000);
+    return () => clearTimeout(timeout);
   }, []);
 
   const signOut = () => {
