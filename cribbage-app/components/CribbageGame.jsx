@@ -54,7 +54,7 @@ export default function CribbageGame({ onLogout }) {
   const [showUnreadNotification, setShowUnreadNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [personalMessage, setPersonalMessage] = useState(null);
+  // personalMessage state removed — now handled by VersionNotification
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -362,23 +362,8 @@ export default function CribbageGame({ onLogout }) {
     }
   }, [unreadBugReports]);
 
-  // Targeted personal messages — show once per user via localStorage
-  useEffect(() => {
-    const email = user?.attributes?.email;
-    if (!email) return;
-
-    const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
-    const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
-
-    // Message for Shawn (and Chris preview)
-    if ((email === 'shawnbourne@sympatico.ca' || email === 'chris@chrisk.com') && !seen['shawn-expert-apology']) {
-      setPersonalMessage({
-        id: 'shawn-expert-apology',
-        title: 'Hey Shawn!',
-        body: `First — we owe you an apology! We were rolling out some new features earlier and accidentally caused a login issue that may have disrupted your experience. We're truly sorry about that and it's been fixed.\n\nNow for the good news — congratulations on your amazing performance! Your win record is truly impressive and has been the benchmark we measure the AI against.\n\nWe've been working hard to make the computer more competitive. We just launched Expert Mode, where the AI evaluates every possible cut card to find optimal discards, plays smarter during pegging, and may even try to bluff overcounts to test your muggins skills.\n\nYou can switch between Normal and Expert at any time from the ⋮ menu — no need to start a new game. We hope you enjoy the challenge!\n\nYour feedback has been invaluable in making the game better for everyone. Thank you for playing!`,
-      });
-    }
-  }, [user]);
+  // Personal messages are now handled by VersionNotification component
+  // (shown after the "Got It!" dismiss — see lib/personal-messages.js)
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -3413,32 +3398,6 @@ export default function CribbageGame({ onLogout }) {
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Yes, Forfeit
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Personal message modal */}
-                {personalMessage && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-                    <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-yellow-500 max-h-[80vh] overflow-y-auto">
-                      <h2 className="text-xl font-bold text-yellow-400 mb-3">{personalMessage.title}</h2>
-                      <div className="text-gray-300 text-sm mb-4 whitespace-pre-line leading-relaxed">
-                        {personalMessage.body}
-                      </div>
-                      <div className="flex justify-end pt-2 border-t border-gray-700">
-                        <Button
-                          onClick={() => {
-                            const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
-                            const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
-                            seen[personalMessage.id] = new Date().toISOString();
-                            localStorage.setItem(PERSONAL_MSG_KEY, JSON.stringify(seen));
-                            setPersonalMessage(null);
-                          }}
-                          className="bg-yellow-600 hover:bg-yellow-700"
-                        >
-                          Thanks!
                         </Button>
                       </div>
                     </div>
