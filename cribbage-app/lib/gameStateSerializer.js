@@ -56,6 +56,9 @@ export const PERSISTED_STATE_KEYS = [
 
   // Scoring
   'pendingScore',
+
+  // Settings
+  'aiDifficulty',
 ];
 
 /**

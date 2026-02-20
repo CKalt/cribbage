@@ -15,7 +15,7 @@ module.exports = {
 
   // URLs
   urls: {
-    local: 'http://localhost:3000',
+    local: 'http://localhost:3004',
     production: 'https://cribbage.chrisk.com'
   },
 

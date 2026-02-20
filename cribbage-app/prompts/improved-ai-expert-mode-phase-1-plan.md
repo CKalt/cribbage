@@ -11,13 +11,15 @@
 
 - [ ] [Overview](#overview)
 - [ ] [Problem Statement](#problem-statement)
+- [ ] [Phase 1.0: Test Infrastructure Setup 🤖](#phase-10-test-infrastructure-setup-🤖)
 - [ ] [Phase 1.1: Modularize AI Structure 🤖](#phase-11-modularize-ai-structure-🤖)
 - [ ] [Phase 1.2: Implement Expected-Value Discard Strategy 🤖](#phase-12-implement-expected-value-discard-strategy-🤖)
 - [ ] [Phase 1.3: Add Difficulty Selector to Menu 🤖](#phase-13-add-difficulty-selector-to-menu-🤖)
 - [ ] [Phase 1.4: Wire Difficulty Setting to AI Functions 🤖](#phase-14-wire-difficulty-setting-to-ai-functions-🤖)
 - [ ] [Phase 1.5: Configurable Counting Error Rate 🤖](#phase-15-configurable-counting-error-rate-🤖)
 - [ ] [Phase 1.6: Per-Difficulty Stats Tracking 🤖](#phase-16-per-difficulty-stats-tracking-🤖)
-- [ ] [Phase 1.7: Deploy & Test 👤🤖](#phase-17-deploy--test-👤🤖)
+- [ ] [Phase 1.7: Playwright Tests for Expert Mode 🤖](#phase-17-playwright-tests-for-expert-mode-🤖)
+- [ ] [Phase 1.8: Deploy & Manual Test 👤🤖](#phase-18-deploy--manual-test-👤🤖)
 
 ---
 
@@ -31,6 +33,7 @@ Phase 1 scope:
 - Difficulty selector on the main menu (Normal / Expert)
 - Zero counting errors in Expert mode
 - Per-difficulty stats tracking (Normal wins don't mix with Expert wins)
+- **Playwright test suite** on Mac using port 3004, headless, with strict timeouts
 - **Normal mode remains 100% unchanged** — same heuristic discard, same pegging, same 10% counting errors
 
 Phase 1 does NOT include: pegging improvements (lookahead, card tracking, minimax), board-position awareness, or adaptive difficulty. Those are Phase 2+ work per the research document.
@@ -44,6 +47,84 @@ Phase 1 does NOT include: pegging improvements (lookahead, card tracking, minima
 Shawn has logged 400+ wins with a ~78% win rate. The current AI (`lib/ai.js`) uses a simple heuristic that evaluates kept hands in isolation without considering cut card probability. An expert cribbage player always considers "average hand" value across all possible cuts. By implementing expected-value discard calculation, the Expert AI will make significantly better discard decisions — the area where the current AI loses the most ground.
 
 The key constraint: **Normal mode must not change.** Shawn's 400+ win record was earned against Normal AI and must remain valid. Expert mode is additive — a new challenge, not a correction.
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Phase 1.0: Test Infrastructure Setup 🤖
+
+**Goal**: Update the existing Playwright configuration to use port 3004 (ports 3000 and 3001 are used by Dean's projects) and establish test conventions that prevent hanging.
+
+**Current state**: Playwright is already installed (`@playwright/test` 1.57.0) with config at `playwright.config.js`, test directory at `test-bin/`, and two existing test files (`version-notification.spec.js`, `seo-audit.spec.js`). Current config uses port 3000.
+
+**Steps**:
+
+1. Update `playwright.config.js`:
+   - Change `baseURL` default from `localhost:3000` to `localhost:3004`
+   - Change `webServer.command` from `npm run dev` to `npm run dev -- -p 3004`
+   - Change `webServer.url` from `localhost:3000` to `localhost:3004`
+   - Add global `timeout: 30000` (30s max per test — prevents hanging)
+   - Add `use.actionTimeout: 10000` (10s max for any single action)
+   - Add `use.navigationTimeout: 15000` (15s max for page navigation)
+   - Keep `headless: true` (default, but explicit for clarity)
+
+2. Add `test:local` script to `package.json`:
+   ```json
+   "test:local": "playwright test --reporter=list"
+   ```
+   This uses the list reporter for immediate console feedback (no HTML report generation that could confuse).
+
+3. Verify existing tests still pass with port 3004.
+
+**Updated `playwright.config.js`**:
+```javascript
+module.exports = defineConfig({
+  testDir: './test-bin',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'list',
+  timeout: 30000,            // 30s max per test — no hanging
+
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3004',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    actionTimeout: 10000,    // 10s max for clicks/waits
+    navigationTimeout: 15000, // 15s max for page loads
+  },
+
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+
+  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
+    command: 'npm run dev -- -p 3004',
+    url: 'http://localhost:3004',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
+});
+```
+
+**Test credentials**: All tests requiring login use `chris@chrisk.com` / `Hello123$`. Create a shared `test-bin/helpers/auth.js` helper:
+```javascript
+async function login(page) {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'chris@chrisk.com');
+  await page.fill('input[type="password"]', 'Hello123$');
+  await page.click('button[type="submit"]');
+  await page.waitForURL('/', { timeout: 10000 });
+}
+module.exports = { login };
+```
+
+**Timeout strategy**: Every test gets the global 30s cap. Individual assertions use explicit `{ timeout: 5000 }` where waiting for UI elements. If a test exceeds 30s, Playwright kills it and reports failure — no silent hanging.
 
 [Back to TOC](#table-of-contents)
 
@@ -342,25 +423,121 @@ Only show the Expert record section if the player has any Expert games.
 
 ---
 
-## Phase 1.7: Deploy & Test 👤🤖
+## Phase 1.7: Playwright Tests for Expert Mode 🤖
 
-**Goal**: Deploy to production and validate with real play.
+**Goal**: Automated headless tests in `test-bin/` that validate expert mode functionality on `localhost:3004`. All tests use strict timeouts — no hanging.
+
+**Test credentials**: `chris@chrisk.com` / `Hello123$`
+
+**Test file**: `test-bin/expert-mode.spec.js`
+
+**Test cases**:
+
+### 1.7.1 Login and Menu Access
+```
+- Login with test credentials
+- Verify menu loads with stats display
+- Verify "Start New Game" or "Resume Game" button visible
+```
+
+### 1.7.2 Difficulty Selector
+```
+- Verify Normal/Expert toggle appears on menu
+- Verify Normal is selected by default
+- Click Expert — verify it's visually selected (orange/red highlight)
+- Click Normal — verify it's visually selected (green highlight)
+- Verify localStorage 'aiDifficulty' updates on toggle
+```
+
+### 1.7.3 Start Game on Normal (Baseline)
+```
+- Select Normal difficulty
+- Click "Start New Game" (forfeit existing game if needed)
+- Verify game enters cutting/dealing phase
+- Verify NO "Expert" label in top bar
+- Verify console logs do NOT contain "[AI Expert]"
+```
+
+### 1.7.4 Start Game on Expert
+```
+- Select Expert difficulty
+- Click "Start New Game" (forfeit existing game if needed)
+- Verify game enters cutting/dealing phase
+- Verify "Expert" label visible in top bar
+- Wait for computer discard (deal phase)
+- Capture console logs — verify "[AI Expert] EV discard" appears
+```
+
+### 1.7.5 Per-Difficulty Stats Display
+```
+- Navigate to menu
+- Verify Normal stats section shows (if games played)
+- Verify Expert stats section shows (if Expert games played)
+- Verify stats sections are labeled correctly
+```
+
+### 1.7.6 Difficulty Persistence Across Sessions
+```
+- Select Expert, reload page
+- Verify Expert is still selected on menu
+- Select Normal, reload page
+- Verify Normal is still selected on menu
+```
+
+### 1.7.7 Resume Game Preserves Difficulty
+```
+- Start a game on Expert
+- Forfeit the game (to get back to menu)
+- Start a new game on Expert, play past dealing phase
+- Navigate away and back (or reload)
+- Resume game — verify "Expert" label still visible
+```
+
+**Timeout enforcement**:
+- Each test: max 30s (global config)
+- Each assertion: max 5s explicit timeout
+- Login helper: max 10s for URL change
+- Console log capture: `page.waitForEvent('console', { timeout: 5000 })` — never open-ended
+- If dev server fails to start within 120s, test run aborts with clear error
+
+**Running tests**:
+```bash
+# Run all expert mode tests
+npm run test -- test-bin/expert-mode.spec.js
+
+# Run with visible output (no HTML report)
+npx playwright test test-bin/expert-mode.spec.js --reporter=list
+
+# Run all tests
+npm test
+```
+
+[Back to TOC](#table-of-contents)
+
+---
+
+## Phase 1.8: Deploy & Manual Test 👤🤖
+
+**Goal**: Run Playwright tests locally, then deploy to production and validate with real play.
 
 **Steps**:
-1. 🤖 Run local build to catch compilation errors
-2. 🤖 Bump version to next build number
-3. 🤖 Git add, commit, push, deploy to production
-4. 👤 Test Normal mode — verify behavior is identical (same AI quality, same counting errors, same stats)
-5. 👤 Test Expert mode — start new game on Expert, verify:
+1. 🤖 Run `npm test` on Mac (port 3004, headless) — all tests must pass
+2. 🤖 Fix any test failures — re-run until green
+3. 🤖 Run local build (`npm run build`) to catch compilation errors
+4. 🤖 Bump version to next build number
+5. 🤖 Git add, commit, push, deploy to production
+6. 👤 Test Normal mode — verify behavior is identical (same AI quality, same counting errors, same stats)
+7. 👤 Test Expert mode — start new game on Expert, verify:
    - Difficulty selector works on menu
    - In-game difficulty label visible
    - AI makes noticeably better discard decisions
    - AI never miscounts (0% error rate)
    - Stats track separately from Normal
    - Resuming a saved Expert game stays on Expert
-6. 👤 Invite Shawn to try Expert mode and gather feedback
+8. 👤 Invite Shawn to try Expert mode and gather feedback
 
 **Validation criteria**:
+- All Playwright tests pass (zero failures, zero timeouts)
 - Normal mode win rate unchanged
 - Expert mode AI makes correct EV-optimal discards (can verify by checking debug logs)
 - No counting errors in Expert mode
@@ -380,5 +557,8 @@ Only show the Expert record section if the player has any Expert games.
 | Crib value table inaccurate | Use published values from cribbage literature; refine later |
 | Stats migration breaks existing data | Additive columns only — never modify existing columns |
 | Expert mode too hard / not hard enough | Tune later with pegging improvements (Phase 2) |
+| Playwright tests hanging | Global 30s timeout per test, 10s action timeout, 15s nav timeout |
+| Port 3004 conflict | Only used during local testing; production unchanged |
+| Test credentials exposed | Test account only; not admin; password in test files only |
 
 [Back to TOC](#table-of-contents)

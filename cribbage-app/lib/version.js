@@ -1,13 +1,15 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.2.1-b142-20260219';
+export const APP_VERSION = 'v0.3.0-b143-20260219';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Fixed: Race condition during muggins overcount no longer corrupts game state (bug #80)
-- Fixed: Continue button no longer appears during muggins 5-second review period
-- Defensive: Restore from stuck "dealing" state clears stale counting fields
+- NEW: Expert Mode — AI uses expected-value analysis over all 46 possible cuts
+- NEW: Difficulty selector on the menu (Normal / Expert)
+- NEW: Per-difficulty stats tracking (Normal and Expert records)
+- NEW: Expert leaderboard tab
+- Expert AI never miscounts hands
 
-Thanks for your feedback - it helps make the game better!`;
+Try Expert Mode for a tougher challenge!`;
 
 // Version check interval in seconds - increase as user base grows to reduce server load
 // Current: 60s check + 0-60s random offset = checks spread over 60-120s window

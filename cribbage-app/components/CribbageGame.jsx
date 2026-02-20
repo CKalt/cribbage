@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 // Import game logic from lib/
 import { createDeck, shuffleDeck } from '@/lib/deck';
 import { calculateHandScore, calculatePeggingScore } from '@/lib/scoring';
-import { computerSelectCrib, computerSelectPlay } from '@/lib/ai';
+import { computerSelectCrib, computerSelectPlay, DIFFICULTY_PROFILES } from '@/lib/ai';
 import { rankOrder } from '@/lib/constants';
 import {
   PERSISTED_STATE_KEYS,
@@ -166,6 +166,7 @@ export default function CribbageGame({ onLogout }) {
   const [savedGameExists, setSavedGameExists] = useState(false);
   const [savedGameData, setSavedGameData] = useState(null);
   const [userStats, setUserStats] = useState({ wins: 0, losses: 0, forfeits: 0 });
+  const [userExpertStats, setUserExpertStats] = useState({ wins: 0, losses: 0, forfeits: 0 });
   const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const lastSavedStateRef = useRef(null);
@@ -189,6 +190,25 @@ export default function CribbageGame({ onLogout }) {
     }
   };
 
+  // AI difficulty preference (persists across sessions)
+  const getAiDifficulty = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('aiDifficulty') || 'normal';
+    }
+    return 'normal';
+  };
+  const saveAiDifficulty = (d) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aiDifficulty', d);
+    }
+  };
+  const [aiDifficulty, setAiDifficulty] = useState('normal');
+
+  // Initialize difficulty from localStorage on mount
+  useEffect(() => {
+    setAiDifficulty(getAiDifficulty());
+  }, []);
+
   // Create current state snapshot for saving
   const createCurrentSnapshot = useCallback(() => {
     return createGameStateSnapshot({
@@ -202,7 +222,7 @@ export default function CribbageGame({ onLogout }) {
       countingTurn, handsCountedThisRound, counterIsComputer,
       computerClaimedScore, actualScore, pendingCountContinue,
       playerCutCard, computerCutCard, cutResultReady,
-      pendingScore,
+      pendingScore, aiDifficulty,
       computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
     });
   }, [
@@ -217,7 +237,7 @@ export default function CribbageGame({ onLogout }) {
     computerClaimedScore, actualScore, pendingCountContinue,
     computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
     playerCutCard, computerCutCard, cutResultReady,
-    pendingScore,
+    pendingScore, aiDifficulty,
   ]);
 
   // Save game state to server
@@ -267,7 +287,7 @@ export default function CribbageGame({ onLogout }) {
       const response = await fetch('/api/game-stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result }),
+        body: JSON.stringify({ result, difficulty: aiDifficulty }),
       });
 
       if (response.ok) {
@@ -275,11 +295,14 @@ export default function CribbageGame({ onLogout }) {
         if (data.stats) {
           setUserStats(data.stats);
         }
+        if (data.expertStats) {
+          setUserExpertStats(data.expertStats);
+        }
       }
     } catch (error) {
       console.error('Failed to record game result:', error);
     }
-  }, []);
+  }, [aiDifficulty]);
 
   // Load saved game state on mount
   useEffect(() => {
@@ -294,6 +317,9 @@ export default function CribbageGame({ onLogout }) {
           }
           if (data.stats) {
             setUserStats(data.stats);
+          }
+          if (data.expertStats) {
+            setUserExpertStats(data.expertStats);
           }
         }
       } catch (error) {
@@ -554,6 +580,9 @@ export default function CribbageGame({ onLogout }) {
     // the clearing done by the counting validation block at line 477)
     if (restored.pendingScore !== undefined && restored.gameState !== 'counting') {
       setPendingScore(restored.pendingScore);
+    }
+    if (restored.aiDifficulty) {
+      setAiDifficulty(restored.aiDifficulty);
     }
 
     // Store as last saved state
@@ -867,7 +896,7 @@ export default function CribbageGame({ onLogout }) {
     }
 
     // Computer decides its discard at deal time (enables independent animation timing)
-    const kept = computerSelectCrib(computerCards, activeDealer === 'computer');
+    const kept = computerSelectCrib(computerCards, activeDealer === 'computer', aiDifficulty);
     const discards = computerCards.filter(card =>
       !kept.some(c => c.rank === card.rank && c.suit === card.suit)
     );
@@ -1091,7 +1120,7 @@ export default function CribbageGame({ onLogout }) {
     );
 
     // Use pre-computed computer decision from dealHands
-    const newComputerHand = computerKeptHand || computerSelectCrib(computerHand, dealer === 'computer');
+    const newComputerHand = computerKeptHand || computerSelectCrib(computerHand, dealer === 'computer', aiDifficulty);
     const discards = computerDiscardCards.length === 2 ? computerDiscardCards :
       computerHand.filter(card => !newComputerHand.some(c => c.rank === card.rank && c.suit === card.suit));
 
@@ -1506,7 +1535,7 @@ export default function CribbageGame({ onLogout }) {
   useEffect(() => {
     if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore && !flyingCard) {
       const timer = setTimeout(() => {
-        const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount);
+        const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount, aiDifficulty);
 
         if (card) {
           // Animate computer card from a single card in the hand to play area center
@@ -1994,8 +2023,9 @@ export default function CribbageGame({ onLogout }) {
     setActualScore({ score, breakdown });
 
     let claimed = score;
-    if (Math.random() < 0.1 && score > 0) {
-      const error = Math.random() < 0.5 ? -2 : 2;
+    const profile = DIFFICULTY_PROFILES[aiDifficulty] || DIFFICULTY_PROFILES.normal;
+    if (Math.random() < profile.countingErrorRate && score > 0) {
+      const error = Math.random() < 0.5 ? -profile.countingErrorRange : profile.countingErrorRange;
       claimed = Math.max(0, score + error);
       addDebugLog(`Computer making counting error: actual ${score}, claiming ${claimed}`);
     }
@@ -2591,6 +2621,9 @@ export default function CribbageGame({ onLogout }) {
             {user?.attributes?.email && (
               <div className="text-center text-green-400 text-xs mt-0.5">{user.attributes.email}</div>
             )}
+            {aiDifficulty === 'expert' && gameState !== 'menu' && (
+              <div className="text-center text-orange-400 text-xs font-bold mt-0.5" data-testid="expert-label">Expert Mode</div>
+            )}
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -2601,13 +2634,25 @@ export default function CribbageGame({ onLogout }) {
                   <>
                     {/* Stats display */}
                     {(userStats.wins > 0 || userStats.losses > 0 || userStats.forfeits > 0) && (
-                      <div className="mb-6 text-sm">
-                        <div className="text-gray-400 mb-1">Your Record:</div>
+                      <div className="mb-4 text-sm">
+                        <div className="text-gray-400 mb-1">Normal Record:</div>
                         <div className="flex justify-center gap-4">
-                          <span className="text-green-400">Wins: {userStats.wins}</span>
-                          <span className="text-red-400">Losses: {userStats.losses}</span>
+                          <span className="text-green-400">W: {userStats.wins}</span>
+                          <span className="text-red-400">L: {userStats.losses}</span>
                           {userStats.forfeits > 0 && (
-                            <span className="text-yellow-400">Forfeits: {userStats.forfeits}</span>
+                            <span className="text-yellow-400">F: {userStats.forfeits}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {(userExpertStats.wins > 0 || userExpertStats.losses > 0 || userExpertStats.forfeits > 0) && (
+                      <div className="mb-4 text-sm">
+                        <div className="text-orange-400 mb-1">Expert Record:</div>
+                        <div className="flex justify-center gap-4">
+                          <span className="text-green-400">W: {userExpertStats.wins}</span>
+                          <span className="text-red-400">L: {userExpertStats.losses}</span>
+                          {userExpertStats.forfeits > 0 && (
+                            <span className="text-yellow-400">F: {userExpertStats.forfeits}</span>
                           )}
                         </div>
                       </div>
@@ -2627,6 +2672,43 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                       </div>
                     )}
+
+                    {/* Difficulty selector */}
+                    <div className="mb-6" data-testid="difficulty-selector">
+                      <div className="text-gray-400 text-sm mb-2">Difficulty:</div>
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => { setAiDifficulty('normal'); saveAiDifficulty('normal'); }}
+                          className={`px-4 py-2 rounded-l-full text-sm font-medium transition-colors ${
+                            aiDifficulty === 'normal'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          Normal
+                        </button>
+                        <button
+                          onClick={() => { setAiDifficulty('expert'); saveAiDifficulty('expert'); }}
+                          className={`px-4 py-2 rounded-r-full text-sm font-medium transition-colors ${
+                            aiDifficulty === 'expert'
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          Expert
+                        </button>
+                      </div>
+                      {aiDifficulty === 'expert' && (
+                        <div className="text-orange-400 text-xs mt-2 text-left max-w-[260px] mx-auto">
+                          <div className="mb-1 font-medium">Expert AI improvements:</div>
+                          <ul className="list-disc list-inside space-y-0.5 text-gray-300">
+                            <li>Optimal discards via expected value</li>
+                            <li>Evaluates all 46 possible cuts</li>
+                            <li>Never miscounts hands</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
 
                     {/* New game button - only shown when no saved game exists */}
                     {!savedGameExists && (
