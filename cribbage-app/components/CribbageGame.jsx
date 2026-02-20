@@ -2595,6 +2595,28 @@ export default function CribbageGame({ onLogout }) {
                 Leaderboard
               </button>
 
+              {/* Switch Difficulty Mode */}
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  const newMode = aiDifficulty === 'expert' ? 'normal' : 'expert';
+                  setAiDifficulty(newMode);
+                  saveAiDifficulty(newMode);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                {aiDifficulty === 'expert' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )}
+                {aiDifficulty === 'expert' ? 'Switch to Normal' : 'Switch to Expert'}
+              </button>
+
               {/* Admin Panel - only for chris@chrisk.com */}
               {user?.attributes?.email === 'chris@chrisk.com' && (
                 <button
