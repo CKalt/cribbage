@@ -813,6 +813,25 @@ export default function CribbageGame({ onLogout }) {
     });
   };
 
+  // Return to menu (e.g., after game over) so player can change settings
+  const returnToMenu = () => {
+    setGameState('menu');
+    setMessage('');
+    setPlayerScore(0);
+    setComputerScore(0);
+    setPlayerHand([]);
+    setComputerHand([]);
+    setCrib([]);
+    setCutCard(null);
+    setPlayerPlayHand([]);
+    setComputerPlayHand([]);
+    setPlayerPlayedCards([]);
+    setComputerPlayedCards([]);
+    setAllPlayedCards([]);
+    setSavedGameExists(false);
+    setSavedGameData(null);
+  };
+
   // Player cuts the deck (position is 0-1 from DeckCut component)
   const playerCutDeck = (cutPosition = 0.5) => {
     if (playerCutCard) return;
@@ -2440,8 +2459,8 @@ export default function CribbageGame({ onLogout }) {
         setMessage('Enter your score to continue');
       }
     } else if (gameState === 'gameOver') {
-      addDebugLog('Stuck recovery: game over, starting new game');
-      startNewGame();
+      addDebugLog('Stuck recovery: game over, returning to menu');
+      returnToMenu();
     } else if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore) {
       // Computer should be playing but isn't - give turn to player
       addDebugLog('Stuck recovery: computer stuck in play phase, switching to player');
@@ -2622,7 +2641,9 @@ export default function CribbageGame({ onLogout }) {
               <div className="text-center text-green-400 text-xs mt-0.5">{user.attributes.email}</div>
             )}
             {aiDifficulty === 'expert' && gameState !== 'menu' && (
-              <div className="text-center text-orange-400 text-xs font-bold mt-0.5" data-testid="expert-label">Expert Mode</div>
+              <div className="text-center mt-0.5" data-testid="expert-label">
+                <span className="bg-orange-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">EXPERT MODE</span>
+              </div>
             )}
           </CardHeader>
           <CardContent>
@@ -2704,6 +2725,7 @@ export default function CribbageGame({ onLogout }) {
                           <ul className="list-disc list-inside space-y-0.5 text-gray-300">
                             <li>Optimal discards via expected value</li>
                             <li>Evaluates all 46 possible cuts</li>
+                            <li>Smarter pegging with count control</li>
                             <li>Never miscounts hands</li>
                           </ul>
                         </div>
@@ -3483,6 +3505,7 @@ export default function CribbageGame({ onLogout }) {
                 handleCountContinue,
                 playerGo,
                 startNewGame,
+                returnToMenu,
                 acceptComputerCount,
                 objectToComputerCount,
                 handleMugginsPreferenceChoice,

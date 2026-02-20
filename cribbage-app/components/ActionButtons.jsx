@@ -173,11 +173,11 @@ export default function ActionButtons({
     );
   }
 
-  // Game over - play again
+  // Game over - return to menu
   if (type === 'game_over') {
     return (
       <Button
-        onClick={handlers.startNewGame}
+        onClick={handlers.returnToMenu}
         className="bg-green-600 hover:bg-green-700 px-6 py-3"
       >
         Play Again

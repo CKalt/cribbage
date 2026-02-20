@@ -1,13 +1,13 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b143-20260219';
+export const APP_VERSION = 'v0.3.0-b144-20260219';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- NEW: Expert Mode — AI uses expected-value analysis over all 46 possible cuts
-- NEW: Difficulty selector on the menu (Normal / Expert)
-- NEW: Per-difficulty stats tracking (Normal and Expert records)
-- NEW: Expert leaderboard tab
-- Expert AI never miscounts hands
+- NEW: Expert Mode — smarter discards, pegging, and perfect counting
+- Difficulty selector on the menu (Normal / Expert)
+- Per-difficulty stats and Expert leaderboard tab
+- "Play Again" now returns to menu so you can change settings
+- Expert Mode badge shown during gameplay
 
 Try Expert Mode for a tougher challenge!`;
 

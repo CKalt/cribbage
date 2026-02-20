@@ -13,7 +13,7 @@ export const DIFFICULTY_PROFILES = {
     name: 'Expert',
     description: 'Stronger AI that evaluates every possible cut card',
     discardStrategy: 'expected-value',
-    peggingStrategy: 'heuristic',
+    peggingStrategy: 'expert',
     countingErrorRate: 0.0,
     countingErrorRange: 0,
   },
