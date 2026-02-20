@@ -370,8 +370,9 @@ export default function CribbageGame({ onLogout }) {
     const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
     const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
 
-    // Message for Shawn
-    if (email === 'shawnbourne@sympatico.ca' && !seen['shawn-expert-mode']) {
+    // Message for Shawn (and Chris preview)
+    const shawnMsgRecipients = ['shawnbourne@sympatico.ca', 'chris@chrisk.com'];
+    if (shawnMsgRecipients.includes(email) && !seen['shawn-expert-mode']) {
       // Delay slightly so it doesn't collide with the version notification
       const timer = setTimeout(() => {
         setPersonalMessage({
