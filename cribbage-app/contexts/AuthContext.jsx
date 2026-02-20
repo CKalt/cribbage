@@ -42,11 +42,17 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
 
-    // Safety timeout — if Cognito calls hang, unblock the app after 6 seconds
+    // Safety timeout — if Cognito calls hang, sign out cleanly after 6 seconds
     const timeout = setTimeout(() => {
       if (!settled) {
-        console.warn('Auth context timed out — treating as unauthenticated');
+        console.warn('Auth context timed out — signing out cleanly');
         settled = true;
+        // Sign out from Cognito and clear cookie to prevent redirect loops
+        if (currentUser) {
+          try { currentUser.signOut(); } catch (e) { /* ignore */ }
+        }
+        document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        localStorage.removeItem('isLoggedIn');
         setUser(null);
         setLoading(false);
       }
