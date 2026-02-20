@@ -31,7 +31,7 @@ test.describe('Expert Mode', () => {
     // Should show the improvement list
     await expect(page.getByText('Expert AI improvements:')).toBeVisible();
     await expect(page.getByText('Optimal discards via expected value')).toBeVisible();
-    await expect(page.getByText('Never miscounts hands')).toBeVisible();
+    await expect(page.getByText('May bluff overcounts (muggins trap!)')).toBeVisible();
   });
 
   test('Expert mode persists after page reload', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('Expert Mode', () => {
     if (await newGameBtn.isVisible()) {
       await newGameBtn.click();
       // Wait for game to start - header should show Expert Mode label
-      await expect(page.locator('[data-testid="expert-label"]')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('[data-testid="difficulty-label"]')).toBeVisible({ timeout: 10000 });
     }
   });
 

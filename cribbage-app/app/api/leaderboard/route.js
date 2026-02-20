@@ -23,23 +23,35 @@ export async function GET() {
           const userEmail = userData.email || userId;
 
           if (gameStats) {
-            stats.push({
-              email: userEmail,
-              wins: gameStats[1] || 0,
-              losses: gameStats[2] || 0,
-              forfeits: gameStats[3] || 0,
-              lastPlayed: gameStats[4] || null
-            });
-            // Expert stats (indices 5-8), only include if they've played expert
+            const nWins = gameStats[1] || 0;
+            const nLosses = gameStats[2] || 0;
+            const nForfeits = gameStats[3] || 0;
             const eWins = gameStats[5] || 0;
             const eLosses = gameStats[6] || 0;
             const eForfeits = gameStats[7] || 0;
-            if (eWins > 0 || eLosses > 0 || eForfeits > 0) {
+
+            const normalGames = nWins + nLosses + nForfeits;
+            const expertGames = eWins + eLosses + eForfeits;
+            const primaryMode = expertGames > normalGames ? 'expert' : 'normal';
+
+            stats.push({
+              email: userEmail,
+              wins: nWins,
+              losses: nLosses,
+              forfeits: nForfeits,
+              gamesPlayed: normalGames,
+              primaryMode,
+              lastPlayed: gameStats[4] || null
+            });
+            // Expert stats — only include if they've played expert
+            if (expertGames > 0) {
               expertStats.push({
                 email: userEmail,
                 wins: eWins,
                 losses: eLosses,
                 forfeits: eForfeits,
+                gamesPlayed: expertGames,
+                primaryMode,
                 lastPlayed: gameStats[8] || null
               });
             }
@@ -50,6 +62,8 @@ export async function GET() {
               wins: 0,
               losses: 0,
               forfeits: 0,
+              gamesPlayed: 0,
+              primaryMode: 'normal',
               lastPlayed: null
             });
           }

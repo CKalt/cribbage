@@ -2645,9 +2645,13 @@ export default function CribbageGame({ onLogout }) {
             {user?.attributes?.email && (
               <div className="text-center text-green-400 text-xs mt-0.5">{user.attributes.email}</div>
             )}
-            {aiDifficulty === 'expert' && gameState !== 'menu' && (
-              <div className="text-center mt-0.5" data-testid="expert-label">
-                <span className="bg-orange-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">EXPERT MODE</span>
+            {gameState !== 'menu' && (
+              <div className="text-center mt-0.5" data-testid="difficulty-label">
+                {aiDifficulty === 'expert' ? (
+                  <span className="bg-orange-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">EXPERT MODE</span>
+                ) : (
+                  <span className="bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-full">NORMAL MODE</span>
+                )}
               </div>
             )}
           </CardHeader>

@@ -118,23 +118,34 @@ export default function Leaderboard({ isOpen, onClose }) {
                     <th className="pb-2 text-center">W</th>
                     <th className="pb-2 text-center">L</th>
                     <th className="pb-2 text-center">%</th>
-                    <th className="pb-2 text-right">Last</th>
+                    <th className="pb-2 text-center">GP</th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeStats.map((user, idx) => (
                     <tr key={idx} className="border-b border-gray-700">
                       <td className="py-2 text-gray-500">{idx + 1}</td>
-                      <td className="py-2 text-white truncate max-w-[150px]" title={user.email}>
-                        {user.email.split('@')[0]}
+                      <td className="py-2 text-white max-w-[150px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate" title={user.email}>
+                            {user.email.split('@')[0]}
+                          </span>
+                          {user.primaryMode === activeTab && (
+                            <span className={`shrink-0 text-[9px] font-bold px-1 py-0 rounded ${
+                              activeTab === 'expert' ? 'bg-orange-600 text-white' : 'bg-green-700 text-white'
+                            }`} title="This is their primary mode">
+                              MAIN
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2 text-center text-green-400">{user.wins}</td>
                       <td className="py-2 text-center text-red-400">{user.losses}</td>
                       <td className="py-2 text-center text-blue-400">
                         {getWinRate(user.wins, user.losses)}
                       </td>
-                      <td className="py-2 text-right text-gray-400 text-xs">
-                        {formatDateShort(user.lastPlayed)}
+                      <td className="py-2 text-center text-gray-400">
+                        {user.gamesPlayed || 0}
                       </td>
                     </tr>
                   ))}
