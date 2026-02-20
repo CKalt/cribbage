@@ -1,15 +1,15 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b145-20260219';
+export const APP_VERSION = 'v0.3.0-b146-20260219';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- NEW: Expert Mode — smarter discards, pegging, and perfect counting
+- NEW: Expert Mode — optimal discards, smarter pegging, and overcount bluffs
 - Difficulty selector on the menu (Normal / Expert)
 - Per-difficulty stats and Expert leaderboard tab
-- "Play Again" now returns to menu so you can change settings
-- Expert Mode badge shown during gameplay
+- Mode badge shown on every screen so you always know your level
+- Leaderboard shows games played and primary mode for trust
 
-Try Expert Mode for a tougher challenge!`;
+Try Expert Mode — but watch out for bluff overcounts!`;
 
 // Version check interval in seconds - increase as user base grows to reduce server load
 // Current: 60s check + 0-60s random offset = checks spread over 60-120s window

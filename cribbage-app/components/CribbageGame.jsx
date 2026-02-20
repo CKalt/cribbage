@@ -54,6 +54,7 @@ export default function CribbageGame({ onLogout }) {
   const [showUnreadNotification, setShowUnreadNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [personalMessage, setPersonalMessage] = useState(null);
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -360,6 +361,28 @@ export default function CribbageGame({ onLogout }) {
       setShowUnreadNotification(true);
     }
   }, [unreadBugReports]);
+
+  // Targeted personal messages — show once per user via localStorage
+  useEffect(() => {
+    const email = user?.attributes?.email;
+    if (!email) return;
+
+    const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
+    const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
+
+    // Message for Shawn
+    if (email === 'shawnbourne@sympatico.ca' && !seen['shawn-expert-mode']) {
+      // Delay slightly so it doesn't collide with the version notification
+      const timer = setTimeout(() => {
+        setPersonalMessage({
+          id: 'shawn-expert-mode',
+          title: 'Hey Shawn!',
+          body: `Congratulations on your amazing performance — your win record is truly impressive and has been the benchmark we measure the AI against!\n\nWe've been working hard to make the computer more competitive. We just launched Expert Mode, where the AI evaluates every possible cut card to find optimal discards, plays smarter during pegging, and may even try to bluff overcounts to test your muggins skills.\n\nWe hope you enjoy the challenge. Your feedback has been invaluable in making the game better for everyone. Thank you for playing!`,
+        });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   // Auto-save game state with debounce
   useEffect(() => {
@@ -3373,6 +3396,32 @@ export default function CribbageGame({ onLogout }) {
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Yes, Forfeit
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Personal message modal */}
+                {personalMessage && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-yellow-500 max-h-[80vh] overflow-y-auto">
+                      <h2 className="text-xl font-bold text-yellow-400 mb-3">{personalMessage.title}</h2>
+                      <div className="text-gray-300 text-sm mb-4 whitespace-pre-line leading-relaxed">
+                        {personalMessage.body}
+                      </div>
+                      <div className="flex justify-end pt-2 border-t border-gray-700">
+                        <Button
+                          onClick={() => {
+                            const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
+                            const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
+                            seen[personalMessage.id] = new Date().toISOString();
+                            localStorage.setItem(PERSONAL_MSG_KEY, JSON.stringify(seen));
+                            setPersonalMessage(null);
+                          }}
+                          className="bg-yellow-600 hover:bg-yellow-700"
+                        >
+                          Thanks!
                         </Button>
                       </div>
                     </div>
