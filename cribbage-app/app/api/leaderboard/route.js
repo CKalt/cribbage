@@ -7,6 +7,7 @@ export async function GET() {
     // Read all user data files
     const dataDir = path.join(process.cwd(), 'data');
     const stats = [];
+    const expertStats = [];
 
     if (fs.existsSync(dataDir)) {
       const files = fs.readdirSync(dataDir).filter(f => f.endsWith('-dml-ast.json'));
@@ -29,6 +30,19 @@ export async function GET() {
               forfeits: gameStats[3] || 0,
               lastPlayed: gameStats[4] || null
             });
+            // Expert stats (indices 5-8), only include if they've played expert
+            const eWins = gameStats[5] || 0;
+            const eLosses = gameStats[6] || 0;
+            const eForfeits = gameStats[7] || 0;
+            if (eWins > 0 || eLosses > 0 || eForfeits > 0) {
+              expertStats.push({
+                email: userEmail,
+                wins: eWins,
+                losses: eLosses,
+                forfeits: eForfeits,
+                lastPlayed: gameStats[8] || null
+              });
+            }
           } else {
             // User has data file but no games played
             stats.push({
@@ -46,21 +60,22 @@ export async function GET() {
     }
 
     // Sort by wins descending, then by win rate
-    stats.sort((a, b) => {
-      // First by wins
+    const sortByWins = (a, b) => {
       if (b.wins !== a.wins) return b.wins - a.wins;
-      // Then by win rate (if they have games)
       const aTotal = a.wins + a.losses;
       const bTotal = b.wins + b.losses;
       if (aTotal > 0 && bTotal > 0) {
         return (b.wins / bTotal) - (a.wins / aTotal);
       }
       return 0;
-    });
+    };
+    stats.sort(sortByWins);
+    expertStats.sort(sortByWins);
 
     return NextResponse.json({
       success: true,
       stats,
+      expertStats,
       totalUsers: stats.length
     });
   } catch (error) {

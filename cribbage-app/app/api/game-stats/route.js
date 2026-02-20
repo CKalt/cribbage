@@ -104,7 +104,8 @@ export async function GET() {
     if (!userStats) {
       return NextResponse.json({
         success: true,
-        stats: { wins: 0, losses: 0, forfeits: 0, lastPlayed: null }
+        stats: { wins: 0, losses: 0, forfeits: 0, lastPlayed: null },
+        expertStats: { wins: 0, losses: 0, forfeits: 0, lastPlayed: null }
       });
     }
 
@@ -115,6 +116,12 @@ export async function GET() {
         losses: userStats[GAME_STATS_COLS.LOSSES] || 0,
         forfeits: userStats[GAME_STATS_COLS.FORFEITS] || 0,
         lastPlayed: userStats[GAME_STATS_COLS.LAST_PLAYED] || null
+      },
+      expertStats: {
+        wins: userStats[GAME_STATS_COLS.EXPERT_WINS] || 0,
+        losses: userStats[GAME_STATS_COLS.EXPERT_LOSSES] || 0,
+        forfeits: userStats[GAME_STATS_COLS.EXPERT_FORFEITS] || 0,
+        lastPlayed: userStats[GAME_STATS_COLS.EXPERT_LAST_PLAYED] || null
       }
     });
   } catch (error) {
@@ -148,7 +155,7 @@ export async function POST(request) {
     const { userId, email } = userInfo;
 
     const body = await request.json();
-    const { result } = body;
+    const { result, difficulty } = body;
 
     if (!result || !['win', 'loss', 'forfeit'].includes(result)) {
       return NextResponse.json(
@@ -156,6 +163,8 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    const isExpert = difficulty === 'expert';
 
     const userData = readUserData(userId);
     const statsData = userData.game_stats?.data || [];
@@ -168,25 +177,42 @@ export async function POST(request) {
     let userStats;
     if (existingIndex !== -1) {
       userStats = [...statsData[existingIndex]];
+      // Backfill expert columns for old rows that don't have them
+      while (userStats.length < 9) {
+        userStats.push(userStats.length === 8 ? null : 0);
+      }
     } else {
       userStats = createGameStatsRow(userId);
     }
 
-    // Increment the appropriate counter
-    switch (result) {
-      case 'win':
-        userStats[GAME_STATS_COLS.WINS] = (userStats[GAME_STATS_COLS.WINS] || 0) + 1;
-        break;
-      case 'loss':
-        userStats[GAME_STATS_COLS.LOSSES] = (userStats[GAME_STATS_COLS.LOSSES] || 0) + 1;
-        break;
-      case 'forfeit':
-        userStats[GAME_STATS_COLS.FORFEITS] = (userStats[GAME_STATS_COLS.FORFEITS] || 0) + 1;
-        break;
+    // Increment the appropriate counter based on difficulty
+    if (isExpert) {
+      switch (result) {
+        case 'win':
+          userStats[GAME_STATS_COLS.EXPERT_WINS] = (userStats[GAME_STATS_COLS.EXPERT_WINS] || 0) + 1;
+          break;
+        case 'loss':
+          userStats[GAME_STATS_COLS.EXPERT_LOSSES] = (userStats[GAME_STATS_COLS.EXPERT_LOSSES] || 0) + 1;
+          break;
+        case 'forfeit':
+          userStats[GAME_STATS_COLS.EXPERT_FORFEITS] = (userStats[GAME_STATS_COLS.EXPERT_FORFEITS] || 0) + 1;
+          break;
+      }
+      userStats[GAME_STATS_COLS.EXPERT_LAST_PLAYED] = new Date().toISOString();
+    } else {
+      switch (result) {
+        case 'win':
+          userStats[GAME_STATS_COLS.WINS] = (userStats[GAME_STATS_COLS.WINS] || 0) + 1;
+          break;
+        case 'loss':
+          userStats[GAME_STATS_COLS.LOSSES] = (userStats[GAME_STATS_COLS.LOSSES] || 0) + 1;
+          break;
+        case 'forfeit':
+          userStats[GAME_STATS_COLS.FORFEITS] = (userStats[GAME_STATS_COLS.FORFEITS] || 0) + 1;
+          break;
+      }
+      userStats[GAME_STATS_COLS.LAST_PLAYED] = new Date().toISOString();
     }
-
-    // Update last played timestamp
-    userStats[GAME_STATS_COLS.LAST_PLAYED] = new Date().toISOString();
 
     // Save back to data
     if (existingIndex !== -1) {
@@ -206,12 +232,18 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: `Recorded ${result}`,
+      message: `Recorded ${result}${isExpert ? ' (expert)' : ''}`,
       stats: {
         wins: userStats[GAME_STATS_COLS.WINS] || 0,
         losses: userStats[GAME_STATS_COLS.LOSSES] || 0,
         forfeits: userStats[GAME_STATS_COLS.FORFEITS] || 0,
-        lastPlayed: userStats[GAME_STATS_COLS.LAST_PLAYED]
+        lastPlayed: userStats[GAME_STATS_COLS.LAST_PLAYED] || null
+      },
+      expertStats: {
+        wins: userStats[GAME_STATS_COLS.EXPERT_WINS] || 0,
+        losses: userStats[GAME_STATS_COLS.EXPERT_LOSSES] || 0,
+        forfeits: userStats[GAME_STATS_COLS.EXPERT_FORFEITS] || 0,
+        lastPlayed: userStats[GAME_STATS_COLS.EXPERT_LAST_PLAYED] || null
       }
     });
   } catch (error) {
