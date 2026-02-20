@@ -13,40 +13,34 @@ export default function withAuth(WrappedComponent) {
     const [isValidating, setIsValidating] = useState(true);
 
     useEffect(() => {
-      const validateAuth = async () => {
-        const { token } = parseCookies();
-
-        if (!token) {
-          router.replace('/login');
-          return;
-        }
-
-        const currentUser = userPool.getCurrentUser();
-
-        if (!currentUser) {
+      if (!loading) {
+        if (user) {
+          // AuthContext already validated the Cognito session — trust it.
+          // Re-set the cookie in case it was cleared, so future loads work too.
+          const currentUser = userPool.getCurrentUser();
+          if (currentUser) {
+            currentUser.getSession((err, session) => {
+              if (!err && session && session.isValid()) {
+                const { setCookie } = require('nookies');
+                setCookie(null, 'token', session.getIdToken().getJwtToken(), {
+                  maxAge: 30 * 24 * 60 * 60,
+                  path: '/',
+                  sameSite: 'lax',
+                  secure: process.env.NODE_ENV === 'production',
+                });
+              }
+              setIsValidating(false);
+            });
+          } else {
+            setIsValidating(false);
+          }
+        } else {
+          // No valid user from AuthContext — redirect to login
           destroyCookie(null, 'token', { path: '/' });
           router.replace('/login');
-          return;
         }
-
-        currentUser.getSession((err, session) => {
-          if (err || !session || !session.isValid()) {
-            currentUser.signOut();
-            destroyCookie(null, 'token', { path: '/' });
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('isLoggedIn');
-            }
-            router.replace('/login');
-            return;
-          }
-          setIsValidating(false);
-        });
-      };
-
-      if (!loading) {
-        validateAuth();
       }
-    }, [loading, router]);
+    }, [loading, user, router]);
 
     if (loading || isValidating) {
       return (
