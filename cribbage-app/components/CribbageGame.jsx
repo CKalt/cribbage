@@ -370,15 +370,14 @@ export default function CribbageGame({ onLogout }) {
     const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
     const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
 
-    // Message for Shawn (and Chris preview)
-    const shawnMsgRecipients = ['shawnbourne@sympatico.ca', 'chris@chrisk.com'];
-    if (shawnMsgRecipients.includes(email) && !seen['shawn-expert-mode']) {
+    // Message for Shawn
+    if (email === 'shawnbourne@sympatico.ca' && !seen['shawn-expert-apology']) {
       // Delay slightly so it doesn't collide with the version notification
       const timer = setTimeout(() => {
         setPersonalMessage({
-          id: 'shawn-expert-mode',
+          id: 'shawn-expert-apology',
           title: 'Hey Shawn!',
-          body: `Congratulations on your amazing performance — your win record is truly impressive and has been the benchmark we measure the AI against!\n\nWe've been working hard to make the computer more competitive. We just launched Expert Mode, where the AI evaluates every possible cut card to find optimal discards, plays smarter during pegging, and may even try to bluff overcounts to test your muggins skills.\n\nWe hope you enjoy the challenge. Your feedback has been invaluable in making the game better for everyone. Thank you for playing!`,
+          body: `First — we owe you an apology! We were rolling out some new features earlier and accidentally caused a login issue that may have disrupted your experience. We're truly sorry about that and it's been fixed.\n\nNow for the good news — congratulations on your amazing performance! Your win record is truly impressive and has been the benchmark we measure the AI against.\n\nWe've been working hard to make the computer more competitive. We just launched Expert Mode, where the AI evaluates every possible cut card to find optimal discards, plays smarter during pegging, and may even try to bluff overcounts to test your muggins skills.\n\nYou can switch between Normal and Expert at any time from the ⋮ menu — no need to start a new game. We hope you enjoy the challenge!\n\nYour feedback has been invaluable in making the game better for everyone. Thank you for playing!`,
         });
       }, 3000);
       return () => clearTimeout(timer);
