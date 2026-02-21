@@ -187,7 +187,8 @@ function shouldFireForLevel(eventType, level) {
     case 'classic':
       return ['MONSTER_HAND_24', 'BIG_HAND_20_PLUS', 'PEG_31', 'CUT_JACK',
               'CLOSE_GAME_WIN', 'COMEBACK_WIN', 'HUGE_CRIB', 'ZERO_HAND',
-              'FOUR_OF_A_KIND', 'TRIPLE_RUN'].includes(eventType);
+              'FOUR_OF_A_KIND', 'TRIPLE_RUN', 'DOUBLE_RUN',
+              'BACK_TO_BACK_BIG_HANDS'].includes(eventType);
     case 'lively':
     case 'fullBanter':
       return true; // all events fire
