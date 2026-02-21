@@ -3094,9 +3094,9 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         );
                       })()}
-                      <div className="grid min-w-0">
+                      <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'dealing' ? computerHand :
                             gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                             gameState === 'play' ? computerPlayHand :
@@ -3202,9 +3202,9 @@ export default function CribbageGame({ onLogout }) {
                       {showCribHere ? "Crib (Yours):" : gameState === 'dealing' ? 'Your Hand:' : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-                      <div className="grid min-w-0">
+                      <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'dealing' ? playerHand :
                             gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
