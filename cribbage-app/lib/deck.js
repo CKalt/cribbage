@@ -1,6 +1,7 @@
 // Deck utility functions for Cribbage game
 
 import { suits, ranks, rankValues } from './constants';
+import { aiRandom } from './ai/rng';
 
 /**
  * Create a standard 52-card deck
@@ -24,7 +25,7 @@ export const createDeck = () => {
 export const shuffleDeck = (deck) => {
   const newDeck = [...deck];
   for (let i = newDeck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(aiRandom() * (i + 1));
     [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
   }
   return newDeck;

@@ -2,6 +2,7 @@
 
 import { rankOrder } from '../../constants';
 import { calculatePeggingScore } from '../../scoring';
+import { aiRandom } from '../rng';
 
 /**
  * Computer AI - select which card to play during pegging
@@ -87,7 +88,7 @@ export const computerSelectPlay = (hand, playedCards, currentCount) => {
     if (card.rank === 'A' && hand.length > 2) score -= 3;
 
     // Random factor to make AI less predictable
-    score += Math.random() * 0.5;
+    score += aiRandom() * 0.5;
 
     if (score > bestScore) {
       bestScore = score;

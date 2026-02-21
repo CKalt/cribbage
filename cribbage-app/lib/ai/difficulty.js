@@ -16,8 +16,8 @@ export const DIFFICULTY_PROFILES = {
     peggingStrategy: 'expert',
     countingErrorRate: 0.0,
     countingErrorRange: 0,
-    // Expert deliberately overcounts sometimes as a bluff (muggins strategy)
-    overcountRate: 0.15,
-    overcountRange: 2,
+    // Overcount bluffing disabled — it was a net handicap vs muggins-capable players
+    overcountRate: 0,
+    overcountRange: 0,
   },
 };
