@@ -1947,6 +1947,10 @@ export default function CribbageGame({ onLogout }) {
       const { newHandsCountedThisRound, score } = pendingCountContinue;
       setMessage(`${score} points scored!`);
       setPendingCountContinue(null);
+      // Clear actualScore immediately so the computer counting useEffect
+      // can see shouldCount=true in this render cycle (bug #84)
+      setActualScore(null);
+      setShowBreakdown(false);
       // Short delay then proceed
       setTimeout(() => {
         proceedAfterPlayerCount(newHandsCountedThisRound);
