@@ -190,3 +190,409 @@
   100% { transform: scaleX(1); }
 }
 .card-flip-reveal { animation: cardFlipReveal 400ms ease-in-out forwards; }
+
+/* ============================================
+   Celebration Micro-Animations
+   ============================================ */
+
+/* --- Low Intensity --- */
+
+/* Score Glow: soft gold pulse */
+@keyframes scoreGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+  50% { box-shadow: 0 0 12px 4px rgba(234, 179, 8, 0.4); }
+}
+.anim-score-glow { animation: scoreGlow 800ms ease-in-out; }
+
+/* Peg Nudge: horizontal bounce */
+@keyframes pegNudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+.anim-peg-nudge { animation: pegNudge 400ms ease-in-out; }
+
+/* Card Wink: quick scale bounce */
+@keyframes cardWink {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.anim-card-wink { animation: cardWink 500ms ease-in-out; }
+
+/* Text Float: fade in and float up */
+@keyframes textFadeUp {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.anim-text-fade-up { animation: textFadeUp 600ms ease-out; }
+
+/* Subtle Flash: quick brightness pulse */
+@keyframes subtleFlash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.4); }
+}
+.anim-subtle-flash { animation: subtleFlash 300ms ease-in-out; }
+
+/* Dot Pulse */
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.anim-dot-pulse { animation: dotPulse 700ms ease-in-out; }
+
+/* Underline Draw */
+@keyframes underlineDraw {
+  0% { background-size: 0% 2px; }
+  100% { background-size: 100% 2px; }
+}
+.anim-underline-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  animation: underlineDraw 500ms ease-out forwards;
+}
+
+/* Checkmark Pop */
+@keyframes checkmarkPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.anim-checkmark-pop::after {
+  content: ' \2713';
+  display: inline-block;
+  animation: checkmarkPop 400ms ease-out;
+}
+
+/* --- Medium Intensity --- */
+
+/* Score Sparkle */
+@keyframes scoreSparkle {
+  0% { opacity: 0; transform: scale(0.5); }
+  40% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(0.8) translateY(-10px); }
+}
+.anim-score-sparkle { position: relative; }
+.anim-score-sparkle::after {
+  content: '\2728';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 16px;
+  animation: scoreSparkle 700ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Ink Stamp */
+@keyframes stampEffect {
+  0% { transform: scale(2) rotate(-8deg); opacity: 0; }
+  40% { transform: scale(1) rotate(-2deg); opacity: 1; }
+  60% { transform: scale(1.02) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.anim-stamp-effect { animation: stampEffect 600ms ease-out; }
+
+/* Ribbon Unfurl */
+@keyframes ribbonUnfurl {
+  0% { transform: scaleX(0); opacity: 0; }
+  50% { transform: scaleX(1.05); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+.anim-ribbon-unfurl { animation: ribbonUnfurl 800ms ease-out; transform-origin: center; }
+
+/* Card Fan Glow */
+@keyframes cardFanGlow {
+  0% { box-shadow: inset -40px 0 20px -20px rgba(234, 179, 8, 0); }
+  50% { box-shadow: inset 0 0 20px -5px rgba(234, 179, 8, 0.3); }
+  100% { box-shadow: inset 40px 0 20px -20px rgba(234, 179, 8, 0); }
+}
+.anim-card-fan-glow { animation: cardFanGlow 900ms ease-in-out; }
+
+/* Peg Trail */
+@keyframes pegTrail {
+  0% { box-shadow: -20px 0 10px -5px rgba(234, 179, 8, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+.anim-peg-trail { animation: pegTrail 800ms ease-out; }
+
+/* Bounce Number */
+@keyframes bounceNumber {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+  60% { transform: translateY(2px); }
+}
+.anim-bounce-number { animation: bounceNumber 500ms ease-in-out; }
+
+/* Speech Bubble */
+@keyframes speechBubble {
+  0% { transform: scale(0.8); opacity: 0; border-radius: 24px 24px 24px 4px; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; border-radius: 12px; }
+}
+.anim-speech-bubble { animation: speechBubble 600ms ease-out; }
+
+/* Star Burst */
+@keyframes starBurst {
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  50% { transform: scale(1.3) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+}
+.anim-star-burst { position: relative; }
+.anim-star-burst::after {
+  content: '\2B50';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 18px;
+  animation: starBurst 600ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Wave Underline */
+@keyframes waveUnderline {
+  0% { text-decoration-color: transparent; }
+  50% { text-decoration-color: rgba(234, 179, 8, 0.6); }
+  100% { text-decoration-color: transparent; }
+}
+.anim-wave-underline {
+  text-decoration: underline wavy;
+  animation: waveUnderline 700ms ease-in-out;
+}
+
+/* Score Ring */
+@keyframes scoreRing {
+  0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.6); }
+  100% { box-shadow: 0 0 0 12px rgba(234, 179, 8, 0); }
+}
+.anim-score-ring { animation: scoreRing 800ms ease-out; }
+
+/* Card Shine */
+@keyframes cardShine {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+.anim-card-shine {
+  background-image: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: cardShine 600ms ease-in-out;
+}
+
+/* Wobble Text */
+@keyframes wobbleText {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-2deg); }
+  40% { transform: rotate(2deg); }
+  60% { transform: rotate(-1deg); }
+  80% { transform: rotate(1deg); }
+}
+.anim-wobble-text { animation: wobbleText 500ms ease-in-out; }
+
+/* --- High Intensity --- */
+
+/* Mini Confetti — uses pseudo-elements for a few particles */
+@keyframes miniConfettiLeft {
+  0% { transform: translate(0,0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-20px, -30px) rotate(180deg); opacity: 0; }
+}
+@keyframes miniConfettiRight {
+  0% { transform: translate(0,0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(20px, -25px) rotate(-200deg); opacity: 0; }
+}
+.anim-mini-confetti { position: relative; }
+.anim-mini-confetti::before {
+  content: '\1F389';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  font-size: 14px;
+  animation: miniConfettiLeft 1200ms ease-out forwards;
+  pointer-events: none;
+}
+.anim-mini-confetti::after {
+  content: '\1F38A';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 14px;
+  animation: miniConfettiRight 1200ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Gold Rain */
+@keyframes goldRain {
+  0% { box-shadow: 0 -20px 15px -5px rgba(234, 179, 8, 0.5); }
+  50% { box-shadow: 0 0px 15px -5px rgba(234, 179, 8, 0.3); }
+  100% { box-shadow: 0 10px 15px -5px rgba(234, 179, 8, 0); }
+}
+.anim-gold-rain { animation: goldRain 1000ms ease-in; }
+
+/* Firework Pop */
+@keyframes fireworkPop {
+  0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.8); transform: scale(0.95); }
+  50% { box-shadow: 0 0 20px 8px rgba(234, 179, 8, 0.3); transform: scale(1.04); }
+  100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); transform: scale(1); }
+}
+.anim-firework-pop { animation: fireworkPop 800ms ease-out; }
+
+/* Trophy Bounce */
+@keyframes trophyBounce {
+  0% { transform: translateY(-20px) scale(0); opacity: 0; }
+  50% { transform: translateY(4px) scale(1.2); opacity: 1; }
+  70% { transform: translateY(-2px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.anim-trophy-bounce::before {
+  content: '\1F3C6';
+  display: inline-block;
+  margin-right: 6px;
+  animation: trophyBounce 900ms ease-out;
+}
+
+/* Double Sparkle */
+@keyframes doubleSparkle1 {
+  0% { opacity: 0; transform: scale(0) translate(-5px, -5px); }
+  50% { opacity: 1; transform: scale(1.2) translate(-8px, -10px); }
+  100% { opacity: 0; transform: scale(0.5) translate(-12px, -15px); }
+}
+@keyframes doubleSparkle2 {
+  0% { opacity: 0; transform: scale(0) translate(5px, -5px); }
+  60% { opacity: 1; transform: scale(1.1) translate(8px, -10px); }
+  100% { opacity: 0; transform: scale(0.5) translate(12px, -15px); }
+}
+.anim-double-sparkle { position: relative; }
+.anim-double-sparkle::before {
+  content: '\2728';
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: doubleSparkle1 1000ms ease-out forwards;
+  pointer-events: none;
+}
+.anim-double-sparkle::after {
+  content: '\2728';
+  position: absolute;
+  top: 0;
+  right: 0;
+  animation: doubleSparkle2 1000ms 100ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Score Zoom */
+@keyframes scoreZoom {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.anim-score-zoom { animation: scoreZoom 700ms ease-in-out; }
+
+/* Glow Cascade */
+@keyframes glowCascade {
+  0% { box-shadow: inset -60px 0 30px -20px rgba(234, 179, 8, 0.4); }
+  50% { box-shadow: inset 0 0 30px -10px rgba(234, 179, 8, 0.3); }
+  100% { box-shadow: inset 60px 0 30px -20px rgba(234, 179, 8, 0); }
+}
+.anim-glow-cascade { animation: glowCascade 1100ms ease-in-out; }
+
+/* --- Legendary Intensity --- */
+
+/* Full Confetti — more dramatic */
+.anim-full-confetti { position: relative; }
+.anim-full-confetti::before {
+  content: '\1F389\1F38A';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  animation: miniConfettiLeft 2000ms ease-out forwards;
+  pointer-events: none;
+}
+.anim-full-confetti::after {
+  content: '\2728\1F451';
+  position: absolute;
+  top: -10px;
+  right: 20%;
+  font-size: 20px;
+  animation: miniConfettiRight 2000ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Golden Frame */
+@keyframes goldenFrame {
+  0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); border-color: transparent; }
+  30% { box-shadow: 0 0 15px 3px rgba(234, 179, 8, 0.5); border-color: rgba(234, 179, 8, 0.8); }
+  70% { box-shadow: 0 0 20px 5px rgba(234, 179, 8, 0.3); border-color: rgba(234, 179, 8, 0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); border-color: transparent; }
+}
+.anim-golden-frame {
+  border: 2px solid transparent;
+  animation: goldenFrame 1500ms ease-in-out;
+}
+
+/* Crown Drop */
+@keyframes crownDrop {
+  0% { transform: translateY(-30px) rotate(-10deg); opacity: 0; }
+  60% { transform: translateY(3px) rotate(3deg); opacity: 1; }
+  80% { transform: translateY(-2px) rotate(-1deg); }
+  100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+}
+.anim-crown-drop::before {
+  content: '\1F451';
+  display: inline-block;
+  margin-right: 6px;
+  animation: crownDrop 1200ms ease-out;
+}
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .anim-score-glow,
+  .anim-peg-nudge,
+  .anim-card-wink,
+  .anim-subtle-flash,
+  .anim-dot-pulse,
+  .anim-underline-draw,
+  .anim-score-sparkle,
+  .anim-stamp-effect,
+  .anim-ribbon-unfurl,
+  .anim-card-fan-glow,
+  .anim-peg-trail,
+  .anim-bounce-number,
+  .anim-speech-bubble,
+  .anim-star-burst,
+  .anim-wave-underline,
+  .anim-score-ring,
+  .anim-card-shine,
+  .anim-wobble-text,
+  .anim-mini-confetti,
+  .anim-gold-rain,
+  .anim-firework-pop,
+  .anim-trophy-bounce,
+  .anim-double-sparkle,
+  .anim-score-zoom,
+  .anim-glow-cascade,
+  .anim-full-confetti,
+  .anim-golden-frame,
+  .anim-crown-drop {
+    animation: none !important;
+  }
+
+  .anim-score-sparkle::after,
+  .anim-star-burst::after,
+  .anim-mini-confetti::before,
+  .anim-mini-confetti::after,
+  .anim-double-sparkle::before,
+  .anim-double-sparkle::after,
+  .anim-full-confetti::before,
+  .anim-full-confetti::after,
+  .anim-trophy-bounce::before,
+  .anim-crown-drop::before,
+  .anim-checkmark-pop::after {
+    animation: none !important;
+  }
+
+  /* Simple fade for elements that have simpleFade fallback */
+  .anim-text-fade-up {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -1,15 +1,16 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b163-20260221';
+export const APP_VERSION = 'v0.3.0-b164-20260221';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Expert Mode upgraded — the AI now counts accurately every time (no more free muggins points!)
-- Expert Mode — optimal discards, smarter pegging, and honest counting
-- Switch between Normal and Expert at any time via the ⋮ menu — no need to logout or start a new game
-- Two separate leaderboards: one for Normal, one for Expert
-- Mode badge on every screen so you always know your level
+- The game now reacts to your plays! Big hands, pegging highlights, close wins, and more get celebration phrases
+- 435 unique phrases across 17 event types — never the same reaction twice
+- Micro-animations bring the table to life: sparkles, glows, confetti, and more
+- Set your Celebration Level from the ⋮ menu: Off, Minimal, Classic, Lively, or Full Banter
+- Full Banter mode includes Maine Lodge 1958 table talk — dry humor, old-school slang
+- Expert Mode — optimal discards, smarter pegging, accurate counting every time
 
-Expert Mode just got tougher — are you up for the challenge?`;
+Happy playing!`;
 
 // Version check interval in seconds - increase as user base grows to reduce server load
 // Current: 60s check + 0-60s random offset = checks spread over 60-120s window

@@ -30,6 +30,7 @@ import ScoreBreakdown from './ScoreBreakdown';
 import DebugPanel from './DebugPanel';
 import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
+import CelebrationToast from './CelebrationToast';
 import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
 import FlyingCard from './FlyingCard';
@@ -37,6 +38,7 @@ import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
 import { APP_VERSION } from '@/lib/version';
+import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
 
@@ -206,9 +208,32 @@ export default function CribbageGame({ onLogout }) {
   };
   const [aiDifficulty, setAiDifficulty] = useState('normal');
 
-  // Initialize difficulty from localStorage on mount
+  // Celebration settings (persists across sessions)
+  const getCelebrationLevel = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('celebrationLevel') || 'classic';
+    }
+    return 'classic';
+  };
+  const getMotionLevel = () => {
+    if (typeof window !== 'undefined') {
+      // Check prefers-reduced-motion
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 'off';
+      return localStorage.getItem('motionLevel') || 'standard';
+    }
+    return 'standard';
+  };
+  const [celebrationLevel, setCelebrationLevel] = useState('classic');
+  const [motionLevel, setMotionLevel] = useState('standard');
+  const [celebrationToast, setCelebrationToast] = useState(null); // { phrase, animation }
+  const [prevHandScore, setPrevHandScore] = useState(null); // for streak detection
+  const [maxDeficit, setMaxDeficit] = useState(0); // for comeback detection
+
+  // Initialize difficulty and celebration settings from localStorage on mount
   useEffect(() => {
     setAiDifficulty(getAiDifficulty());
+    setCelebrationLevel(getCelebrationLevel());
+    setMotionLevel(getMotionLevel());
   }, []);
 
   // Create current state snapshot for saving
@@ -616,10 +641,25 @@ export default function CribbageGame({ onLogout }) {
     // Delete saved game
     await deleteSavedGame();
 
+    // Fire game-end celebration
+    const gameResult = celebrateGameEnd(
+      playerWon,
+      playerScoreRef.current,
+      computerScoreRef.current,
+      maxDeficit,
+      { celebrationLevel, motionLevel }
+    );
+    if (gameResult.phrase) {
+      setCelebrationToast({ phrase: gameResult.phrase, animation: gameResult.animation });
+    }
+
     // Update game state
     setGameState('gameOver');
     setMessage(customMessage || (playerWon ? 'You win!' : 'Computer wins!'));
-  }, [recordGameResult, deleteSavedGame]);
+    // Reset streak tracking
+    setPrevHandScore(null);
+    setMaxDeficit(0);
+  }, [recordGameResult, deleteSavedGame, maxDeficit, celebrationLevel, motionLevel]);
 
   // Refs to track current scores for use in addPoints
   const playerScoreRef = useRef(playerScore);
@@ -650,6 +690,14 @@ export default function CribbageGame({ onLogout }) {
     } else {
       setComputerScore(newScore);
       computerScoreRef.current = newScore;
+    }
+
+    // Track max deficit for comeback detection
+    const pScore = player === 'player' ? newScore : playerScoreRef.current;
+    const cScore = player === 'computer' ? newScore : computerScoreRef.current;
+    const playerDeficit = cScore - pScore;
+    if (playerDeficit > 0) {
+      setMaxDeficit(prev => Math.max(prev, playerDeficit));
     }
 
     // Log the scoring event
@@ -1295,6 +1343,16 @@ export default function CribbageGame({ onLogout }) {
       });
 
       if (cut.rank === 'J') {
+        // Fire cut celebration
+        const cutCelebration = celebrateCut(cut, {
+          scorer: dealer,
+          celebrationLevel,
+          motionLevel,
+        });
+        if (cutCelebration.phrase) {
+          setCelebrationToast({ phrase: cutCelebration.phrase, animation: cutCelebration.animation });
+        }
+
         setGameState('play');
         if (dealer === 'player') {
           setPendingScore({ player: 'player', points: 2, reason: 'His heels!' });
@@ -1520,6 +1578,19 @@ export default function CribbageGame({ onLogout }) {
     const isLastCard = newComputerPlayHand.length === 0;
     const playerOutOfCards = playerPlayHand.length === 0;
 
+    // Fire pegging celebration for computer
+    if (score > 0 || (isLastCard && playerOutOfCards)) {
+      const isGo = isLastCard && playerOutOfCards && score === 0;
+      const pegCelebration = celebratePegging(score || 1, newCount, reason, isGo, {
+        scorer: 'computer',
+        celebrationLevel,
+        motionLevel,
+      });
+      if (pegCelebration.phrase) {
+        setCelebrationToast({ phrase: pegCelebration.phrase, animation: pegCelebration.animation });
+      }
+    }
+
     if (score > 0) {
       setCurrentPlayer('player');
       if (isLastCard && playerOutOfCards && newCount !== 31) {
@@ -1665,6 +1736,19 @@ export default function CribbageGame({ onLogout }) {
 
     const isLastCard = newPlayerPlayHand.length === 0;
     const computerOutOfCards = computerPlayHand.length === 0;
+
+    // Fire pegging celebration
+    if (score > 0 || (isLastCard && computerOutOfCards)) {
+      const isGo = isLastCard && computerOutOfCards && score === 0;
+      const pegCelebration = celebratePegging(score || 1, newCount, reason, isGo, {
+        scorer: 'player',
+        celebrationLevel,
+        motionLevel,
+      });
+      if (pegCelebration.phrase) {
+        setCelebrationToast({ phrase: pegCelebration.phrase, animation: pegCelebration.animation });
+      }
+    }
 
     if (score > 0) {
       // Only award last card if NOT hitting 31 (31 already includes 2-point bonus)
@@ -1867,6 +1951,19 @@ export default function CribbageGame({ onLogout }) {
     setPlayerCountInput('');
     setShowBreakdown(true);
 
+    // Fire celebration toast for notable hands (regardless of correct count)
+    const handCelebration = celebrateHand(score, breakdown, {
+      scorer: 'player',
+      celebrationLevel,
+      motionLevel,
+      prevHandScore,
+      isCrib: handType === 'crib',
+    });
+    if (handCelebration.phrase) {
+      setCelebrationToast({ phrase: handCelebration.phrase, animation: handCelebration.animation });
+    }
+    setPrevHandScore(score);
+
     if (claimed === score) {
       // Show celebration for correct count
       setCelebrationScore(score);
@@ -2048,6 +2145,19 @@ export default function CribbageGame({ onLogout }) {
 
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
     setActualScore({ score, breakdown });
+
+    // Fire celebration for computer's hand (shown as toast)
+    const compCelebration = celebrateHand(score, breakdown, {
+      scorer: 'computer',
+      celebrationLevel,
+      motionLevel,
+      prevHandScore,
+      isCrib: handType === 'crib',
+    });
+    if (compCelebration.phrase) {
+      setCelebrationToast({ phrase: compCelebration.phrase, animation: compCelebration.animation });
+    }
+    setPrevHandScore(score);
 
     let claimed = score;
     const profile = DIFFICULTY_PROFILES[aiDifficulty] || DIFFICULTY_PROFILES.normal;
@@ -2600,6 +2710,25 @@ export default function CribbageGame({ onLogout }) {
                   </svg>
                 )}
                 {aiDifficulty === 'expert' ? 'Switch to Normal' : 'Switch to Expert'}
+              </button>
+
+              {/* Celebration Level */}
+              <button
+                onClick={() => {
+                  const levels = ['off', 'minimal', 'classic', 'lively', 'fullBanter'];
+                  const labels = { off: 'Off', minimal: 'Minimal', classic: 'Classic', lively: 'Lively', fullBanter: 'Full Banter' };
+                  const idx = levels.indexOf(celebrationLevel);
+                  const next = levels[(idx + 1) % levels.length];
+                  setCelebrationLevel(next);
+                  if (typeof window !== 'undefined') localStorage.setItem('celebrationLevel', next);
+                  setMessage(`Celebrations: ${labels[next]}`);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Celebrations: {{ off: 'Off', minimal: 'Minimal', classic: 'Classic', lively: 'Lively', fullBanter: 'Full Banter' }[celebrationLevel]}
               </button>
 
               {/* Admin Panel - only for chris@chrisk.com */}
@@ -3416,6 +3545,13 @@ export default function CribbageGame({ onLogout }) {
                     onComplete={handleCelebrationComplete}
                   />
                 )}
+
+                {/* Celebration toast (phrases + micro-animations) */}
+                <CelebrationToast
+                  phrase={celebrationToast?.phrase}
+                  animation={celebrationToast?.animation}
+                  onDismiss={() => setCelebrationToast(null)}
+                />
 
                 {/* Debug Panel */}
                 <DebugPanel
