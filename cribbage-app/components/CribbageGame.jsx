@@ -2894,7 +2894,7 @@ export default function CribbageGame({ onLogout }) {
                             <li>Optimal discards via expected value</li>
                             <li>Evaluates all 46 possible cuts</li>
                             <li>Smarter pegging with count control</li>
-                            <li>Accurate counting every time</li>
+                            <li>Rarely miscounts — stay sharp with muggins!</li>
                           </ul>
                         </div>
                       )}
