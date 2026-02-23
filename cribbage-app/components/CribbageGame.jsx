@@ -1649,6 +1649,11 @@ export default function CribbageGame({ onLogout }) {
   // Computer makes a play - useEffect
   useEffect(() => {
     if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore && !flyingCard) {
+      // Guard: computer must have cards to play (bug #97)
+      if (computerPlayHand.length === 0) {
+        addDebugLog(`Bug #97: computer is currentPlayer with no cards at count ${currentCount}`);
+        return;
+      }
       const timer = setTimeout(() => {
         const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount, aiDifficulty);
 
@@ -1790,7 +1795,13 @@ export default function CribbageGame({ onLogout }) {
       setMessage('You get 1 point for last card - Click Accept');
     } else {
       setMessage(`You played ${card.rank}${card.suit} (count: ${newCount})`);
-      setCurrentPlayer('computer');
+      // Only hand control to computer if it has cards to play (bug #97)
+      if (computerPlayHand.length > 0) {
+        setCurrentPlayer('computer');
+      } else {
+        // Computer has no cards — player continues playing remaining cards
+        setCurrentPlayer('player');
+      }
     }
   }, [currentCount, allPlayedCards, playerPlayHand, computerPlayHand, playerPlayedCards]);
 
