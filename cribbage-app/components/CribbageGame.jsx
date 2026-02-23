@@ -742,7 +742,11 @@ export default function CribbageGame({ onLogout }) {
         playerScore: playerScore,
         computerScore: computerScore,
         currentCount: currentCount,
-        currentPlayer: currentPlayer
+        currentPlayer: currentPlayer,
+        playerPlayHand: playerPlayHand?.map(c => `${c.rank}${c.suit}`),
+        computerPlayHand: computerPlayHand?.map(c => `${c.rank}${c.suit}`),
+        pendingScore: pendingScore ? { player: pendingScore.player, points: pendingScore.points, reason: pendingScore.reason } : null,
+        lastPlayedBy: lastPlayedBy,
       }
     };
     setGameLog(prev => [...prev, event]);
@@ -1690,7 +1694,9 @@ export default function CribbageGame({ onLogout }) {
           logGameEvent('COMPUTER_GO', {
             player: 'computer',
             currentCount: currentCount,
-            remainingCards: computerPlayHand.length
+            remainingCards: computerPlayHand.length,
+            computerHand: computerPlayHand.map(c => `${c.rank}${c.suit}`),
+            playerHand: playerPlayHand.map(c => `${c.rank}${c.suit}`),
           });
 
           // Add Go to pegging history
