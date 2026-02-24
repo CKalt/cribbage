@@ -251,6 +251,7 @@ export default function CribbageGame({ onLogout }) {
       playerCutCard, computerCutCard, cutResultReady,
       pendingScore, aiDifficulty,
       computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
+      gameLog, debugLog,
     });
   }, [
     gameState, dealer, currentPlayer, message,
@@ -265,6 +266,7 @@ export default function CribbageGame({ onLogout }) {
     computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
     playerCutCard, computerCutCard, cutResultReady,
     pendingScore, aiDifficulty,
+    gameLog, debugLog,
   ]);
 
   // Save game state to server
@@ -506,6 +508,10 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerDiscardCards !== undefined) setComputerDiscardCards(restored.computerDiscardCards);
     if (restored.computerDiscardDone !== undefined) setComputerDiscardDone(restored.computerDiscardDone);
     if (restored.cribCardsInPile !== undefined) setCribCardsInPile(restored.cribCardsInPile);
+
+    // Restore game logs so full history survives page reload
+    if (restored.gameLog) setGameLog(restored.gameLog);
+    if (restored.debugLog) setDebugLog(restored.debugLog);
 
     // Validate and fix counting state consistency
     // The source of truth is handsCountedThisRound and dealer - derive counterIsComputer from them
