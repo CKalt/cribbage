@@ -35,12 +35,22 @@ export async function GET(request) {
           const userEmail = userData.email || userId;
 
           if (gameStats) {
+            // Use the most recent lastPlayed across normal (index 4) and expert (index 8)
+            const normalLastPlayed = gameStats[4] || null;
+            const expertLastPlayed = gameStats[8] || null;
+            let lastPlayed = normalLastPlayed;
+            if (expertLastPlayed && (!normalLastPlayed || new Date(expertLastPlayed) > new Date(normalLastPlayed))) {
+              lastPlayed = expertLastPlayed;
+            }
+
             stats.push({
               email: userEmail,
               wins: gameStats[1] || 0,
               losses: gameStats[2] || 0,
               forfeits: gameStats[3] || 0,
-              lastPlayed: gameStats[4] || null
+              expertWins: gameStats[5] || 0,
+              expertLosses: gameStats[6] || 0,
+              lastPlayed
             });
           } else {
             // User has data file but no games played

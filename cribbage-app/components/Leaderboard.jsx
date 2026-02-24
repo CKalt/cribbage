@@ -119,6 +119,7 @@ export default function Leaderboard({ isOpen, onClose }) {
                     <th className="pb-2 text-center">L</th>
                     <th className="pb-2 text-center">%</th>
                     <th className="pb-2 text-center">GP</th>
+                    <th className="pb-2 text-right">Last</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -146,6 +147,9 @@ export default function Leaderboard({ isOpen, onClose }) {
                       </td>
                       <td className="py-2 text-center text-gray-400">
                         {user.gamesPlayed || 0}
+                      </td>
+                      <td className="py-2 text-right text-gray-400 text-xs">
+                        {formatDateShort(user.lastPlayed)}
                       </td>
                     </tr>
                   ))}

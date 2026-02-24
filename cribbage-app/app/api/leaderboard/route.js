@@ -34,6 +34,14 @@ export async function GET() {
             const expertGames = eWins + eLosses + eForfeits;
             const primaryMode = expertGames > normalGames ? 'expert' : 'normal';
 
+            // Use the most recent lastPlayed across normal (index 4) and expert (index 8)
+            const normalLastPlayed = gameStats[4] || null;
+            const expertLastPlayed = gameStats[8] || null;
+            let lastPlayed = normalLastPlayed;
+            if (expertLastPlayed && (!normalLastPlayed || new Date(expertLastPlayed) > new Date(normalLastPlayed))) {
+              lastPlayed = expertLastPlayed;
+            }
+
             stats.push({
               email: userEmail,
               wins: nWins,
@@ -41,7 +49,7 @@ export async function GET() {
               forfeits: nForfeits,
               gamesPlayed: normalGames,
               primaryMode,
-              lastPlayed: gameStats[4] || null
+              lastPlayed
             });
             // Expert stats — only include if they've played expert
             if (expertGames > 0) {
