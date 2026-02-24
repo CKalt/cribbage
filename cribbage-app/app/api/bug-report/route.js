@@ -53,6 +53,14 @@ export async function POST(request) {
     const body = await request.json();
     const { description, debugLog, gameLog, gameState, userEmail, type, screenshot } = body;
 
+    // Require a valid email address
+    if (!userEmail || userEmail === 'unknown' || !userEmail.includes('@')) {
+      return NextResponse.json(
+        { success: false, error: 'A valid email address is required to submit a bug report.' },
+        { status: 400 }
+      );
+    }
+
     // Create bug-reports directory if it doesn't exist
     const reportsDir = path.join(process.cwd(), 'bug-reports');
     if (!fs.existsSync(reportsDir)) {
