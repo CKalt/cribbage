@@ -1109,8 +1109,9 @@ export default function CribbageGame({ onLogout }) {
   // Stagger-flip player cards face-up one by one
   const startDealFlip = (index) => {
     if (index >= 6) {
-      // Small delay after last flip before transitioning
-      setTimeout(() => finishDeal(), 300);
+      // Wait for last card's 400ms flip animation to complete before transitioning
+      // (bug #100: 300ms was too short — last card got stuck mid-scaleX on mobile)
+      setTimeout(() => finishDeal(), 500);
       return;
     }
     setDealFlipIndex(index);
@@ -3393,7 +3394,7 @@ export default function CribbageGame({ onLogout }) {
                     <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
                       <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center overflow-visible [&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'dealing' ? playerHand :
                             gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
@@ -3403,8 +3404,10 @@ export default function CribbageGame({ onLogout }) {
                             const isFlipping = gameState === 'dealing' && dealPhase === 'flipping' && idx <= dealFlipIndex;
                             const isDealFaceDown = gameState === 'dealing' && (!isFlipping);
                             return (
-                            <div key={idx} className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`} style={{
+                            <div key={`${card.rank}${card.suit}`} className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`} style={{
                               marginTop: idx % 2 === 1 ? '4px' : '0',
+                              // Explicit transform reset prevents stuck scaleX from interrupted flip animation (bug #100)
+                              ...(!isFlipping ? { transform: 'none' } : {}),
                               ...(isBeingDiscarded ? { visibility: 'hidden' } : {}),
                               ...(isDealHidden ? { visibility: 'hidden' } : {})
                             }}>
