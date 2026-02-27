@@ -121,11 +121,13 @@ export async function GET() {
       row => row[GAME_SESSIONS_COLS.USER_ID] === userId
     );
 
+    const userStatsData = getStatsForUser(userData, userId);
+
     if (!userSession) {
       return NextResponse.json({
         success: true,
         gameState: null,
-        stats: getStatsForUser(userData, userId)
+        ...userStatsData
       });
     }
 
@@ -138,7 +140,7 @@ export async function GET() {
       gameState,
       updatedAt: userSession[GAME_SESSIONS_COLS.UPDATED_AT],
       version: userSession[GAME_SESSIONS_COLS.VERSION],
-      stats: getStatsForUser(userData, userId)
+      ...userStatsData
     });
   } catch (error) {
     console.error('Error reading game state:', error);
@@ -157,14 +159,25 @@ function getStatsForUser(userData, userId) {
   const userStats = statsData.find(row => row[0] === userId);
 
   if (!userStats) {
-    return { wins: 0, losses: 0, forfeits: 0, lastPlayed: null };
+    return {
+      stats: { wins: 0, losses: 0, forfeits: 0, lastPlayed: null },
+      expertStats: { wins: 0, losses: 0, forfeits: 0, lastPlayed: null }
+    };
   }
 
   return {
-    wins: userStats[1] || 0,
-    losses: userStats[2] || 0,
-    forfeits: userStats[3] || 0,
-    lastPlayed: userStats[4] || null
+    stats: {
+      wins: userStats[1] || 0,
+      losses: userStats[2] || 0,
+      forfeits: userStats[3] || 0,
+      lastPlayed: userStats[4] || null
+    },
+    expertStats: {
+      wins: userStats[5] || 0,
+      losses: userStats[6] || 0,
+      forfeits: userStats[7] || 0,
+      lastPlayed: userStats[8] || null
+    }
   };
 }
 

@@ -17,12 +17,17 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { APP_VERSION, VERSION_CHECK_INTERVAL_SECONDS, RELEASE_NOTE } from '@/lib/version';
+import { getPersonalMessage } from '@/lib/personal-messages';
 
 const RELEASE_NOTES_SEEN_KEY = 'cribbage_release_notes_seen';
+const PERSONAL_MSG_KEY = 'cribbage_personal_msg_seen';
 
 export default function VersionNotification() {
+  const { user } = useAuth();
   const [modalState, setModalState] = useState(null); // { version, releaseNote, isNewLoad }
+  const [personalMsg, setPersonalMsg] = useState(null);
 
   useEffect(() => {
     const intervalMs = VERSION_CHECK_INTERVAL_SECONDS * 1000;
@@ -88,11 +93,52 @@ export default function VersionNotification() {
       localStorage.setItem(RELEASE_NOTES_SEEN_KEY, APP_VERSION);
     }
     setModalState(null);
+
+    // After dismissing version notification, check for a personal message
+    const email = user?.attributes?.email;
+    if (email) {
+      const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
+      const msg = getPersonalMessage(email, seen);
+      if (msg) {
+        setPersonalMsg(msg);
+      }
+    }
+  };
+
+  const handleDismissPersonal = () => {
+    if (personalMsg) {
+      const seen = JSON.parse(localStorage.getItem(PERSONAL_MSG_KEY) || '{}');
+      seen[personalMsg.id] = new Date().toISOString();
+      localStorage.setItem(PERSONAL_MSG_KEY, JSON.stringify(seen));
+      setPersonalMsg(null);
+    }
   };
 
   const handleUpgrade = () => {
     window.location.href = window.location.pathname + '?_cb=' + Date.now();
   };
+
+  // Show personal message modal
+  if (personalMsg) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-yellow-500 max-h-[80vh] overflow-y-auto">
+          <h2 className="text-xl font-bold text-yellow-400 mb-3">{personalMsg.title}</h2>
+          <div className="text-gray-300 text-sm mb-4 whitespace-pre-line leading-relaxed">
+            {personalMsg.body}
+          </div>
+          <div className="flex justify-end pt-2 border-t border-gray-700">
+            <Button
+              onClick={handleDismissPersonal}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              Thanks!
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!modalState) {
     return null;

@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:prod": "PLAYWRIGHT_BASE_URL=https://cribbage.chrisk.com playwright test"
+    "test:prod": "PLAYWRIGHT_BASE_URL=https://cribbage.chrisk.com playwright test",
+    "test:local": "playwright test --reporter=list"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "3.940.0",

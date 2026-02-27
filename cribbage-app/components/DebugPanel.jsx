@@ -78,15 +78,8 @@ export default function DebugPanel({
     setSubmitStatus(null);
 
     try {
-      // Convert screenshot to base64 if present
-      let screenshotData = null;
-      if (screenshot) {
-        screenshotData = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(screenshot);
-        });
-      }
+      // Use the already-read base64 preview data (avoids iOS stale File reference error)
+      const screenshotData = screenshotPreview || null;
 
       const response = await fetch('/api/bug-report', {
         method: 'POST',

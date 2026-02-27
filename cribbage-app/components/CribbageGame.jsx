@@ -10,7 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 // Import game logic from lib/
 import { createDeck, shuffleDeck } from '@/lib/deck';
 import { calculateHandScore, calculatePeggingScore } from '@/lib/scoring';
-import { computerSelectCrib, computerSelectPlay } from '@/lib/ai';
+import { computerSelectCrib, computerSelectPlay, DIFFICULTY_PROFILES } from '@/lib/ai';
+import { aiRandom } from '@/lib/ai/rng';
 import { rankOrder } from '@/lib/constants';
 import {
   PERSISTED_STATE_KEYS,
@@ -29,6 +30,7 @@ import ScoreBreakdown from './ScoreBreakdown';
 import DebugPanel from './DebugPanel';
 import ScoreSelector from './ScoreSelector';
 import CorrectScoreCelebration from './CorrectScoreCelebration';
+import CelebrationToast from './CelebrationToast';
 import DeckCut from './DeckCut';
 import ActionButtons from './ActionButtons';
 import FlyingCard from './FlyingCard';
@@ -40,6 +42,7 @@ import InviteFriend from './InviteFriend';
 import MultiplayerGame from './MultiplayerGame';
 import ProfileModal from './ProfileModal';
 import { APP_VERSION } from '@/lib/version';
+import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
 import { useRequiredAction, useActionDebug } from '@/hooks/useRequiredAction';
 
@@ -65,6 +68,7 @@ export default function CribbageGame({ onLogout }) {
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [showInvitationBanner, setShowInvitationBanner] = useState(true);
   const [acceptedGame, setAcceptedGame] = useState(null);
+  // personalMessage state removed — now handled by VersionNotification
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -145,6 +149,7 @@ export default function CribbageGame({ onLogout }) {
   const [savedGameExists, setSavedGameExists] = useState(false);
   const [savedGameData, setSavedGameData] = useState(null);
   const [userStats, setUserStats] = useState({ wins: 0, losses: 0, forfeits: 0 });
+  const [userExpertStats, setUserExpertStats] = useState({ wins: 0, losses: 0, forfeits: 0 });
   const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const lastSavedStateRef = useRef(null);
@@ -202,6 +207,48 @@ export default function CribbageGame({ onLogout }) {
     }
   };
 
+  // AI difficulty preference (persists across sessions)
+  const getAiDifficulty = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('aiDifficulty') || 'normal';
+    }
+    return 'normal';
+  };
+  const saveAiDifficulty = (d) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aiDifficulty', d);
+    }
+  };
+  const [aiDifficulty, setAiDifficulty] = useState('normal');
+
+  // Celebration settings (persists across sessions)
+  const getCelebrationLevel = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('celebrationLevel') || 'classic';
+    }
+    return 'classic';
+  };
+  const getMotionLevel = () => {
+    if (typeof window !== 'undefined') {
+      // Check prefers-reduced-motion
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 'off';
+      return localStorage.getItem('motionLevel') || 'standard';
+    }
+    return 'standard';
+  };
+  const [celebrationLevel, setCelebrationLevel] = useState('classic');
+  const [motionLevel, setMotionLevel] = useState('standard');
+  const [celebrationToast, setCelebrationToast] = useState(null); // { phrase, animation }
+  const [prevHandScore, setPrevHandScore] = useState(null); // for streak detection
+  const [maxDeficit, setMaxDeficit] = useState(0); // for comeback detection
+
+  // Initialize difficulty and celebration settings from localStorage on mount
+  useEffect(() => {
+    setAiDifficulty(getAiDifficulty());
+    setCelebrationLevel(getCelebrationLevel());
+    setMotionLevel(getMotionLevel());
+  }, []);
+
   // Create current state snapshot for saving
   const createCurrentSnapshot = useCallback(() => {
     return createGameStateSnapshot({
@@ -215,8 +262,9 @@ export default function CribbageGame({ onLogout }) {
       countingTurn, handsCountedThisRound, counterIsComputer,
       computerClaimedScore, actualScore, pendingCountContinue,
       playerCutCard, computerCutCard, cutResultReady,
-      pendingScore,
+      pendingScore, aiDifficulty,
       computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
+      gameLog, debugLog,
     });
   }, [
     gameState, dealer, currentPlayer, message,
@@ -229,8 +277,9 @@ export default function CribbageGame({ onLogout }) {
     countingTurn, handsCountedThisRound, counterIsComputer,
     computerClaimedScore, actualScore, pendingCountContinue,
     playerCutCard, computerCutCard, cutResultReady,
-    pendingScore,
+    pendingScore, aiDifficulty,
     computerKeptHand, computerDiscardCards, computerDiscardDone, cribCardsInPile,
+    gameLog, debugLog,
   ]);
 
   // Save game state to server
@@ -280,7 +329,7 @@ export default function CribbageGame({ onLogout }) {
       const response = await fetch('/api/game-stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result }),
+        body: JSON.stringify({ result, difficulty: aiDifficulty }),
       });
 
       if (response.ok) {
@@ -288,11 +337,14 @@ export default function CribbageGame({ onLogout }) {
         if (data.stats) {
           setUserStats(data.stats);
         }
+        if (data.expertStats) {
+          setUserExpertStats(data.expertStats);
+        }
       }
     } catch (error) {
       console.error('Failed to record game result:', error);
     }
-  }, []);
+  }, [aiDifficulty]);
 
   // Load saved game state on mount
   useEffect(() => {
@@ -307,6 +359,9 @@ export default function CribbageGame({ onLogout }) {
           }
           if (data.stats) {
             setUserStats(data.stats);
+          }
+          if (data.expertStats) {
+            setUserExpertStats(data.expertStats);
           }
         }
       } catch (error) {
@@ -384,6 +439,9 @@ export default function CribbageGame({ onLogout }) {
     return () => clearInterval(interval);
   }, [activeMultiplayerGameId]);
 
+  // Personal messages are now handled by VersionNotification component
+  // (shown after the "Got It!" dismiss — see lib/personal-messages.js)
+
   // Auto-save game state with debounce
   useEffect(() => {
     // Don't save during initial load or if not in a saveable state
@@ -442,10 +500,18 @@ export default function CribbageGame({ onLogout }) {
     const restored = deserializeGameState(savedGameData);
     if (!restored) return;
 
-    // If restored during deal animation, skip to cribSelect
+    // If restored during deal animation, skip to cribSelect.
+    // Also clear stale counting fields from previous hand — the race condition
+    // in bug #80 can leave counterIsComputer/countingTurn set when a new deal fires.
     if (restored.gameState === 'dealing') {
       restored.gameState = 'cribSelect';
       restored.message = 'Select 2 cards for the crib';
+      restored.counterIsComputer = null;
+      restored.countingTurn = '';
+      restored.handsCountedThisRound = 0;
+      restored.actualScore = null;
+      restored.computerClaimedScore = null;
+      restored.pendingCountContinue = null;
     }
 
     // Restore all persisted state
@@ -486,6 +552,15 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerClaimedScore !== undefined) setComputerClaimedScore(restored.computerClaimedScore);
     if (restored.actualScore !== undefined) setActualScore(restored.actualScore);
     if (restored.pendingCountContinue !== undefined) setPendingCountContinue(restored.pendingCountContinue);
+    console.log('[Restore] Generic restore: actualScore=', restored.actualScore, 'computerClaimedScore=', restored.computerClaimedScore, 'pendingCountContinue=', restored.pendingCountContinue, 'gameState=', restored.gameState, 'counterIsComputer=', restored.counterIsComputer, 'handsCountedThisRound=', restored.handsCountedThisRound);
+    if (restored.computerKeptHand !== undefined) setComputerKeptHand(restored.computerKeptHand);
+    if (restored.computerDiscardCards !== undefined) setComputerDiscardCards(restored.computerDiscardCards);
+    if (restored.computerDiscardDone !== undefined) setComputerDiscardDone(restored.computerDiscardDone);
+    if (restored.cribCardsInPile !== undefined) setCribCardsInPile(restored.cribCardsInPile);
+
+    // Restore game logs so full history survives page reload
+    if (restored.gameLog) setGameLog(restored.gameLog);
+    if (restored.debugLog) setDebugLog(restored.debugLog);
 
     // Validate and fix counting state consistency
     // The source of truth is handsCountedThisRound and dealer - derive counterIsComputer from them
@@ -514,8 +589,17 @@ export default function CribbageGame({ onLogout }) {
         setPendingScore(null);
       }
 
-      // Override with correct values if they don't match
-      if (correctCounterIsComputer !== undefined && correctCounterIsComputer !== restored.counterIsComputer) {
+      // Clear stale pendingCountContinue from previous count sub-phase.
+      // Points are already applied; the acknowledgment is only UI and is not
+      // meaningful after a page refresh/restore. If left set, it takes priority
+      // over the ScoreSelector in getRequiredAction() and shows a Continue button
+      // instead of the score entry grid (bug #77).
+      if (hands < 3) {
+        setPendingCountContinue(null);
+      }
+
+      // Override with correct values if they don't match (skip if hands >= 3, already handled)
+      if (hands < 3 && correctCounterIsComputer !== undefined && correctCounterIsComputer !== restored.counterIsComputer) {
         console.log(`[Resume] Fixing counterIsComputer: ${restored.counterIsComputer} → ${correctCounterIsComputer}`);
         setCounterIsComputer(correctCounterIsComputer);
       }
@@ -546,18 +630,26 @@ export default function CribbageGame({ onLogout }) {
       }
       console.log(`[Resume] Set counting message for hands=${hands}, turn=${turn}, isComputer=${isComputerCounting}`);
 
-      // Clear stale actualScore and pendingCountContinue from a previous count sub-phase.
-      // These are set during submitPlayerCount and cleared in proceedAfterPlayerCount.
-      // If the game was saved between those two calls (e.g. player submitted count but
-      // didn't click Continue before closing), actualScore persists and blocks the
-      // ScoreSelector from showing on the next count sub-phase.
-      if (hands < 3 && !restored.pendingCountContinue) {
-        // No pending acknowledgment → actualScore is stale from a completed count
+      // Clear stale score state from a previous count sub-phase.
+      // For the player's turn: any actualScore/computerClaimedScore is stale.
+      // For the computer's turn: actualScore without computerClaimedScore is stale
+      // (leftover from player's previous count that blocks computer counting useEffect).
+      // Only keep both when the computer has actually claimed (player needs to verify).
+      if (hands < 3 && correctCounterIsComputer === false) {
         if (restored.actualScore) {
-          console.log(`[Resume] Clearing stale actualScore from previous count`);
+          console.log(`[Resume] Clearing stale actualScore from previous count (player's turn)`);
           setActualScore(null);
           setShowBreakdown(false);
         }
+        if (restored.computerClaimedScore) {
+          console.log(`[Resume] Clearing stale computerClaimedScore`);
+          setComputerClaimedScore(null);
+        }
+      } else if (hands < 3 && correctCounterIsComputer === true && restored.actualScore && !restored.computerClaimedScore) {
+        // Computer's turn but has stale actualScore from player's previous count (bug #79)
+        console.log(`[Resume] Clearing stale actualScore blocking computer counting`);
+        setActualScore(null);
+        setShowBreakdown(false);
       }
     }
 
@@ -585,7 +677,14 @@ export default function CribbageGame({ onLogout }) {
     if (restored.playerCutCard !== undefined) setPlayerCutCard(restored.playerCutCard);
     if (restored.computerCutCard !== undefined) setComputerCutCard(restored.computerCutCard);
     if (restored.cutResultReady !== undefined) setCutResultReady(restored.cutResultReady);
-    if (restored.pendingScore !== undefined) setPendingScore(restored.pendingScore);
+    // Don't restore pendingScore during counting phase — it's a pegging concept
+    // and would block ScoreSelector from appearing (line 532 previously overrode
+    // the clearing done by the counting validation block at line 477)
+    if (restored.pendingScore !== undefined && restored.gameState !== 'counting') {
+      setPendingScore(restored.pendingScore);
+    }
+    // Don't restore aiDifficulty from saved game — use the player's
+    // current menu selection. They just had a chance to change it.
 
     // Store as last saved state
     lastSavedStateRef.current = savedGameData;
@@ -614,10 +713,25 @@ export default function CribbageGame({ onLogout }) {
     // Delete saved game
     await deleteSavedGame();
 
+    // Fire game-end celebration
+    const gameResult = celebrateGameEnd(
+      playerWon,
+      playerScoreRef.current,
+      computerScoreRef.current,
+      maxDeficit,
+      { celebrationLevel, motionLevel }
+    );
+    if (gameResult.phrase) {
+      setCelebrationToast({ phrase: gameResult.phrase, animation: gameResult.animation });
+    }
+
     // Update game state
     setGameState('gameOver');
     setMessage(customMessage || (playerWon ? 'You win!' : 'Computer wins!'));
-  }, [recordGameResult, deleteSavedGame]);
+    // Reset streak tracking
+    setPrevHandScore(null);
+    setMaxDeficit(0);
+  }, [recordGameResult, deleteSavedGame, maxDeficit, celebrationLevel, motionLevel]);
 
   // Refs to track current scores for use in addPoints
   const playerScoreRef = useRef(playerScore);
@@ -648,6 +762,14 @@ export default function CribbageGame({ onLogout }) {
     } else {
       setComputerScore(newScore);
       computerScoreRef.current = newScore;
+    }
+
+    // Track max deficit for comeback detection
+    const pScore = player === 'player' ? newScore : playerScoreRef.current;
+    const cScore = player === 'computer' ? newScore : computerScoreRef.current;
+    const playerDeficit = cScore - pScore;
+    if (playerDeficit > 0) {
+      setMaxDeficit(prev => Math.max(prev, playerDeficit));
     }
 
     // Log the scoring event
@@ -686,7 +808,11 @@ export default function CribbageGame({ onLogout }) {
         playerScore: playerScore,
         computerScore: computerScore,
         currentCount: currentCount,
-        currentPlayer: currentPlayer
+        currentPlayer: currentPlayer,
+        playerPlayHand: playerPlayHand?.map(c => `${c.rank}${c.suit}`),
+        computerPlayHand: computerPlayHand?.map(c => `${c.rank}${c.suit}`),
+        pendingScore: pendingScore ? { player: pendingScore.player, points: pendingScore.points, reason: pendingScore.reason } : null,
+        lastPlayedBy: lastPlayedBy,
       }
     };
     setGameLog(prev => [...prev, event]);
@@ -701,6 +827,7 @@ export default function CribbageGame({ onLogout }) {
 
     // Clear any leftover pegging state
     setPendingScore(null);
+    setLastPlayedBy(null);
 
     setComputerClaimedScore(null);
     setActualScore(null);
@@ -797,6 +924,20 @@ export default function CribbageGame({ onLogout }) {
     }
   };
 
+  // Safety: if crib reveal gets stuck in 'revealing', force to 'done' (bug #80)
+  useEffect(() => {
+    if (cribRevealPhase === 'revealing') {
+      const safetyTimer = setTimeout(() => {
+        console.log('[Safety] Crib reveal stuck in revealing — forcing to done');
+        setCribRevealPhase('done');
+        setCribRevealedCards([...crib]);
+        setFlyingCard(null);
+        setMessage(dealer === 'computer' ? 'Computer counts the crib' : 'Count your crib');
+      }, 5000);
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [cribRevealPhase, crib, dealer]);
+
   // Start new game
   const startNewGame = () => {
     const newDeck = shuffleDeck(createDeck());
@@ -812,6 +953,25 @@ export default function CribbageGame({ onLogout }) {
       deckSize: newDeck.length,
       timestamp: new Date().toISOString()
     });
+  };
+
+  // Return to menu (e.g., after game over) so player can change settings
+  const returnToMenu = () => {
+    setGameState('menu');
+    setMessage('');
+    setPlayerScore(0);
+    setComputerScore(0);
+    setPlayerHand([]);
+    setComputerHand([]);
+    setCrib([]);
+    setCutCard(null);
+    setPlayerPlayHand([]);
+    setComputerPlayHand([]);
+    setPlayerPlayedCards([]);
+    setComputerPlayedCards([]);
+    setAllPlayedCards([]);
+    setSavedGameExists(false);
+    setSavedGameData(null);
   };
 
   // Player cuts the deck (position is 0-1 from DeckCut component)
@@ -897,7 +1057,7 @@ export default function CribbageGame({ onLogout }) {
     }
 
     // Computer decides its discard at deal time (enables independent animation timing)
-    const kept = computerSelectCrib(computerCards, activeDealer === 'computer');
+    const kept = computerSelectCrib(computerCards, activeDealer === 'computer', aiDifficulty);
     const discards = computerCards.filter(card =>
       !kept.some(c => c.rank === card.rank && c.suit === card.suit)
     );
@@ -1006,8 +1166,9 @@ export default function CribbageGame({ onLogout }) {
   // Stagger-flip player cards face-up one by one
   const startDealFlip = (index) => {
     if (index >= 6) {
-      // Small delay after last flip before transitioning
-      setTimeout(() => finishDeal(), 300);
+      // Wait for last card's 400ms flip animation to complete before transitioning
+      // (bug #100: 300ms was too short — last card got stuck mid-scaleX on mobile)
+      setTimeout(() => finishDeal(), 500);
       return;
     }
     setDealFlipIndex(index);
@@ -1119,7 +1280,7 @@ export default function CribbageGame({ onLogout }) {
     );
 
     // Use pre-computed computer decision from dealHands
-    const newComputerHand = computerKeptHand || computerSelectCrib(computerHand, dealer === 'computer');
+    const newComputerHand = computerKeptHand || computerSelectCrib(computerHand, dealer === 'computer', aiDifficulty);
     const discards = computerDiscardCards.length === 2 ? computerDiscardCards :
       computerHand.filter(card => !newComputerHand.some(c => c.rank === card.rank && c.suit === card.suit));
 
@@ -1272,6 +1433,16 @@ export default function CribbageGame({ onLogout }) {
       });
 
       if (cut.rank === 'J') {
+        // Fire cut celebration
+        const cutCelebration = celebrateCut(cut, {
+          scorer: dealer,
+          celebrationLevel,
+          motionLevel,
+        });
+        if (cutCelebration.phrase) {
+          setCelebrationToast({ phrase: cutCelebration.phrase, animation: cutCelebration.animation });
+        }
+
         setGameState('play');
         if (dealer === 'player') {
           setPendingScore({ player: 'player', points: 2, reason: 'His heels!' });
@@ -1493,6 +1664,19 @@ export default function CribbageGame({ onLogout }) {
     const isLastCard = newComputerPlayHand.length === 0;
     const playerOutOfCards = playerPlayHand.length === 0;
 
+    // Fire pegging celebration for computer
+    if (score > 0 || (isLastCard && playerOutOfCards)) {
+      const isGo = isLastCard && playerOutOfCards && score === 0;
+      const pegCelebration = celebratePegging(score || 1, newCount, reason, isGo, {
+        scorer: 'computer',
+        celebrationLevel,
+        motionLevel,
+      });
+      if (pegCelebration.phrase) {
+        setCelebrationToast({ phrase: pegCelebration.phrase, animation: pegCelebration.animation });
+      }
+    }
+
     if (score > 0) {
       setCurrentPlayer('player');
       if (isLastCard && playerOutOfCards && newCount !== 31) {
@@ -1541,8 +1725,13 @@ export default function CribbageGame({ onLogout }) {
   // Computer makes a play - useEffect with card flight animation
   useEffect(() => {
     if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore && !flyingCard) {
+      // Guard: computer must have cards to play (bug #97)
+      if (computerPlayHand.length === 0) {
+        addDebugLog(`Bug #97: computer is currentPlayer with no cards at count ${currentCount}`);
+        return;
+      }
       const timer = setTimeout(() => {
-        const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount);
+        const card = computerSelectPlay(computerPlayHand, allPlayedCards, currentCount, aiDifficulty);
 
         if (card) {
           // Animate computer card from hand to play area
@@ -1578,7 +1767,9 @@ export default function CribbageGame({ onLogout }) {
           logGameEvent('COMPUTER_GO', {
             player: 'computer',
             currentCount: currentCount,
-            remainingCards: computerPlayHand.length
+            remainingCards: computerPlayHand.length,
+            computerHand: computerPlayHand.map(c => `${c.rank}${c.suit}`),
+            playerHand: playerPlayHand.map(c => `${c.rank}${c.suit}`),
           });
 
           setPeggingHistory(prev => [...prev, {
@@ -1650,6 +1841,19 @@ export default function CribbageGame({ onLogout }) {
     const isLastCard = newPlayerPlayHand.length === 0;
     const computerOutOfCards = computerPlayHand.length === 0;
 
+    // Fire pegging celebration
+    if (score > 0 || (isLastCard && computerOutOfCards)) {
+      const isGo = isLastCard && computerOutOfCards && score === 0;
+      const pegCelebration = celebratePegging(score || 1, newCount, reason, isGo, {
+        scorer: 'player',
+        celebrationLevel,
+        motionLevel,
+      });
+      if (pegCelebration.phrase) {
+        setCelebrationToast({ phrase: pegCelebration.phrase, animation: pegCelebration.animation });
+      }
+    }
+
     if (score > 0) {
       // Only award last card if NOT hitting 31 (31 already includes 2-point bonus)
       if (isLastCard && computerOutOfCards && newCount !== 31) {
@@ -1680,8 +1884,12 @@ export default function CribbageGame({ onLogout }) {
           setPendingScore({ player: 'player', points: 1, reason: 'One for last card' });
           setMessage(`You played ${card.rank}${card.suit} (count: ${newCount}) - 1 for last card - Click Accept`);
         }
-      } else {
+      } else if (computerPlayHand.length > 0) {
+        // Only hand control to computer if it has cards to play (bug #97)
         setCurrentPlayer('computer');
+      } else {
+        // Computer has no cards — player continues playing remaining cards
+        setCurrentPlayer('player');
       }
     }
   };
@@ -1862,6 +2070,19 @@ export default function CribbageGame({ onLogout }) {
     setPlayerCountInput('');
     setShowBreakdown(true);
 
+    // Fire celebration toast for notable hands (regardless of correct count)
+    const handCelebration = celebrateHand(score, breakdown, {
+      scorer: 'player',
+      celebrationLevel,
+      motionLevel,
+      prevHandScore,
+      isCrib: handType === 'crib',
+    });
+    if (handCelebration.phrase) {
+      setCelebrationToast({ phrase: handCelebration.phrase, animation: handCelebration.animation });
+    }
+    setPrevHandScore(score);
+
     if (claimed === score) {
       // Show celebration for correct count
       setCelebrationScore(score);
@@ -1917,8 +2138,12 @@ export default function CribbageGame({ onLogout }) {
     }
 
     // Fallback: derive next step from current state (handles restored games)
-    // If actualScore is set, player already submitted - proceed to next count
-    if (actualScore && gameState === 'counting') {
+    // If actualScore is set, player already submitted - proceed to next count.
+    // IMPORTANT: Do NOT fire this fallback when counterIsComputer is true — that means
+    // the computer's counting flow (e.g. muggins 5-second timeout) is handling the
+    // transition. Allowing the fallback to fire here causes a race condition where BOTH
+    // the fallback and the timeout advance the game simultaneously (bug #80).
+    if (actualScore && gameState === 'counting' && !counterIsComputer) {
       const nextHandsCount = handsCountedThisRound + 1;
       addDebugLog(`Fallback continue: actualScore set, proceeding with handsCountedThisRound=${nextHandsCount}`);
       setActualScore(null);
@@ -1939,6 +2164,10 @@ export default function CribbageGame({ onLogout }) {
       const { newHandsCountedThisRound, score } = pendingCountContinue;
       setMessage(`${score} points scored!`);
       setPendingCountContinue(null);
+      // Clear actualScore immediately so the computer counting useEffect
+      // can see shouldCount=true in this render cycle (bug #84)
+      setActualScore(null);
+      setShowBreakdown(false);
       // Short delay then proceed
       setTimeout(() => {
         proceedAfterPlayerCount(newHandsCountedThisRound);
@@ -2035,9 +2264,28 @@ export default function CribbageGame({ onLogout }) {
     const { score, breakdown } = calculateHandScore(hand, cutCard, handType === 'crib');
     setActualScore({ score, breakdown });
 
+    // Fire celebration for computer's hand (shown as toast)
+    const compCelebration = celebrateHand(score, breakdown, {
+      scorer: 'computer',
+      celebrationLevel,
+      motionLevel,
+      prevHandScore,
+      isCrib: handType === 'crib',
+    });
+    if (compCelebration.phrase) {
+      setCelebrationToast({ phrase: compCelebration.phrase, animation: compCelebration.animation });
+    }
+    setPrevHandScore(score);
+
     let claimed = score;
-    if (Math.random() < 0.1 && score > 0) {
-      const error = Math.random() < 0.5 ? -2 : 2;
+    const profile = DIFFICULTY_PROFILES[aiDifficulty] || DIFFICULTY_PROFILES.normal;
+    if (profile.overcountRate && aiRandom() < profile.overcountRate && score > 0) {
+      // Deliberate overcount bluff (currently disabled for Expert — net handicap vs muggins callers)
+      const bluff = Math.ceil(aiRandom() * profile.overcountRange);
+      claimed = score + bluff;
+      addDebugLog(`Computer bluffing overcount: actual ${score}, claiming ${claimed}`);
+    } else if (aiRandom() < profile.countingErrorRate && score > 0) {
+      const error = aiRandom() < 0.5 ? -profile.countingErrorRange : profile.countingErrorRange;
       claimed = Math.max(0, score + error);
       addDebugLog(`Computer making counting error: actual ${score}, claiming ${claimed}`);
     }
@@ -2255,12 +2503,20 @@ export default function CribbageGame({ onLogout }) {
 
   // Check if pegging is truly complete
   useEffect(() => {
-    if (gameState === 'play' && !pendingScore) {
+    if (gameState === 'play' && !pendingScore && !flyingCard) {
       if (playerPlayHand.length === 0 && computerPlayHand.length === 0) {
-        moveToCountingPhase();
+        // Before transitioning, ensure last-card point has been awarded (bug #94)
+        if (lastPlayedBy) {
+          addDebugLog(`Watchdog: awarding last-card point to ${lastPlayedBy} before counting transition`);
+          setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
+          setCurrentPlayer('player');
+          setMessage(`${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
+        } else {
+          moveToCountingPhase();
+        }
       }
     }
-  }, [gameState, playerPlayHand.length, computerPlayHand.length, pendingScore]);
+  }, [gameState, playerPlayHand.length, computerPlayHand.length, pendingScore, flyingCard, lastPlayedBy]);
 
   // Use effect for computer counting
   useEffect(() => {
@@ -2289,6 +2545,46 @@ export default function CribbageGame({ onLogout }) {
       };
     }
   }, [counterIsComputer, gameState, pendingScore, actualScore, computerClaimedScore, isProcessingCount, handsCountedThisRound, dealer, countingTurn, cribRevealPhase]);
+
+  // Recovery: if game was restored with all 3 hands counted, deal next hand.
+  // Uses needsRecoveryDealRef (set ONLY in restore code) to avoid firing during
+  // normal gameplay where handsCountedThisRound transiently reaches 3.
+  useEffect(() => {
+    if (needsRecoveryDealRef.current) {
+      needsRecoveryDealRef.current = false;
+      console.log('[Recovery] Restored with counting complete - dealing next hand');
+      const timer = setTimeout(() => {
+        setDealer(prev => prev === 'player' ? 'computer' : 'player');
+        const newDeck = shuffleDeck(createDeck());
+        setDeck(newDeck);
+        dealHands(newDeck);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  });
+
+  // Recovery: clear stale actualScore when left over from a previous count sub-phase.
+  // Handles two cases:
+  // 1. Player's turn but actualScore set without pendingCountContinue (bug #77)
+  // 2. Computer's turn but actualScore set without computerClaimedScore (bug #79)
+  //    — stale from player's previous count, blocks computer counting useEffect
+  useEffect(() => {
+    if (gameState === 'counting' && counterIsComputer === false &&
+        actualScore && !pendingCountContinue && !showCelebration) {
+      console.log('[Recovery] Clearing stale actualScore during player counting turn',
+        { actualScore, computerClaimedScore, handsCountedThisRound, counterIsComputer });
+      setActualScore(null);
+      setComputerClaimedScore(null);
+      setShowBreakdown(false);
+    }
+    if (gameState === 'counting' && counterIsComputer === true &&
+        actualScore && !computerClaimedScore && !isProcessingCount) {
+      console.log('[Recovery] Clearing stale actualScore blocking computer counting',
+        { actualScore, handsCountedThisRound, counterIsComputer });
+      setActualScore(null);
+      setShowBreakdown(false);
+    }
+  }, [gameState, counterIsComputer, actualScore, pendingCountContinue, showCelebration, computerClaimedScore, isProcessingCount]);
 
   // === Required Action Hook (Phase 1 - Prevent Stuck States) ===
   // Single source of truth for what action the user should take
@@ -2417,8 +2713,8 @@ export default function CribbageGame({ onLogout }) {
         setMessage('Enter your score to continue');
       }
     } else if (gameState === 'gameOver') {
-      addDebugLog('Stuck recovery: game over, starting new game');
-      startNewGame();
+      addDebugLog('Stuck recovery: game over, returning to menu');
+      returnToMenu();
     } else if (gameState === 'play' && currentPlayer === 'computer' && !pendingScore) {
       // Computer should be playing but isn't - give turn to player
       addDebugLog('Stuck recovery: computer stuck in play phase, switching to player');
@@ -2650,6 +2946,47 @@ export default function CribbageGame({ onLogout }) {
                 Leaderboard
               </button>
 
+              {/* Switch Difficulty Mode */}
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  const newMode = aiDifficulty === 'expert' ? 'normal' : 'expert';
+                  setAiDifficulty(newMode);
+                  saveAiDifficulty(newMode);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                {aiDifficulty === 'expert' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )}
+                {aiDifficulty === 'expert' ? 'Switch to Normal' : 'Switch to Expert'}
+              </button>
+
+              {/* Celebration Level */}
+              <button
+                onClick={() => {
+                  const levels = ['off', 'minimal', 'classic', 'lively', 'fullBanter'];
+                  const labels = { off: 'Off', minimal: 'Minimal', classic: 'Classic', lively: 'Lively', fullBanter: 'Full Banter' };
+                  const idx = levels.indexOf(celebrationLevel);
+                  const next = levels[(idx + 1) % levels.length];
+                  setCelebrationLevel(next);
+                  if (typeof window !== 'undefined') localStorage.setItem('celebrationLevel', next);
+                  setMessage(`Celebrations: ${labels[next]}`);
+                }}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Celebrations: {{ off: 'Off', minimal: 'Minimal', classic: 'Classic', lively: 'Lively', fullBanter: 'Full Banter' }[celebrationLevel]}
+              </button>
+
               {/* Admin Panel - only for chris@chrisk.com */}
               {user?.attributes?.email === 'chris@chrisk.com' && (
                 <button
@@ -2732,6 +3069,15 @@ export default function CribbageGame({ onLogout }) {
             {user?.attributes?.email && (
               <div className="text-center text-green-400 text-xs mt-0.5">{user.attributes.email}</div>
             )}
+            {gameState !== 'menu' && (
+              <div className="text-center mt-0.5" data-testid="difficulty-label">
+                {aiDifficulty === 'expert' ? (
+                  <span className="bg-orange-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">EXPERT MODE</span>
+                ) : (
+                  <span className="bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-full">NORMAL MODE</span>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {gameState === 'menu' && (
@@ -2742,13 +3088,25 @@ export default function CribbageGame({ onLogout }) {
                   <>
                     {/* Stats display */}
                     {(userStats.wins > 0 || userStats.losses > 0 || userStats.forfeits > 0) && (
-                      <div className="mb-6 text-sm">
-                        <div className="text-gray-400 mb-1">Your Record:</div>
+                      <div className="mb-4 text-sm">
+                        <div className="text-gray-400 mb-1">Normal Record:</div>
                         <div className="flex justify-center gap-4">
-                          <span className="text-green-400">Wins: {userStats.wins}</span>
-                          <span className="text-red-400">Losses: {userStats.losses}</span>
+                          <span className="text-green-400">W: {userStats.wins}</span>
+                          <span className="text-red-400">L: {userStats.losses}</span>
                           {userStats.forfeits > 0 && (
-                            <span className="text-yellow-400">Forfeits: {userStats.forfeits}</span>
+                            <span className="text-yellow-400">F: {userStats.forfeits}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {(userExpertStats.wins > 0 || userExpertStats.losses > 0 || userExpertStats.forfeits > 0) && (
+                      <div className="mb-4 text-sm">
+                        <div className="text-orange-400 mb-1">Expert Record:</div>
+                        <div className="flex justify-center gap-4">
+                          <span className="text-green-400">W: {userExpertStats.wins}</span>
+                          <span className="text-red-400">L: {userExpertStats.losses}</span>
+                          {userExpertStats.forfeits > 0 && (
+                            <span className="text-yellow-400">F: {userExpertStats.forfeits}</span>
                           )}
                         </div>
                       </div>
@@ -2779,6 +3137,44 @@ export default function CribbageGame({ onLogout }) {
                           New vs Friend
                         </Button>
                       </div>
+                    </div>
+
+                    {/* Difficulty selector */}
+                    <div className="mb-6" data-testid="difficulty-selector">
+                      <div className="text-gray-400 text-sm mb-2">Difficulty:</div>
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => { setAiDifficulty('normal'); saveAiDifficulty('normal'); }}
+                          className={`px-4 py-2 rounded-l-full text-sm font-medium transition-colors ${
+                            aiDifficulty === 'normal'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          Normal
+                        </button>
+                        <button
+                          onClick={() => { setAiDifficulty('expert'); saveAiDifficulty('expert'); }}
+                          className={`px-4 py-2 rounded-r-full text-sm font-medium transition-colors ${
+                            aiDifficulty === 'expert'
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          Expert
+                        </button>
+                      </div>
+                      {aiDifficulty === 'expert' && (
+                        <div className="text-orange-400 text-xs mt-2 text-left max-w-[260px] mx-auto">
+                          <div className="mb-1 font-medium">Expert AI improvements:</div>
+                          <ul className="list-disc list-inside space-y-0.5 text-gray-300">
+                            <li>Optimal discards via expected value</li>
+                            <li>Evaluates all 46 possible cuts</li>
+                            <li>Smarter pegging with count control</li>
+                            <li>Rarely miscounts — stay sharp with muggins!</li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
 
                   </>
@@ -3076,7 +3472,7 @@ export default function CribbageGame({ onLogout }) {
                       {dealer === 'computer' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
-                        <div ref={cribPileRef} className={`flex flex-col items-center transition-opacity duration-300 ${cribRevealPhase === 'revealing' ? 'opacity-60' : ''}`}>
+                        <div ref={cribPileRef} className="flex flex-col items-center">
                           <div className="relative w-12 h-16">
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
@@ -3095,9 +3491,9 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         );
                       })()}
-                      <div className="grid min-w-0">
+                      <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={computerHandRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'dealing' ? computerHand :
                             gameState === 'counting' || gameState === 'gameOver' ? computerHand :
                             gameState === 'play' ? computerPlayHand :
@@ -3203,9 +3599,9 @@ export default function CribbageGame({ onLogout }) {
                       {showCribHere ? "Crib (Yours):" : gameState === 'dealing' ? 'Your Hand:' : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-                      <div className="grid min-w-0">
+                      <div className="grid">
                         {/* Hand cards - always rendered to maintain container size; invisible during crib reveal */}
-                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-2 sm:[&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
+                        <div ref={playerHandContainerRef} className={`col-start-1 row-start-1 flex justify-center overflow-visible [&>*:not(:first-child)]:-ml-1 ${showCribHere ? 'invisible' : ''}`}>
                           {(gameState === 'dealing' ? playerHand :
                             gameState === 'cribSelect' ? playerHand :
                             gameState === 'play' ? playerPlayHand :
@@ -3215,8 +3611,10 @@ export default function CribbageGame({ onLogout }) {
                             const isFlipping = gameState === 'dealing' && dealPhase === 'flipping' && idx <= dealFlipIndex;
                             const isDealFaceDown = gameState === 'dealing' && (!isFlipping);
                             return (
-                            <div key={idx} className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`} style={{
+                            <div key={`${card.rank}${card.suit}`} className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`} style={{
                               marginTop: idx % 2 === 1 ? '4px' : '0',
+                              // Explicit transform reset prevents stuck scaleX from interrupted flip animation (bug #100)
+                              ...(!isFlipping ? { transform: 'none' } : {}),
                               ...(isBeingDiscarded ? { visibility: 'hidden' } : {}),
                               ...(isDealHidden ? { visibility: 'hidden' } : {})
                             }}>
@@ -3293,7 +3691,7 @@ export default function CribbageGame({ onLogout }) {
                       {dealer === 'player' && (gameState === 'cribSelect' || gameState === 'play' || gameState === 'counting') && (handsCountedThisRound < 2 || cribRevealPhase === 'revealing') && (() => {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
-                        <div ref={cribPileRef} className={`flex flex-col items-center ${cribRevealPhase === 'revealing' ? 'transition-opacity duration-300 opacity-60' : ''}`}>
+                        <div ref={cribPileRef} className="flex flex-col items-center">
                           <div className="relative w-12 h-16">
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
@@ -3320,7 +3718,11 @@ export default function CribbageGame({ onLogout }) {
                 {/* Crib is now displayed inline in the hand sections above */}
 
                 {/* Counting input - Score selector grid */}
-                {gameState === 'counting' && !actualScore && !pendingScore && !computerClaimedScore &&
+                {/* Show ScoreSelector when: it's the player's turn to count AND either
+                    actualScore hasn't been set yet (normal) OR actualScore is stale from
+                    a previous count sub-phase (pendingCountContinue is null — during normal
+                    gameplay they're always set together in the same React batch). Bug #77. */}
+                {gameState === 'counting' && (!actualScore || !pendingCountContinue) && !pendingScore && !computerClaimedScore &&
                  counterIsComputer === false && (
                   <div className={`mb-4 ${cribRevealPhase === 'revealing' ? 'invisible' : ''}`}>
                     <ScoreSelector onSelect={(score) => submitPlayerCount(score)} />
@@ -3358,10 +3760,16 @@ export default function CribbageGame({ onLogout }) {
                   </div>
                 )}
 
-                {/* Score breakdown - only show after player decides (when computer counting) or always (when player counting) */}
+                {/* Score breakdown - show when:
+                    - Computer counting and player has accepted/objected
+                    - Player counting and has submitted (pendingCountContinue set)
+                    Don't show stale breakdown from a previous count sub-phase (bug #77) */}
                 <ScoreBreakdown
                   actualScore={actualScore}
-                  show={gameState === 'counting' && (!counterIsComputer || playerMadeCountDecision)}
+                  show={gameState === 'counting' && (
+                    (counterIsComputer && playerMadeCountDecision) ||
+                    (!counterIsComputer && pendingCountContinue)
+                  )}
                 />
 
                 {/* Continue button moved to sticky bar */}
@@ -3406,6 +3814,13 @@ export default function CribbageGame({ onLogout }) {
                     onComplete={handleCelebrationComplete}
                   />
                 )}
+
+                {/* Celebration toast (phrases + micro-animations) */}
+                <CelebrationToast
+                  phrase={celebrationToast?.phrase}
+                  animation={celebrationToast?.animation}
+                  onDismiss={() => setCelebrationToast(null)}
+                />
 
                 {/* Debug Panel */}
                 <DebugPanel
@@ -3574,6 +3989,7 @@ export default function CribbageGame({ onLogout }) {
                 handleCountContinue,
                 playerGo,
                 startNewGame,
+                returnToMenu,
                 acceptComputerCount,
                 objectToComputerCount,
                 handleMugginsPreferenceChoice,

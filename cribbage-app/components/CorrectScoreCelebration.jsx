@@ -3,8 +3,9 @@
 // Celebration overlay for correct score counts
 
 import { useEffect, useState } from 'react';
+import { aiRandom } from '@/lib/ai/rng';
 
-// Encouraging messages to show randomly
+// Fallback messages (used when no celebration phrase is provided)
 const CELEBRATION_MESSAGES = [
   'Perfect!',
   'Nice count!',
@@ -18,11 +19,12 @@ const CELEBRATION_MESSAGES = [
 /**
  * Animated celebration overlay for correct counts
  * @param {number} score - The score achieved
+ * @param {string} [phrase] - Optional phrase from the celebration engine
  * @param {Function} onComplete - Callback when animation finishes
  */
-export default function CorrectScoreCelebration({ score, onComplete }) {
+export default function CorrectScoreCelebration({ score, phrase, onComplete }) {
   const [message] = useState(() =>
-    CELEBRATION_MESSAGES[Math.floor(Math.random() * CELEBRATION_MESSAGES.length)]
+    phrase || CELEBRATION_MESSAGES[Math.floor(aiRandom() * CELEBRATION_MESSAGES.length)]
   );
   const [isVisible, setIsVisible] = useState(true);
 
@@ -54,8 +56,8 @@ export default function CorrectScoreCelebration({ score, onComplete }) {
             key={i}
             className="confetti-particle"
             style={{
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 0.5}s`,
+              left: `${aiRandom() * 100}%`,
+              animationDelay: `${aiRandom() * 0.5}s`,
               backgroundColor: ['#22c55e', '#eab308', '#3b82f6', '#ec4899', '#f97316'][i % 5],
             }}
           />

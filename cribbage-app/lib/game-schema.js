@@ -77,13 +77,40 @@ const gameStatsDDL = {
         computed_sql_type: 'VARCHAR',
         key_type: null,
         nullable: true
+      },
+      expert_wins: {
+        original_col_name: 'Expert Wins',
+        computed_sql_type: 'INTEGER',
+        key_type: null,
+        nullable: false,
+        default: 0
+      },
+      expert_losses: {
+        original_col_name: 'Expert Losses',
+        computed_sql_type: 'INTEGER',
+        key_type: null,
+        nullable: false,
+        default: 0
+      },
+      expert_forfeits: {
+        original_col_name: 'Expert Forfeits',
+        computed_sql_type: 'INTEGER',
+        key_type: null,
+        nullable: false,
+        default: 0
+      },
+      expert_last_played: {
+        original_col_name: 'Expert Last Played',
+        computed_sql_type: 'VARCHAR',
+        key_type: null,
+        nullable: true
       }
     },
     primary_key: ['user_id'],
     foreign_keys: {}
   },
   errors: [],
-  column_order: ['user_id', 'wins', 'losses', 'forfeits', 'last_played']
+  column_order: ['user_id', 'wins', 'losses', 'forfeits', 'last_played', 'expert_wins', 'expert_losses', 'expert_forfeits', 'expert_last_played']
 };
 
 /**
@@ -141,7 +168,11 @@ export function createGameStatsRow(userId) {
     0,  // wins
     0,  // losses
     0,  // forfeits
-    null  // last_played
+    null,  // last_played
+    0,  // expert_wins
+    0,  // expert_losses
+    0,  // expert_forfeits
+    null  // expert_last_played
   ];
 }
 
@@ -162,5 +193,9 @@ export const GAME_STATS_COLS = {
   WINS: 1,
   LOSSES: 2,
   FORFEITS: 3,
-  LAST_PLAYED: 4
+  LAST_PLAYED: 4,
+  EXPERT_WINS: 5,
+  EXPERT_LOSSES: 6,
+  EXPERT_FORFEITS: 7,
+  EXPERT_LAST_PLAYED: 8
 };

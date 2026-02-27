@@ -10,6 +10,8 @@ import CribbageBoard from '@/components/CribbageBoard';
 import ScoreSelector from '@/components/ScoreSelector';
 import FlyingCard from '@/components/FlyingCard';
 import { GAME_PHASE } from '@/lib/multiplayer-game';
+import CelebrationToast from './CelebrationToast';
+import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
 
 /**
  * Multiplayer Game wrapper component
@@ -25,6 +27,14 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const [cutForDealerState, setCutForDealerState] = useState({ myCut: null, opponentCut: null, result: null });
   const [showPeggingSummary, setShowPeggingSummary] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  // Celebration state
+  const [celebrationToast, setCelebrationToast] = useState(null);
+  const [celebrationLevel, setCelebrationLevel] = useState('classic');
+  const [motionLevel, setMotionLevel] = useState('standard');
+  const prevHandsScoredCountRef = useRef(0);
+  const prevCutCardRef = useRef(null);
+  const prevPeggingScoreRef = useRef(null);
 
   // Animation state
   const [flyingCard, setFlyingCard] = useState(null);
@@ -85,6 +95,92 @@ export default function MultiplayerGame({ gameId, onExit }) {
   const nonDealer = dealer === 'player1' ? 'player2' : 'player1';
   const opponentName = opponent?.email || opponent?.username || 'Opponent';
   const isDealAnimating = dealPhase !== 'idle';
+
+  // Initialize celebration settings from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCelebrationLevel(localStorage.getItem('celebrationLevel') || 'classic');
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      setMotionLevel(reducedMotion ? 'off' : (localStorage.getItem('motionLevel') || 'standard'));
+    }
+  }, []);
+
+  // Celebration: cut card (when Jack is cut, dealer gets 2 points)
+  useEffect(() => {
+    if (gs?.cutCard && gs.cutCard !== prevCutCardRef.current && phase !== GAME_PHASE.CUTTING_FOR_DEALER) {
+      prevCutCardRef.current = gs.cutCard;
+      const result = celebrateCut(gs.cutCard, {
+        scorer: isDealer ? 'player' : 'computer',
+        celebrationLevel,
+        motionLevel,
+      });
+      if (result?.phrase) {
+        setCelebrationToast({ phrase: result.phrase, animation: result.animation });
+      }
+    }
+  }, [gs?.cutCard, isDealer, phase, celebrationLevel, motionLevel]);
+
+  // Celebration: pegging plays that score points
+  useEffect(() => {
+    if (gs?.pendingPeggingScore) {
+      const pending = gs.pendingPeggingScore;
+      const scoreKey = `${pending.points}-${pending.reason}-${pending.count}`;
+      if (scoreKey !== prevPeggingScoreRef.current) {
+        prevPeggingScoreRef.current = scoreKey;
+        const result = celebratePegging(
+          pending.points,
+          pending.count || 0,
+          pending.reason || '',
+          pending.reason?.includes('Go') || false,
+          {
+            scorer: pending.player === myKey ? 'player' : 'computer',
+            celebrationLevel,
+            motionLevel,
+          }
+        );
+        if (result?.phrase) {
+          setCelebrationToast({ phrase: result.phrase, animation: result.animation });
+        }
+      }
+    }
+  }, [gs?.pendingPeggingScore, myKey, celebrationLevel, motionLevel]);
+
+  // Celebration: hand/crib scoring
+  useEffect(() => {
+    const handsScored = gs?.countingState?.handsScored || [];
+    if (handsScored.length > prevHandsScoredCountRef.current) {
+      const latest = handsScored[handsScored.length - 1];
+      const score = latest.claimedScore !== undefined ? latest.claimedScore : latest.score;
+      const result = celebrateHand(score, latest.breakdown || [], {
+        scorer: latest.player === myKey ? 'player' : 'computer',
+        celebrationLevel,
+        motionLevel,
+        prevHandScore: handsScored.length > 1 ? handsScored[handsScored.length - 2].score : null,
+        isCrib: latest.phase === 'crib',
+      });
+      if (result?.phrase) {
+        setCelebrationToast({ phrase: result.phrase, animation: result.animation });
+      }
+    }
+    prevHandsScoredCountRef.current = handsScored.length;
+  }, [gs?.countingState?.handsScored?.length, myKey, celebrationLevel, motionLevel]);
+
+  // Celebration: game end
+  useEffect(() => {
+    if (gameState?.status === 'completed' && gameState?.winner) {
+      const isWinner = gameState.winner === myKey;
+      const result = celebrateGameEnd(
+        isWinner,
+        gameState?.myScore || 0,
+        gameState?.opponentScore || 0,
+        0,
+        { celebrationLevel, motionLevel }
+      );
+      if (result?.phrase) {
+        setCelebrationToast({ phrase: result.phrase, animation: result.animation });
+      }
+    }
+  }, [gameState?.status, gameState?.winner, myKey, celebrationLevel, motionLevel]);
 
   // Clear pegging selection when not in play phase or not my turn
   useEffect(() => {
@@ -724,6 +820,11 @@ export default function MultiplayerGame({ gameId, onExit }) {
         <Button onClick={onExit} className="bg-blue-600 hover:bg-blue-700 text-lg px-6 py-3">
           Back to Menu
         </Button>
+        <CelebrationToast
+          phrase={celebrationToast?.phrase}
+          animation={celebrationToast?.animation}
+          onDismiss={() => setCelebrationToast(null)}
+        />
       </div>
     );
   }
@@ -1801,6 +1902,13 @@ export default function MultiplayerGame({ gameId, onExit }) {
           className={flyingCard.className || 'flying-card'}
         />
       )}
+
+      {/* Celebration toast */}
+      <CelebrationToast
+        phrase={celebrationToast?.phrase}
+        animation={celebrationToast?.animation}
+        onDismiss={() => setCelebrationToast(null)}
+      />
     </div>
   );
 }

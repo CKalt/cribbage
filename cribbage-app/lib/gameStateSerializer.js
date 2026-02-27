@@ -62,6 +62,13 @@ export const PERSISTED_STATE_KEYS = [
   'computerDiscardCards',
   'computerDiscardDone',
   'cribCardsInPile',
+
+  // Settings
+  'aiDifficulty',
+
+  // Logs — persisted so bug reports have full history even after restore
+  'gameLog',
+  'debugLog',
 ];
 
 /**
@@ -77,8 +84,6 @@ export const UI_ONLY_STATE_KEYS = [
   'playerMadeCountDecision',
   'showMugginsPreferenceDialog',
   'pendingWrongMugginsResult',
-  'debugLog',
-  'gameLog',
   'playerCountInput',
   // Note: counterIsComputer, computerClaimedScore, actualScore moved to PERSISTED_STATE_KEYS
 ];
@@ -156,8 +161,6 @@ export function getDefaultUIState() {
     playerMadeCountDecision: false,
     showMugginsPreferenceDialog: false,
     pendingWrongMugginsResult: null,
-    debugLog: [],
-    gameLog: [],
     playerCountInput: '',
     computerClaimedScore: null,
     actualScore: null,

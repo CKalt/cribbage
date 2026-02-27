@@ -105,7 +105,11 @@ export function getRequiredAction(state) {
       // Priority order matters here - check most specific conditions first
 
       // 1. Player needs to acknowledge their count result
-      if (pendingCountContinue) {
+      // Require actualScore to also be set — pendingCountContinue is always set
+      // alongside actualScore during normal gameplay. If pendingCountContinue is
+      // set but actualScore is null, it's stale from a previous count sub-phase
+      // that was cleared during game restore (bug #77).
+      if (pendingCountContinue && actualScore) {
         return {
           ...GAME_ACTIONS.counting_player_continue,
           pendingCountContinue,
@@ -126,8 +130,11 @@ export function getRequiredAction(state) {
           };
         }
         // If actualScore is still set from player's previous count (restored game scenario),
-        // show Continue button to clear it so computer can proceed
-        if (actualScore) {
+        // show Continue button to clear it so computer can proceed.
+        // IMPORTANT: Only when playerMadeCountDecision is false (restored game default).
+        // When playerMadeCountDecision is true, a muggins timeout is handling the
+        // transition — showing Continue here causes a race condition (bug #80).
+        if (actualScore && !playerMadeCountDecision) {
           return {
             ...GAME_ACTIONS.counting_player_continue,
             restoredGameRecovery: true,
@@ -138,15 +145,11 @@ export function getRequiredAction(state) {
       }
 
       // 4. Player needs to enter their count
-      if (!actualScore) {
-        return { ...GAME_ACTIONS.counting_player_input };
-      }
-
-      // 5. Fallback - should have pendingCountContinue set, but just in case
-      return {
-        ...GAME_ACTIONS.counting_player_continue,
-        fallback: true,
-      };
+      // Always show ScoreSelector when it's the player's turn and no pendingCountContinue.
+      // A stale actualScore (from a previous count sub-phase captured by auto-save during
+      // the muggins timeout window) must NOT block the ScoreSelector (bug #77).
+      // The recovery useEffect in CribbageGame.jsx will clear the stale actualScore.
+      return { ...GAME_ACTIONS.counting_player_input };
 
     case 'gameOver':
       return { ...GAME_ACTIONS.gameOver };
