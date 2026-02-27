@@ -1,12 +1,13 @@
 'use client';
 
-// Lightweight toast for celebration phrases + micro-animations
-// Non-blocking, auto-dismiss, accessible
+// Celebration toast — displays phrase text + micro-animations
+// All animation anchors now render visibly: toast effects on the text,
+// score/hand/fullscreen effects as an overlay element near the toast.
 
 import { useEffect, useState, useCallback } from 'react';
 
 /**
- * CelebrationToast — displays a phrase with optional animation.
+ * CelebrationToast — displays a phrase with visible animation.
  * @param {Object} props
  * @param {string|null} props.phrase - Text to display
  * @param {Object|null} props.animation - Animation metadata from the pool
@@ -38,8 +39,13 @@ export default function CelebrationToast({ phrase, animation, onDismiss }) {
 
   if (!visible || !phrase) return null;
 
-  // Build animation class for the toast wrapper
-  const animClass = animation?.anchor === 'toast' ? animation.cssClass : '';
+  // Apply animation CSS class to the toast itself regardless of anchor type.
+  // This makes confetti, sparkles, glows etc. all visible on or near the toast.
+  const animClass = animation?.cssClass || '';
+
+  // Determine if this animation has overlay effects (pseudo-elements like ::before/::after)
+  // that need a larger visible container above the toast
+  const hasOverlayEffects = animation && ['scorePanel', 'handCards', 'fullscreen'].includes(animation.anchor);
 
   return (
     <div
@@ -47,6 +53,14 @@ export default function CelebrationToast({ phrase, animation, onDismiss }) {
       aria-live="polite"
       role="status"
     >
+      {/* Overlay element for animations with pseudo-elements (confetti, sparkles, etc.) */}
+      {hasOverlayEffects && (
+        <div
+          className={`absolute -top-8 left-1/2 -translate-x-1/2 w-20 h-10 ${animClass}`}
+          aria-hidden="true"
+        />
+      )}
+
       <div
         className={`
           bg-gray-900/90 text-amber-200 px-5 py-3 rounded-xl
@@ -59,14 +73,6 @@ export default function CelebrationToast({ phrase, animation, onDismiss }) {
       >
         {phrase}
       </div>
-
-      {/* Score panel animation anchor — rendered but invisible, positioned near top */}
-      {animation?.anchor === 'scorePanel' && (
-        <div
-          className={`fixed top-20 left-1/2 -translate-x-1/2 pointer-events-none ${animation.cssClass}`}
-          aria-hidden="true"
-        />
-      )}
     </div>
   );
 }
