@@ -1,12 +1,12 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b19-20260304';
-export const RELEASE_NOTE = `Cribbage v0.3.1 — Counting Phase + Celebration Fixes
+export const APP_VERSION = 'v0.3.1-b20-20260304';
+export const RELEASE_NOTE = `Cribbage v0.3.1 — Board + Counting + Celebration Fixes
 
 NEW in this version:
+- Back peg positions now persist across game save/restore
 - Non-active hands are dimmed during counting phase for clearer focus
 - Yellow border no longer disappears when reviewing undercount/overcount errors
 - Fixed celebrations incorrectly congratulating player when computer scores
-- Celebrations now only fire for the player's own scoring events
 
 Happy playing!`;
 
