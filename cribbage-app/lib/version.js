@@ -1,16 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.1-b17-20260227';
-export const RELEASE_NOTE = `Cribbage v0.3.1 — Celebrations + Multiplayer Merge 🎉
+export const APP_VERSION = 'v0.3.1-b18-20260304';
+export const RELEASE_NOTE = `Cribbage v0.3.1 — Counting Phase Visual Improvements
 
 NEW in this version:
-- Celebrations! Big hands, pegging highlights, close wins get reaction phrases
-- 435 unique phrases across 17 event types — never the same reaction twice
-- Micro-animations: sparkles, glows, confetti, and more
-- Set your Celebration Level from the ⋮ menu: Off, Minimal, Classic, Lively, or Full Banter
-- Expert Mode — optimal discards, smarter pegging, and the occasional bluff
-- Multiplayer: compact 3-dot menu replaces overflow top bar
-- Cards no longer overlap too much on mobile
-- Deal card animation for multiplayer
+- Non-active hands are dimmed during counting phase for clearer focus
+- Yellow border no longer disappears when reviewing undercount/overcount errors
+- Smooth opacity transitions between counting sub-phases
 
 Happy playing!`;
 
