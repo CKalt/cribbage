@@ -71,6 +71,9 @@ function pickWeighted(items, weights) {
 export function selectPhrase(eventType, celebrationLevel, scorer, useMaineLodge = false) {
   if (celebrationLevel === 'off') return null;
 
+  // All celebration phrases are written for the player — skip when computer scores
+  if (scorer === 'computer') return null;
+
   // Check event threshold for celebration level
   if (!shouldFireForLevel(eventType, celebrationLevel)) return null;
 
