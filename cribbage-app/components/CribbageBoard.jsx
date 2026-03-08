@@ -11,12 +11,16 @@ import { useState, useEffect, useRef } from 'react';
  * @param {number} playerScore - Player's current score (0-121)
  * @param {number} computerScore - Computer's current score (0-121)
  */
-export default function CribbageBoard({ playerScore, computerScore }) {
+export default function CribbageBoard({ playerScore, computerScore, initialPlayerBackPeg, initialComputerBackPeg, onBackPegChange }) {
   // Track back peg positions (the previous score before last move)
   // This emulates real cribbage where you leapfrog two pegs
-  // Initialize to a position slightly behind current score for restored games
-  const [playerBackPeg, setPlayerBackPeg] = useState(() => Math.max(0, playerScore - 1));
-  const [computerBackPeg, setComputerBackPeg] = useState(() => Math.max(0, computerScore - 1));
+  // Use saved back peg positions when available (restored games), otherwise score-1
+  const [playerBackPeg, setPlayerBackPeg] = useState(() =>
+    initialPlayerBackPeg != null ? initialPlayerBackPeg : Math.max(0, playerScore - 1)
+  );
+  const [computerBackPeg, setComputerBackPeg] = useState(() =>
+    initialComputerBackPeg != null ? initialComputerBackPeg : Math.max(0, computerScore - 1)
+  );
 
   // Track previous scores to detect changes
   const prevPlayerScore = useRef(playerScore);
@@ -40,11 +44,10 @@ export default function CribbageBoard({ playerScore, computerScore }) {
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      // For restored games, set back peg to score-1 (or 0 if score <= 1)
-      if (playerScore > 0) {
+      if (initialPlayerBackPeg == null && playerScore > 0) {
         setPlayerBackPeg(Math.max(0, playerScore - 1));
       }
-      if (computerScore > 0) {
+      if (initialComputerBackPeg == null && computerScore > 0) {
         setComputerBackPeg(Math.max(0, computerScore - 1));
       }
     }
@@ -54,7 +57,9 @@ export default function CribbageBoard({ playerScore, computerScore }) {
   useEffect(() => {
     if (!isInitialMount.current && playerScore !== prevPlayerScore.current) {
       // Move back peg to where front peg was
-      setPlayerBackPeg(prevPlayerScore.current);
+      const newBackPeg = prevPlayerScore.current;
+      setPlayerBackPeg(newBackPeg);
+      onBackPegChange?.({ playerBackPeg: newBackPeg });
       setPlayerGlow(true);
       const timer = setTimeout(() => setPlayerGlow(false), 1500);
       prevPlayerScore.current = playerScore;
@@ -65,7 +70,9 @@ export default function CribbageBoard({ playerScore, computerScore }) {
   useEffect(() => {
     if (!isInitialMount.current && computerScore !== prevComputerScore.current) {
       // Move back peg to where front peg was
-      setComputerBackPeg(prevComputerScore.current);
+      const newBackPeg = prevComputerScore.current;
+      setComputerBackPeg(newBackPeg);
+      onBackPegChange?.({ computerBackPeg: newBackPeg });
       setComputerGlow(true);
       const timer = setTimeout(() => setComputerGlow(false), 1500);
       prevComputerScore.current = computerScore;

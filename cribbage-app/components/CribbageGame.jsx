@@ -76,6 +76,8 @@ export default function CribbageGame({ onLogout }) {
   // Score state
   const [playerScore, setPlayerScore] = useState(0);
   const [computerScore, setComputerScore] = useState(0);
+  const [playerBackPeg, setPlayerBackPeg] = useState(0);
+  const [computerBackPeg, setComputerBackPeg] = useState(0);
 
   // Selection state
   const [selectedCards, setSelectedCards] = useState([]);
@@ -241,7 +243,7 @@ export default function CribbageGame({ onLogout }) {
     return createGameStateSnapshot({
       gameState, dealer, currentPlayer, message,
       deck, playerHand, computerHand, crib, cutCard,
-      playerScore, computerScore, selectedCards,
+      playerScore, computerScore, playerBackPeg, computerBackPeg, selectedCards,
       playerPlayHand, computerPlayHand,
       playerPlayedCards, computerPlayedCards,
       allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
@@ -256,7 +258,7 @@ export default function CribbageGame({ onLogout }) {
   }, [
     gameState, dealer, currentPlayer, message,
     deck, playerHand, computerHand, crib, cutCard,
-    playerScore, computerScore, selectedCards,
+    playerScore, computerScore, playerBackPeg, computerBackPeg, selectedCards,
     playerPlayHand, computerPlayHand,
     playerPlayedCards, computerPlayedCards,
     allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
@@ -477,6 +479,8 @@ export default function CribbageGame({ onLogout }) {
     if (restored.cutCard !== undefined) setCutCard(restored.cutCard);
     if (restored.playerScore !== undefined) setPlayerScore(restored.playerScore);
     if (restored.computerScore !== undefined) setComputerScore(restored.computerScore);
+    if (restored.playerBackPeg !== undefined) setPlayerBackPeg(restored.playerBackPeg);
+    if (restored.computerBackPeg !== undefined) setComputerBackPeg(restored.computerBackPeg);
     if (restored.selectedCards) setSelectedCards(restored.selectedCards);
     if (restored.playerPlayHand) setPlayerPlayHand(restored.playerPlayHand);
     if (restored.computerPlayHand) setComputerPlayHand(restored.computerPlayHand);
@@ -885,6 +889,8 @@ export default function CribbageGame({ onLogout }) {
     setDeck(newDeck);
     setPlayerScore(0);
     setComputerScore(0);
+    setPlayerBackPeg(0);
+    setComputerBackPeg(0);
     setGameState('cutting');
     setPlayerCutCard(null);
     setComputerCutCard(null);
@@ -902,6 +908,8 @@ export default function CribbageGame({ onLogout }) {
     setMessage('');
     setPlayerScore(0);
     setComputerScore(0);
+    setPlayerBackPeg(0);
+    setComputerBackPeg(0);
     setPlayerHand([]);
     setComputerHand([]);
     setCrib([]);
@@ -3103,6 +3111,12 @@ export default function CribbageGame({ onLogout }) {
                 <CribbageBoard
                   playerScore={playerScore}
                   computerScore={computerScore}
+                  initialPlayerBackPeg={playerBackPeg}
+                  initialComputerBackPeg={computerBackPeg}
+                  onBackPegChange={({ playerBackPeg: pbp, computerBackPeg: cbp }) => {
+                    if (pbp !== undefined) setPlayerBackPeg(pbp);
+                    if (cbp !== undefined) setComputerBackPeg(cbp);
+                  }}
                 />
 
                 {/* Dealer indicator */}

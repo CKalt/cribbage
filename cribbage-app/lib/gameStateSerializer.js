@@ -25,6 +25,8 @@ export const PERSISTED_STATE_KEYS = [
   // Scores
   'playerScore',
   'computerScore',
+  'playerBackPeg',
+  'computerBackPeg',
 
   // Selection
   'selectedCards',

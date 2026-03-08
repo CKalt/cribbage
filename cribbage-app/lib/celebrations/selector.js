@@ -16,9 +16,10 @@ let recentPhrases = [];
  * @returns {string} tone key
  */
 function selectTone(toneVariants, celebrationLevel, scorer) {
-  // Computer scoring uses competitive tone
-  if (scorer === 'computer' && toneVariants.competitive) {
-    return 'competitive';
+  // Competitive tone is the computer reacting to the PLAYER's good play.
+  // When the computer scores, skip celebrations (handled by returning null upstream).
+  if (scorer === 'computer') {
+    return null;
   }
 
   const availableTones = Object.keys(toneVariants).filter(t => t !== 'easterEgg');
