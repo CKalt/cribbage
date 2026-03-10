@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import CardBack from './CardBack';
 
 /**
  * Animated card overlay that flies from one position to another.
@@ -48,9 +49,7 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
       }}
     >
       {faceDown ? (
-        <div className="bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-full h-full flex items-center justify-center font-bold text-lg">
-          ?
-        </div>
+        <CardBack size="md" className="w-full h-full" />
       ) : (
         <div className={`bg-white rounded p-2 text-xl font-bold w-full h-full flex items-center justify-center ${
           isRed ? 'text-red-600' : 'text-black'

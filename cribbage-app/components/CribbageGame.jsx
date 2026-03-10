@@ -37,6 +37,8 @@ import FlyingCard from './FlyingCard';
 import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
+import { CardBackContext } from './CardBackContext';
+import { pickCardBack } from '@/lib/cardBacks';
 import { APP_VERSION } from '@/lib/version';
 import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
@@ -58,6 +60,9 @@ export default function CribbageGame({ onLogout }) {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   // personalMessage state removed — now handled by VersionNotification
+
+  // Card back design — random per game
+  const [cardBack, setCardBack] = useState(() => pickCardBack(Date.now()));
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -885,6 +890,7 @@ export default function CribbageGame({ onLogout }) {
 
   // Start new game
   const startNewGame = () => {
+    setCardBack(pickCardBack(Date.now()));
     const newDeck = shuffleDeck(createDeck());
     setDeck(newDeck);
     setPlayerScore(0);
@@ -2682,6 +2688,7 @@ export default function CribbageGame({ onLogout }) {
   const playerCanPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
 
   return (
+    <CardBackContext.Provider value={cardBack}>
     <>
     {flyingCard && (
       <FlyingCard
@@ -3267,9 +3274,11 @@ export default function CribbageGame({ onLogout }) {
                         <div className="flex flex-col items-center">
                           <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
-                              <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
+                              <div key={i} className={`absolute ${cardBack.bg} border-2 ${cardBack.border} rounded overflow-hidden`}
                                 style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
-                              />
+                              >
+                                <div className="absolute inset-0" style={{ background: cardBack.pattern }} />
+                              </div>
                             ))}
                           </div>
                           <div className="text-[10px] text-gray-400 mt-4">Deck</div>
@@ -3287,10 +3296,10 @@ export default function CribbageGame({ onLogout }) {
                               </div>
                             ) : (
                               <>
-                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
-                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
+                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
+                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center font-bold text-xs ${cardBack.iconColor}`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} />Crib</div>}
                               </>
                             )}
                           </div>
@@ -3486,9 +3495,11 @@ export default function CribbageGame({ onLogout }) {
                         <div className="flex flex-col items-center">
                           <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
-                              <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
+                              <div key={i} className={`absolute ${cardBack.bg} border-2 ${cardBack.border} rounded overflow-hidden`}
                                 style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
-                              />
+                              >
+                                <div className="absolute inset-0" style={{ background: cardBack.pattern }} />
+                              </div>
                             ))}
                           </div>
                           <div className="text-[10px] text-gray-400 mt-4">Deck</div>
@@ -3506,10 +3517,10 @@ export default function CribbageGame({ onLogout }) {
                               </div>
                             ) : (
                               <>
-                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
-                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
+                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
+                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center font-bold text-xs ${cardBack.iconColor}`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} />Crib</div>}
                               </>
                             )}
                           </div>
@@ -3772,5 +3783,6 @@ export default function CribbageGame({ onLogout }) {
       )}
     </div>
     </>
+    </CardBackContext.Provider>
   );
 }

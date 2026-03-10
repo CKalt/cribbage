@@ -1,5 +1,7 @@
 // Playing Card Component
 
+import CardBack from './CardBack';
+
 /**
  * Renders a playing card with proper styling
  * @param {Object} card - Card object { rank, suit, value }
@@ -32,13 +34,9 @@ export default function PlayingCard({
     lg: 'px-2 py-1.5 text-xl min-w-[2.5rem]'
   };
 
-  // Face-down card (unknown) - slightly narrower than original w-12 to fit 6 on mobile
+  // Face-down card — uses the current game's card back design
   if (faceDown) {
-    return (
-      <div className={`bg-blue-900 border-2 border-blue-700 text-blue-300 rounded p-2 w-10 h-14 flex items-center justify-center font-bold text-lg`}>
-        ?
-      </div>
-    );
+    return <CardBack size="md" />;
   }
 
   // Revealed card (computer's cards during counting - white bg like player cards)
@@ -94,11 +92,7 @@ export function PlayedCard({ card }) {
  */
 export function LargeCard({ card, placeholder = false }) {
   if (placeholder || !card) {
-    return (
-      <div className="inline-block bg-gray-600 rounded p-3 w-16 h-20 flex items-center justify-center text-white font-bold">
-        ?
-      </div>
-    );
+    return <CardBack size="lg" />;
   }
 
   const isRed = card.suit === '♥' || card.suit === '♦';

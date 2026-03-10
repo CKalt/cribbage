@@ -1,14 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b175-20260308';
+export const APP_VERSION = 'v0.3.0-b176-20260309';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- The game now reacts to your plays! Big hands, pegging highlights, close wins, and more get celebration phrases
-- 435 unique phrases across 17 event types — never the same reaction twice
-- Micro-animations bring the table to life: sparkles, glows, confetti, and more
-- Set your Celebration Level from the ⋮ menu: Off, Minimal, Classic, Lively, or Full Banter
-- Full Banter mode includes Maine Lodge 1958 table talk — dry humor, old-school slang
-- Expert Mode — optimal discards, smarter pegging, and the occasional bluff to keep you on your toes
+- Random card back designs! Each game picks from 16 unique styles: classic, ornate, modern art, sci-fi, and animal patterns
+- Celebrations only fire for YOUR scoring events (no more congratulating computer plays)
+- Back peg positions remembered when resuming a saved game
 
 Happy playing!`;
 
