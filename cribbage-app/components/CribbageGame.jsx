@@ -61,8 +61,21 @@ export default function CribbageGame({ onLogout }) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   // personalMessage state removed — now handled by VersionNotification
 
-  // Card back design — random per game
+  // Card back design — random per game, respects admin-disabled designs
+  const disabledCardBacksRef = useRef([]);
   const [cardBack, setCardBack] = useState(() => pickCardBack(Date.now()));
+
+  // Fetch disabled card back IDs on mount
+  useEffect(() => {
+    fetch('/api/admin/card-backs')
+      .then(r => r.json())
+      .then(data => {
+        if (data.disabledIds) {
+          disabledCardBacksRef.current = data.disabledIds;
+        }
+      })
+      .catch(() => {}); // non-critical, fall back to all designs
+  }, []);
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -890,7 +903,7 @@ export default function CribbageGame({ onLogout }) {
 
   // Start new game
   const startNewGame = () => {
-    setCardBack(pickCardBack(Date.now()));
+    setCardBack(pickCardBack(Date.now(), disabledCardBacksRef.current));
     const newDeck = shuffleDeck(createDeck());
     setDeck(newDeck);
     setPlayerScore(0);

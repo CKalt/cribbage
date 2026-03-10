@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { getAllCardBacks } from '@/lib/cardBacks';
 
 /**
  * Admin Panel - shows game stats and bug reports for all users
@@ -14,13 +15,17 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [disabledCardBacks, setDisabledCardBacks] = useState([]);
+  const [cardBacksLoading, setCardBacksLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       if (activeTab === 'stats') {
         fetchStats();
-      } else {
+      } else if (activeTab === 'reports') {
         fetchReports();
+      } else if (activeTab === 'cardbacks') {
+        fetchDisabledCardBacks();
       }
     }
   }, [isOpen, activeTab]);
@@ -58,6 +63,41 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDisabledCardBacks = async () => {
+    setCardBacksLoading(true);
+    try {
+      const response = await fetch(`/api/admin/card-backs?email=${encodeURIComponent(userEmail)}`);
+      const data = await response.json();
+      if (data.success) {
+        setDisabledCardBacks(data.disabledIds || []);
+      }
+    } catch (err) {
+      console.error('Error fetching card back config:', err);
+    } finally {
+      setCardBacksLoading(false);
+    }
+  };
+
+  const toggleCardBack = async (cardBackId, currentlyDisabled) => {
+    try {
+      const response = await fetch('/api/admin/card-backs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          cardBackId,
+          disabled: !currentlyDisabled,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDisabledCardBacks(data.disabledIds);
+      }
+    } catch (err) {
+      console.error('Error toggling card back:', err);
     }
   };
 
@@ -119,6 +159,16 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
           >
             Bug Reports
           </button>
+          <button
+            onClick={() => setActiveTab('cardbacks')}
+            className={`px-3 py-1 text-sm rounded ${
+              activeTab === 'cardbacks'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Card Backs
+          </button>
         </div>
 
         {/* Content */}
@@ -157,6 +207,67 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                     ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+          ) : activeTab === 'cardbacks' ? (
+            /* Card Backs Tab */
+            <div>
+              {cardBacksLoading ? (
+                <div className="text-gray-400 text-center py-8">Loading...</div>
+              ) : (
+                <>
+                  <div className="text-gray-400 text-xs mb-3">
+                    {getAllCardBacks().length} designs total — {getAllCardBacks().length - disabledCardBacks.length} enabled
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {getAllCardBacks().map(design => {
+                      const isDisabled = disabledCardBacks.includes(design.id);
+                      const isEmoji = design.centerIcon && design.centerIcon.length > 1;
+                      return (
+                        <button
+                          key={design.id}
+                          onClick={() => toggleCardBack(design.id, isDisabled)}
+                          className={`relative rounded-lg p-2 border-2 transition-all ${
+                            isDisabled
+                              ? 'border-red-500/50 opacity-40 grayscale'
+                              : 'border-green-500/50 hover:border-green-400'
+                          }`}
+                        >
+                          {/* Mini card preview */}
+                          <div
+                            className={`${design.bg} ${design.border} border-2 rounded mx-auto relative overflow-hidden`}
+                            style={{ width: '48px', height: '68px' }}
+                          >
+                            <div
+                              className="absolute inset-0 rounded"
+                              style={{ background: design.pattern }}
+                            />
+                            <div
+                              className="absolute rounded"
+                              style={{
+                                top: '4px', left: '4px', right: '4px', bottom: '4px',
+                                border: `1px solid ${design.accentColor}`,
+                              }}
+                            />
+                            <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} ${isEmoji ? 'text-lg' : 'text-sm'} font-bold select-none`}>
+                              {design.centerIcon}
+                            </div>
+                          </div>
+                          <div className="text-white text-xs mt-1 text-center truncate">
+                            {design.name}
+                          </div>
+                          {/* Status badge */}
+                          <div className={`absolute top-1 right-1 w-3 h-3 rounded-full ${
+                            isDisabled ? 'bg-red-500' : 'bg-green-500'
+                          }`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="text-gray-500 text-xs mt-3 text-center">
+                    Click a design to enable/disable it
+                  </div>
+                </>
               )}
             </div>
           ) : (

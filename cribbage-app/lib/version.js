@@ -1,8 +1,9 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b178-20260310';
+export const APP_VERSION = 'v0.3.0-b179-20260310';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Admin can manage card back designs (enable/disable) from the Admin Panel
 - Cut deck now shows your game's card back design with slanted icon
 - Random card back designs! Each game picks from 16 unique styles: classic, ornate, modern art, sci-fi, and animal patterns
 - Celebrations only fire for YOUR scoring events (no more congratulating computer plays)
