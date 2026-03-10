@@ -3274,10 +3274,11 @@ export default function CribbageGame({ onLogout }) {
                         <div className="flex flex-col items-center">
                           <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
-                              <div key={i} className={`absolute ${cardBack.bg} border-2 ${cardBack.border} rounded overflow-hidden`}
+                              <div key={i} className={`absolute ${cardBack.bg} border-2 ${cardBack.border} rounded overflow-hidden flex items-center justify-center`}
                                 style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
                               >
                                 <div className="absolute inset-0" style={{ background: cardBack.pattern }} />
+                                <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>
                               </div>
                             ))}
                           </div>
@@ -3299,7 +3300,7 @@ export default function CribbageGame({ onLogout }) {
                                 {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
                                 {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
                                 {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
-                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center font-bold text-xs ${cardBack.iconColor}`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} />Crib</div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.iconColor}`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span></div>}
                               </>
                             )}
                           </div>
@@ -3495,10 +3496,11 @@ export default function CribbageGame({ onLogout }) {
                         <div className="flex flex-col items-center">
                           <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
-                              <div key={i} className={`absolute ${cardBack.bg} border-2 ${cardBack.border} rounded overflow-hidden`}
+                              <div key={i} className={`absolute ${cardBack.bg} border-2 ${cardBack.border} rounded overflow-hidden flex items-center justify-center`}
                                 style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
                               >
                                 <div className="absolute inset-0" style={{ background: cardBack.pattern }} />
+                                <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>
                               </div>
                             ))}
                           </div>
@@ -3520,7 +3522,7 @@ export default function CribbageGame({ onLogout }) {
                                 {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
                                 {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
                                 {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /></div>}
-                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center font-bold text-xs ${cardBack.iconColor}`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} />Crib</div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.bg} border-2 ${cardBack.border} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.iconColor}`}><div className="absolute inset-0" style={{ background: cardBack.pattern }} /><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span></div>}
                               </>
                             )}
                           </div>
