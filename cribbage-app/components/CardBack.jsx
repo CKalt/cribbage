@@ -13,7 +13,7 @@ import { useCardBack } from './CardBackContext';
 /**
  * Full-screen preview overlay for card back designs
  */
-function CardBackPreview({ design, onClose }) {
+export function CardBackPreview({ design, onClose }) {
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
   const [showArtistInfo, setShowArtistInfo] = useState(false);
   const hasArtist = design.artistName && design.artistBio;

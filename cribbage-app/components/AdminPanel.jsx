@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { getAllCardBacks } from '@/lib/cardBacks';
+import { CardBackPreview } from './CardBack';
 
 /**
  * Admin Panel - shows game stats and bug reports for all users
@@ -16,6 +17,7 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [disabledCardBacks, setDisabledCardBacks] = useState([]);
+  const [previewDesign, setPreviewDesign] = useState(null);
   const [cardBacksLoading, setCardBacksLoading] = useState(false);
 
   useEffect(() => {
@@ -224,19 +226,19 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                       const isDisabled = disabledCardBacks.includes(design.id);
                       const isEmoji = design.centerIcon && design.centerIcon.length > 1;
                       return (
-                        <button
+                        <div
                           key={design.id}
-                          onClick={() => toggleCardBack(design.id, isDisabled)}
                           className={`relative rounded-lg p-2 border-2 transition-all ${
                             isDisabled
                               ? 'border-red-500/50 opacity-40 grayscale'
-                              : 'border-green-500/50 hover:border-green-400'
+                              : 'border-green-500/50'
                           }`}
                         >
-                          {/* Mini card preview */}
+                          {/* Card preview — tap to open full preview */}
                           <div
-                            className={`${design.bg} ${design.border} border-2 rounded mx-auto relative overflow-hidden`}
+                            className={`${design.bg} ${design.border} border-2 rounded mx-auto relative overflow-hidden cursor-pointer`}
                             style={{ width: '48px', height: '68px' }}
+                            onClick={() => setPreviewDesign(design)}
                           >
                             {design.sceneImage ? (
                               <img src={design.sceneImage} alt={design.name} className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} />
@@ -278,16 +280,24 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                           <div className="text-white text-xs mt-1 text-center truncate">
                             {design.name}
                           </div>
-                          {/* Status badge */}
-                          <div className={`absolute top-1 right-1 w-3 h-3 rounded-full ${
-                            isDisabled ? 'bg-red-500' : 'bg-green-500'
-                          }`} />
-                        </button>
+                          {/* Enable/disable toggle */}
+                          <button
+                            onClick={() => toggleCardBack(design.id, isDisabled)}
+                            className={`mt-1 w-full text-[10px] py-0.5 rounded transition-colors ${
+                              isDisabled
+                                ? 'bg-red-900/50 text-red-300 hover:bg-red-800/50'
+                                : 'bg-green-900/50 text-green-300 hover:bg-green-800/50'
+                            }`}
+                          >
+                            {isDisabled ? 'Disabled' : 'Enabled'}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
+                  {previewDesign && <CardBackPreview design={previewDesign} onClose={() => setPreviewDesign(null)} />}
                   <div className="text-gray-500 text-xs mt-3 text-center">
-                    Click a design to enable/disable it
+                    Tap card to preview — use button to enable/disable
                   </div>
                 </>
               )}
