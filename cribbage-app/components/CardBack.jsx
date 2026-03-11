@@ -20,7 +20,7 @@ function CardBackPreview({ design, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-50 flex flex-col bg-black/95"
       onClick={onClose}
     >
       {/* Close button */}
@@ -32,33 +32,33 @@ function CardBackPreview({ design, onClose }) {
       </button>
 
       {/* Card name */}
-      <div className="absolute top-4 left-0 right-0 text-center text-white text-lg font-semibold">
+      <div className="pt-4 pb-2 text-center text-white text-lg font-semibold shrink-0">
         {design.name}
       </div>
 
-      {/* Main content area */}
-      <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
-        {/* Large card preview */}
+      {/* Main content area — fills remaining space */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4 pb-4 min-h-0" onClick={(e) => e.stopPropagation()}>
+        {/* Full-screen image preview for paintings */}
         {design.sceneImage ? (
-          <div className="rounded-xl overflow-hidden shadow-2xl" style={{ width: '240px', height: '336px' }}>
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center">
             <img
               src={design.sceneImage}
               alt={design.name}
-              className="w-full h-full object-cover rounded-xl"
+              className="max-w-full max-h-full object-contain rounded-lg"
               draggable={false}
             />
           </div>
         ) : design.sceneSvg ? (
           <div
-            className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl`}
-            style={{ width: '240px', height: '336px' }}
+            className={`${design.bg} border ${design.border} rounded-xl overflow-hidden shadow-2xl`}
+            style={{ width: '280px', height: '392px' }}
           >
             <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
           </div>
         ) : design.type === 'fullcard' ? (
           <div
-            className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
-            style={{ width: '240px', height: '336px' }}
+            className={`${design.bg} border ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
+            style={{ width: '280px', height: '392px' }}
           >
             <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
             <div
@@ -70,8 +70,8 @@ function CardBackPreview({ design, onClose }) {
           </div>
         ) : (
           <div
-            className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
-            style={{ width: '240px', height: '336px' }}
+            className={`${design.bg} border ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
+            style={{ width: '280px', height: '392px' }}
           >
             <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
             <div
@@ -99,18 +99,18 @@ function CardBackPreview({ design, onClose }) {
         {hasArtist && !showArtistInfo && (
           <button
             onClick={() => setShowArtistInfo(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-700/80 hover:bg-amber-600/80 text-white text-sm rounded-full transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-700/80 hover:bg-amber-600/80 text-white text-sm rounded-full transition-colors shrink-0"
           >
             <span className="text-base">&#x1F3A8;</span>
-            About the Artist
+            About the Style
           </button>
         )}
 
         {/* Artist bio panel */}
         {hasArtist && showArtistInfo && (
-          <div className="bg-gray-900/95 border border-amber-600/50 rounded-lg p-4 max-w-[280px] text-center">
+          <div className="bg-gray-900/95 border border-amber-600/50 rounded-lg p-4 max-w-[320px] text-center shrink-0">
             <div className="text-amber-400 font-bold text-base mb-2">
-              &#x1F3A8; {design.artistName}
+              &#x1F3A8; In the style of {design.artistName}
             </div>
             <p className="text-gray-300 text-xs leading-relaxed">
               {design.artistBio}
