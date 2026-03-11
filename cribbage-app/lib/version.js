@@ -1,12 +1,12 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b193-20260311';
+export const APP_VERSION = 'v0.3.0-b194-20260311';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- 33 card back designs! 12 full-card scenes (seashells, Mona Lisa, beach, farm, volcano, castle, camping, sunrise, cherry blossom, fireworks + desert, skyscraper)
+- During counting, non-active hands are dimmed so it's clear which hand to count
+- Yellow highlight stays visible during score feedback
+- 33 card back designs with full-card scenes
 - Card back persists when resuming a saved game
-- Fixed celebration toasts getting stuck
-- Admin card back management in the Admin Panel
 
 Happy playing!`;
 

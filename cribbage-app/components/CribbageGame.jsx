@@ -3291,8 +3291,14 @@ export default function CribbageGame({ onLogout }) {
                     counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2;
                   // Keep border visible during entire crib reveal so the box never disappears
                   const showBorder = handHighlighted || cribHighlighted || showCribHere;
+                  // Dim this section when counting and it's not the active hand
+                  const computerDimmed = gameState === 'counting' && !showCribHere && !handHighlighted && handsCountedThisRound < 3;
+                  const computerCribDimmed = gameState === 'counting' && showCribHere && !cribHighlighted && handsCountedThisRound < 3;
+                  const isDimmed = computerDimmed || computerCribDimmed;
                   return (
-                  <div className={`mb-6 p-2 rounded ${
+                  <div className={`mb-6 p-2 rounded transition-opacity duration-300 ${
+                    isDimmed ? 'opacity-30' : ''
+                  } ${
                     showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">
@@ -3434,14 +3440,20 @@ export default function CribbageGame({ onLogout }) {
                   const handHighlighted = !showCribHere && (
                     (gameState === 'cribSelect') ||
                     (gameState === 'play' && currentPlayer === 'player' && !pendingScore) ||
-                    (gameState === 'counting' && !counterIsComputer && !pendingCountContinue &&
+                    (gameState === 'counting' && !counterIsComputer &&
                      ((handsCountedThisRound === 0 && dealer === 'computer') || (handsCountedThisRound === 1 && dealer === 'player')))
                   );
                   const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
-                    !counterIsComputer && !pendingCountContinue && handsCountedThisRound === 2;
+                    !counterIsComputer && handsCountedThisRound === 2;
+                  // Dim this section when counting and it's not the active hand
+                  const playerDimmed = gameState === 'counting' && !showCribHere && !handHighlighted && handsCountedThisRound < 3;
+                  const playerCribDimmed = gameState === 'counting' && showCribHere && !cribHighlighted && handsCountedThisRound < 3;
                   const showBorder = handHighlighted || cribHighlighted || showCribHere;
+                  const isDimmed = playerDimmed || playerCribDimmed;
                   return (
-                  <div className={`mb-6 p-2 rounded ${
+                  <div className={`mb-6 p-2 rounded transition-opacity duration-300 ${
+                    isDimmed ? 'opacity-30' : ''
+                  } ${
                     showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
                   }`}>
                     <div className="text-sm mb-2">
