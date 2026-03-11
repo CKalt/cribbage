@@ -198,6 +198,78 @@ const CARD_BACKS = [
     iconColor: 'text-orange-300',
     accentColor: 'rgba(249,115,22,0.25)',
   },
+
+  // ── More Animals ──
+  {
+    id: 'octopus',
+    name: 'Octopus',
+    bg: 'bg-purple-950',
+    border: 'border-purple-400',
+    bgHex: '#3b0764', borderHex: '#c084fc',
+    pattern: 'radial-gradient(circle 3px, rgba(192,132,252,0.15) 50%, transparent 50%) 0 0 / 8px 8px, radial-gradient(circle 2px, rgba(192,132,252,0.1) 50%, transparent 50%) 4px 4px / 8px 8px, linear-gradient(180deg, rgba(192,132,252,0.08) 0%, transparent 100%)',
+    centerIcon: '\uD83D\uDC19',
+    iconColor: 'text-purple-300',
+    accentColor: 'rgba(192,132,252,0.3)',
+  },
+
+  // ── More Vehicles ──
+  {
+    id: 'tug-boat',
+    name: 'Tug Boat',
+    bg: 'bg-blue-900',
+    border: 'border-blue-400',
+    bgHex: '#1e3a5f', borderHex: '#60a5fa',
+    pattern: 'linear-gradient(180deg, transparent 60%, rgba(96,165,250,0.12) 100%), repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(96,165,250,0.05) 3px, rgba(96,165,250,0.05) 4px)',
+    centerIcon: '\u26F4\uFE0F',
+    iconColor: 'text-blue-300',
+    accentColor: 'rgba(96,165,250,0.25)',
+  },
+
+  // ── Landmarks & Scenes ──
+  {
+    id: 'desert',
+    name: 'Desert',
+    bg: 'bg-yellow-900',
+    border: 'border-yellow-500',
+    bgHex: '#713f12', borderHex: '#eab308',
+    pattern: 'linear-gradient(180deg, rgba(234,179,8,0.15) 0%, rgba(234,179,8,0.05) 40%, rgba(161,98,7,0.15) 100%), radial-gradient(circle, rgba(234,179,8,0.12) 0.5px, transparent 0.5px) 0 0 / 6px 6px',
+    centerIcon: '\uD83C\uDFDC\uFE0F',
+    iconColor: 'text-yellow-300',
+    accentColor: 'rgba(234,179,8,0.3)',
+  },
+  {
+    id: 'skyscraper',
+    name: 'Skyscraper',
+    bg: 'bg-gray-900',
+    border: 'border-sky-400',
+    bgHex: '#111827', borderHex: '#38bdf8',
+    pattern: 'repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(56,189,248,0.06) 4px, rgba(56,189,248,0.06) 5px), repeating-linear-gradient(0deg, transparent, transparent 6px, rgba(56,189,248,0.04) 6px, rgba(56,189,248,0.04) 7px)',
+    centerIcon: '\uD83C\uDFD9\uFE0F',
+    iconColor: 'text-sky-300',
+    accentColor: 'rgba(56,189,248,0.2)',
+  },
+  {
+    id: 'statue-of-liberty',
+    name: 'Lady Liberty',
+    bg: 'bg-cyan-950',
+    border: 'border-emerald-400',
+    bgHex: '#083344', borderHex: '#34d399',
+    pattern: 'linear-gradient(180deg, rgba(52,211,153,0.1) 0%, transparent 50%, rgba(52,211,153,0.06) 100%), repeating-linear-gradient(90deg, transparent, transparent 6px, rgba(52,211,153,0.05) 6px, rgba(52,211,153,0.05) 7px)',
+    centerIcon: '\uD83D\uDDFD',
+    iconColor: 'text-emerald-300',
+    accentColor: 'rgba(52,211,153,0.25)',
+  },
+  {
+    id: 'pyramids',
+    name: 'Pyramids',
+    bg: 'bg-amber-900',
+    border: 'border-yellow-400',
+    bgHex: '#78350f', borderHex: '#facc15',
+    pattern: 'linear-gradient(135deg, rgba(250,204,21,0.1) 25%, transparent 25%), linear-gradient(225deg, rgba(250,204,21,0.1) 25%, transparent 25%), linear-gradient(180deg, rgba(250,204,21,0.06) 0%, transparent 100%)',
+    centerIcon: '\u25B3',
+    iconColor: 'text-yellow-300',
+    accentColor: 'rgba(250,204,21,0.25)',
+  },
 ];
 
 /**

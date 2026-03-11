@@ -28,6 +28,9 @@ export const PERSISTED_STATE_KEYS = [
   'playerBackPeg',
   'computerBackPeg',
 
+  // Card back design
+  'cardBackId',
+
   // Selection
   'selectedCards',
 

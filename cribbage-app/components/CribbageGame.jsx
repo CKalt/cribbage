@@ -38,7 +38,7 @@ import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
 import { CardBackContext } from './CardBackContext';
-import { pickCardBack } from '@/lib/cardBacks';
+import { pickCardBack, getCardBackById } from '@/lib/cardBacks';
 import { APP_VERSION } from '@/lib/version';
 import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
@@ -261,7 +261,8 @@ export default function CribbageGame({ onLogout }) {
     return createGameStateSnapshot({
       gameState, dealer, currentPlayer, message,
       deck, playerHand, computerHand, crib, cutCard,
-      playerScore, computerScore, playerBackPeg, computerBackPeg, selectedCards,
+      playerScore, computerScore, playerBackPeg, computerBackPeg,
+      cardBackId: cardBack.id, selectedCards,
       playerPlayHand, computerPlayHand,
       playerPlayedCards, computerPlayedCards,
       allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
@@ -276,7 +277,8 @@ export default function CribbageGame({ onLogout }) {
   }, [
     gameState, dealer, currentPlayer, message,
     deck, playerHand, computerHand, crib, cutCard,
-    playerScore, computerScore, playerBackPeg, computerBackPeg, selectedCards,
+    playerScore, computerScore, playerBackPeg, computerBackPeg, cardBack,
+    selectedCards,
     playerPlayHand, computerPlayHand,
     playerPlayedCards, computerPlayedCards,
     allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
@@ -499,6 +501,10 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerScore !== undefined) setComputerScore(restored.computerScore);
     if (restored.playerBackPeg !== undefined) setPlayerBackPeg(restored.playerBackPeg);
     if (restored.computerBackPeg !== undefined) setComputerBackPeg(restored.computerBackPeg);
+    if (restored.cardBackId) {
+      const savedBack = getCardBackById(restored.cardBackId);
+      if (savedBack) setCardBack(savedBack);
+    }
     if (restored.selectedCards) setSelectedCards(restored.selectedCards);
     if (restored.playerPlayHand) setPlayerPlayHand(restored.playerPlayHand);
     if (restored.computerPlayHand) setComputerPlayHand(restored.computerPlayHand);
@@ -3344,7 +3350,7 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
-                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-1">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
@@ -3493,7 +3499,7 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
-                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-1">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
