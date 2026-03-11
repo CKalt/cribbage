@@ -171,7 +171,9 @@ export default function DeckCut({
               style={{ top: '40px' }}
             >
               <div className="flex flex-col items-center gap-1">
-                {cardBack.sceneSvg ? (
+                {cardBack.sceneImage ? (
+                  <img src={cardBack.sceneImage} alt={cardBack.name || ''} style={{ width: '60px', height: '84px', opacity: 0.8, borderRadius: '4px', objectFit: 'cover' }} draggable={false} />
+                ) : cardBack.sceneSvg ? (
                   <div style={{ width: '60px', height: '42px', opacity: 0.8, borderRadius: '4px', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} />
                 ) : (
                   <div

@@ -26,6 +26,19 @@ export default function CardBack({ size = 'md', className = '' }) {
   const s = sizes[size] || sizes.md;
 
   if (isFullcard) {
+    // Image-based card backs (e.g., Mona Lisa) — image fills entire card, no border added
+    if (design.sceneImage) {
+      return (
+        <div className={`rounded ${s.outer} relative overflow-hidden ${className}`}>
+          <img
+            src={design.sceneImage}
+            alt={design.name}
+            className="absolute inset-0 w-full h-full object-cover rounded"
+            draggable={false}
+          />
+        </div>
+      );
+    }
     return (
       <div
         className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden ${className}`}

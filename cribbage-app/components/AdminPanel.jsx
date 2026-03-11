@@ -235,9 +235,12 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                         >
                           {/* Mini card preview */}
                           <div
-                            className={`${design.bg} ${design.border} border-2 rounded mx-auto relative overflow-hidden`}
+                            className={`${design.sceneImage ? '' : `${design.bg} ${design.border} border-2`} rounded mx-auto relative overflow-hidden`}
                             style={{ width: '48px', height: '68px' }}
                           >
+                            {design.sceneImage ? (
+                              <img src={design.sceneImage} alt={design.name} className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} />
+                            ) : (<>
                             <div
                               className="absolute inset-0 rounded"
                               style={{ background: design.pattern }}
@@ -270,6 +273,7 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                                 </div>
                               </>
                             )}
+                            </>)}
                           </div>
                           <div className="text-white text-xs mt-1 text-center truncate">
                             {design.name}
