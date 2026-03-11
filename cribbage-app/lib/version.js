@@ -1,11 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b191-20260311';
+export const APP_VERSION = 'v0.3.0-b192-20260311';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- 23 card back designs! Added desert, octopus, tug boat, skyscraper, Lady Liberty, pyramids
+- 33 card back designs! 12 full-card scenes (seashells, Mona Lisa, beach, farm, volcano, castle, camping, sunrise, cherry blossom, fireworks + desert, skyscraper)
 - Card back persists when resuming a saved game
-- Fixed crib cards overlapping too much during counting
+- Fixed celebration toasts getting stuck
 - Admin card back management in the Admin Panel
 
 Happy playing!`;
