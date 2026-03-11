@@ -438,12 +438,131 @@ const CARD_BACKS = [
     iconColor: 'text-yellow-300',
     accentColor: 'rgba(250,204,21,0.25)',
   },
+
+  // ── Paintings (image-based, borderless) ──
+  {
+    id: 'lighthouse-painting',
+    type: 'fullcard',
+    name: 'Lighthouse (Munch)',
+    bg: 'bg-slate-800',
+    border: 'border-amber-500',
+    bgHex: '#1e293b', borderHex: '#f59e0b',
+    pattern: 'none',
+    centerIcon: '\uD83C\uDF1F',
+    iconColor: 'text-amber-400',
+    accentColor: 'rgba(245,158,11,0.2)',
+    sceneImage: '/card-backs/lighthouse-painting-munch.png',
+  },
+  {
+    id: 'skyscraper-painting',
+    type: 'fullcard',
+    name: "Skyscraper (O'Keeffe)",
+    bg: 'bg-gray-900',
+    border: 'border-sky-400',
+    bgHex: '#111827', borderHex: '#38bdf8',
+    pattern: 'none',
+    centerIcon: '\uD83C\uDFD9\uFE0F',
+    iconColor: 'text-sky-300',
+    accentColor: 'rgba(56,189,248,0.2)',
+    sceneImage: '/card-backs/skyscraper-paiting-okeeffe.png',
+  },
+  {
+    id: 'desert-painting',
+    type: 'fullcard',
+    name: 'Desert (Dali)',
+    bg: 'bg-yellow-900',
+    border: 'border-yellow-500',
+    bgHex: '#713f12', borderHex: '#eab308',
+    pattern: 'none',
+    centerIcon: '\uD83C\uDFDC\uFE0F',
+    iconColor: 'text-yellow-300',
+    accentColor: 'rgba(234,179,8,0.3)',
+    sceneImage: '/card-backs/desert-painting-dali.png',
+  },
+  {
+    id: 'farm-painting',
+    type: 'fullcard',
+    name: 'Farm (Benton)',
+    bg: 'bg-green-100',
+    border: 'border-red-500',
+    bgHex: '#dcfce7', borderHex: '#ef4444',
+    pattern: 'none',
+    centerIcon: '\uD83D\uDE9C',
+    iconColor: 'text-green-700',
+    accentColor: 'rgba(239,68,68,0.2)',
+    sceneImage: '/card-backs/farm-painting-th-benton.png',
+  },
+  {
+    id: 'pyramids-painting',
+    type: 'fullcard',
+    name: 'Pyramids (Gerome)',
+    bg: 'bg-amber-200',
+    border: 'border-amber-500',
+    bgHex: '#fde68a', borderHex: '#f59e0b',
+    pattern: 'none',
+    centerIcon: '\u25B3',
+    iconColor: 'text-yellow-300',
+    accentColor: 'rgba(245,158,11,0.25)',
+    sceneImage: '/card-backs/pyramids-painting-jl-gerome.png',
+  },
+  {
+    id: 'castle-painting',
+    type: 'fullcard',
+    name: 'Castle (Kincade)',
+    bg: 'bg-stone-200',
+    border: 'border-stone-500',
+    bgHex: '#e7e5e4', borderHex: '#78716c',
+    pattern: 'none',
+    centerIcon: '\uD83C\uDFF0',
+    iconColor: 'text-stone-600',
+    accentColor: 'rgba(120,113,108,0.2)',
+    sceneImage: '/card-backs/castle-painting-t-kincade.png',
+  },
+  {
+    id: 'sunrise-painting',
+    type: 'fullcard',
+    name: 'Sunrise (Shan Shui)',
+    bg: 'bg-orange-100',
+    border: 'border-orange-400',
+    bgHex: '#ffedd5', borderHex: '#fb923c',
+    pattern: 'none',
+    centerIcon: '\uD83C\uDF04',
+    iconColor: 'text-orange-500',
+    accentColor: 'rgba(251,146,60,0.3)',
+    sceneImage: '/card-backs/sunrise-painting-shan-shui.png',
+  },
+  {
+    id: 'beach-painting',
+    type: 'fullcard',
+    name: 'Beach (Gauguin)',
+    bg: 'bg-cyan-100',
+    border: 'border-cyan-500',
+    bgHex: '#cffafe', borderHex: '#06b6d4',
+    pattern: 'none',
+    centerIcon: '\uD83C\uDFD6\uFE0F',
+    iconColor: 'text-cyan-600',
+    accentColor: 'rgba(6,182,212,0.3)',
+    sceneImage: '/card-backs/beach-painting-gauguin.png',
+  },
 ];
 
 /**
+ * Card back types for weighted selection:
+ *   'icon'      — emoji center + pattern + corner accents (no sceneImage/sceneSvg)
+ *   'svg'       — fullcard with inline SVG scene (sceneSvg field)
+ *   'painting'  — fullcard with image file (sceneImage field)
+ */
+function getCardType(cb) {
+  if (cb.sceneImage) return 'painting';
+  if (cb.sceneSvg) return 'svg';
+  return 'icon';
+}
+
+/**
  * Pick a random card back design using a seed value.
- * Uses the seed to deterministically select a design so it stays
- * consistent for the duration of a game.
+ * Algorithm: first pick one of the 3 types (icon/svg/painting) at random,
+ * then pick a random card within that type. This ensures each type appears
+ * roughly every 3 games regardless of how many designs each type has.
  * @param {number} seed - Numeric seed (e.g., Date.now() at game start)
  * @param {string[]} disabledIds - Array of disabled card back IDs to exclude
  * @returns {Object} Card back design object
@@ -452,10 +571,24 @@ export function pickCardBack(seed, disabledIds = []) {
   const available = disabledIds.length > 0
     ? CARD_BACKS.filter(cb => !disabledIds.includes(cb.id))
     : CARD_BACKS;
-  // Fallback to all designs if everything is disabled
   const pool = available.length > 0 ? available : CARD_BACKS;
-  const index = Math.abs(seed) % pool.length;
-  return pool[index];
+
+  // Group by type
+  const icons = pool.filter(cb => getCardType(cb) === 'icon');
+  const svgs = pool.filter(cb => getCardType(cb) === 'svg');
+  const paintings = pool.filter(cb => getCardType(cb) === 'painting');
+
+  // Build list of non-empty type buckets
+  const buckets = [];
+  if (icons.length > 0) buckets.push(icons);
+  if (svgs.length > 0) buckets.push(svgs);
+  if (paintings.length > 0) buckets.push(paintings);
+
+  // Use seed to pick type, then pick within type
+  const s = Math.abs(seed);
+  const bucket = buckets[s % buckets.length];
+  const index = Math.floor(s / buckets.length) % bucket.length;
+  return bucket[index];
 }
 
 /**
