@@ -174,7 +174,7 @@ export default function DeckCut({
                 <div
                   style={{
                     transform: cardBack.type === 'fullcard' ? 'none' : 'rotate(-15deg)',
-                    fontSize: cardBack.type === 'fullcard' ? '44px' : (cardBack.centerIcon && cardBack.centerIcon.length > 1 ? '24px' : '18px'),
+                    fontSize: cardBack.type === 'fullcard' ? '48px' : (cardBack.centerIcon && cardBack.centerIcon.length > 1 ? '24px' : '18px'),
                     color: cardBack.borderHex,
                     opacity: 0.7,
                     textShadow: `0 0 6px ${cardBack.accentColor}`,

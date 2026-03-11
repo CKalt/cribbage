@@ -18,9 +18,9 @@ export default function CardBack({ size = 'md', className = '' }) {
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
 
   const sizes = {
-    sm: { outer: 'w-8 h-12', icon: isEmoji ? 'text-base' : 'text-xs', corner: isEmoji ? '8px' : '6px', fullPx: '40px', border: 'border', inset: 1 },
-    md: { outer: 'w-10 h-14', icon: isEmoji ? 'text-xl' : 'text-sm', corner: isEmoji ? '10px' : '6px', fullPx: '52px', border: 'border-2', inset: 2 },
-    lg: { outer: 'w-12 h-16', icon: isEmoji ? 'text-2xl' : 'text-base', corner: isEmoji ? '12px' : '6px', fullPx: '60px', border: 'border-2', inset: 2 },
+    sm: { outer: 'w-8 h-12', icon: isEmoji ? 'text-base' : 'text-xs', corner: isEmoji ? '8px' : '6px', fullPx: '32px', fullScaleY: 1.5, border: 'border', inset: 1 },
+    md: { outer: 'w-10 h-14', icon: isEmoji ? 'text-xl' : 'text-sm', corner: isEmoji ? '10px' : '6px', fullPx: '40px', fullScaleY: 1.4, border: 'border-2', inset: 2 },
+    lg: { outer: 'w-12 h-16', icon: isEmoji ? 'text-2xl' : 'text-base', corner: isEmoji ? '12px' : '6px', fullPx: '48px', fullScaleY: 1.33, border: 'border-2', inset: 2 },
   };
 
   const s = sizes[size] || sizes.md;
@@ -35,10 +35,10 @@ export default function CardBack({ size = 'md', className = '' }) {
           className="absolute inset-0 rounded"
           style={{ background: design.pattern }}
         />
-        {/* Full-card emoji — sized to fill the card */}
+        {/* Full-card emoji — stretched to fill the card rectangle */}
         <div
           className="absolute inset-0 flex items-center justify-center select-none"
-          style={{ fontSize: s.fullPx, lineHeight: 1 }}
+          style={{ fontSize: s.fullPx, lineHeight: 1, transform: `scaleY(${s.fullScaleY})` }}
         >
           {design.centerIcon}
         </div>
