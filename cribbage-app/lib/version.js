@@ -1,10 +1,10 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b200-20260311';
+export const APP_VERSION = 'v0.3.0-b201-20260311';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
 - Tap any face-down card for a full-screen preview
-- Paintings fill the screen with no border waste
+- Painting images cropped to show pure artwork, no ornate frames
 - "In the style of" artist credits with mini biographies
 - During counting, non-active hands are dimmed so it's clear which hand to count
 - Yellow highlight stays visible during score feedback
