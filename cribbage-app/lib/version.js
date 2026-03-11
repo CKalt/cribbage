@@ -1,12 +1,13 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b198-20260311';
+export const APP_VERSION = 'v0.3.0-b199-20260311';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Tap any face-down card to see a full-screen preview
+- Painting card backs show artist info and mini biographies
 - During counting, non-active hands are dimmed so it's clear which hand to count
 - Yellow highlight stays visible during score feedback
 - 33 card back designs with full-card scenes
-- Card back persists when resuming a saved game
 
 Happy playing!`;
 

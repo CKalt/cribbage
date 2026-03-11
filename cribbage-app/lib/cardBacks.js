@@ -301,6 +301,8 @@ const CARD_BACKS = [
     iconColor: 'text-yellow-500',
     accentColor: 'rgba(161,98,7,0.2)',
     sceneImage: '/card-backs/american-gothic.png',
+    artistName: 'Grant Wood',
+    artistBio: 'Grant Wood (1891\u20131942) was an American painter best known for his paintings depicting the rural American Midwest. "American Gothic" (1930), showing a farmer and his daughter before a house with a Gothic window, became one of the most iconic images in American art. Wood was a leading figure in the Regionalism movement, celebrating heartland values and small-town life.',
   },
   {
     id: 'the-scream',
@@ -314,6 +316,8 @@ const CARD_BACKS = [
     iconColor: 'text-orange-500',
     accentColor: 'rgba(234,88,12,0.2)',
     sceneImage: '/card-backs/the-scream.png',
+    artistName: 'Edvard Munch',
+    artistBio: 'Edvard Munch (1863\u20131944) was a Norwegian painter and printmaker whose intensely personal art laid the groundwork for Expressionism. "The Scream" (1893) depicts an agonized figure against a blood-red sky and has become one of the most recognizable images in art history. Munch explored themes of anxiety, illness, and emotional turbulence throughout his career.',
   },
   {
     id: 'mona-lisa',
@@ -327,6 +331,8 @@ const CARD_BACKS = [
     iconColor: 'text-yellow-500',
     accentColor: 'rgba(161,98,7,0.2)',
     sceneImage: '/card-backs/mona-lisa.png',
+    artistName: 'Leonardo da Vinci',
+    artistBio: 'Leonardo da Vinci (1452\u20131519) was an Italian polymath of the Renaissance\u2014painter, sculptor, architect, scientist, and inventor. The "Mona Lisa" (c. 1503\u20131519), with its enigmatic smile and pioneering sfumato technique, is the most famous painting in the world, housed in the Louvre in Paris. Leonardo\'s notebooks reveal a mind centuries ahead of his time.',
   },
   {
     id: 'lighthouse',
@@ -452,6 +458,8 @@ const CARD_BACKS = [
     iconColor: 'text-amber-400',
     accentColor: 'rgba(245,158,11,0.2)',
     sceneImage: '/card-backs/lighthouse-painting-munch.png',
+    artistName: 'Edvard Munch',
+    artistBio: 'Edvard Munch (1863\u20131944) was a Norwegian painter and printmaker whose intensely personal art laid the groundwork for Expressionism. Best known for "The Scream," Munch explored themes of anxiety, illness, and emotional turbulence throughout his prolific career spanning over 60 years.',
   },
   {
     id: 'skyscraper-painting',
@@ -465,6 +473,8 @@ const CARD_BACKS = [
     iconColor: 'text-sky-300',
     accentColor: 'rgba(56,189,248,0.2)',
     sceneImage: '/card-backs/skyscraper-paiting-okeeffe.png',
+    artistName: "Georgia O'Keeffe",
+    artistBio: "Georgia O'Keeffe (1887\u20131986) was an American modernist artist known as the \"Mother of American Modernism.\" Famous for her large-scale flower paintings, New York skyscrapers, and New Mexico landscapes, she was one of the most significant artists of the 20th century. Her bold, abstract style transformed how Americans saw their own landscape.",
   },
   {
     id: 'desert-painting',
@@ -478,6 +488,8 @@ const CARD_BACKS = [
     iconColor: 'text-yellow-300',
     accentColor: 'rgba(234,179,8,0.3)',
     sceneImage: '/card-backs/desert-painting-dali.png',
+    artistName: 'Salvador Dal\u00ed',
+    artistBio: 'Salvador Dal\u00ed (1904\u20131989) was a Spanish Surrealist artist renowned for his striking and bizarre imagery. His most famous work, "The Persistence of Memory" with its melting clocks, epitomizes the Surrealist movement. An eccentric showman with his trademark upturned mustache, Dal\u00ed worked across painting, sculpture, film, and photography.',
   },
   {
     id: 'farm-painting',
@@ -491,11 +503,13 @@ const CARD_BACKS = [
     iconColor: 'text-green-700',
     accentColor: 'rgba(239,68,68,0.2)',
     sceneImage: '/card-backs/farm-painting-th-benton.png',
+    artistName: 'Thomas Hart Benton',
+    artistBio: 'Thomas Hart Benton (1889\u20131975) was an American painter and muralist, a leader of the Regionalism art movement. His dynamic, rolling compositions depicted everyday life in the American heartland\u2014farmers, laborers, and small-town scenes rendered with muscular, rhythmic forms. He was a mentor to the young Jackson Pollock.',
   },
   {
     id: 'pyramids-painting',
     type: 'fullcard',
-    name: 'Pyramids (Gerome)',
+    name: 'Pyramids (G\u00e9r\u00f4me)',
     bg: 'bg-amber-200',
     border: 'border-amber-500',
     bgHex: '#fde68a', borderHex: '#f59e0b',
@@ -504,11 +518,13 @@ const CARD_BACKS = [
     iconColor: 'text-yellow-300',
     accentColor: 'rgba(245,158,11,0.25)',
     sceneImage: '/card-backs/pyramids-painting-jl-gerome.png',
+    artistName: 'Jean-L\u00e9on G\u00e9r\u00f4me',
+    artistBio: 'Jean-L\u00e9on G\u00e9r\u00f4me (1824\u20131904) was a French Academic painter and sculptor known for his vivid historical and Orientalist scenes. His meticulously detailed works transported viewers to ancient Rome, Egypt, and the Middle East. One of the most celebrated artists of his era, he trained many students at the \u00c9cole des Beaux-Arts in Paris.',
   },
   {
     id: 'castle-painting',
     type: 'fullcard',
-    name: 'Castle (Kincade)',
+    name: 'Castle (Kinkade)',
     bg: 'bg-stone-200',
     border: 'border-stone-500',
     bgHex: '#e7e5e4', borderHex: '#78716c',
@@ -517,6 +533,8 @@ const CARD_BACKS = [
     iconColor: 'text-stone-600',
     accentColor: 'rgba(120,113,108,0.2)',
     sceneImage: '/card-backs/castle-painting-t-kincade.png',
+    artistName: 'Thomas Kinkade',
+    artistBio: 'Thomas Kinkade (1958\u20132012) was an American painter of popular realistic and pastoral scenes, self-described as the "Painter of Light." His luminous cottages, gardens, and landscapes became some of the most widely collected art in America. His work emphasized warmth, nostalgia, and an idealized vision of the world.',
   },
   {
     id: 'sunrise-painting',
@@ -530,6 +548,8 @@ const CARD_BACKS = [
     iconColor: 'text-orange-500',
     accentColor: 'rgba(251,146,60,0.3)',
     sceneImage: '/card-backs/sunrise-painting-shan-shui.png',
+    artistName: 'Shan Shui Tradition',
+    artistBio: 'Shan Shui (\u5c71\u6c34, "mountain-water") is a style of Chinese landscape painting dating back over a thousand years. Rather than depicting a specific scene, Shan Shui paintings capture the spiritual essence of nature\u2014misty mountains, flowing water, and tiny human figures dwarfed by the grandeur of the landscape. It remains one of the highest forms of Chinese art.',
   },
   {
     id: 'beach-painting',
@@ -543,6 +563,8 @@ const CARD_BACKS = [
     iconColor: 'text-cyan-600',
     accentColor: 'rgba(6,182,212,0.3)',
     sceneImage: '/card-backs/beach-painting-gauguin.png',
+    artistName: 'Paul Gauguin',
+    artistBio: 'Paul Gauguin (1848\u20131903) was a French Post-Impressionist artist who famously left Europe for Tahiti seeking a more primitive and authentic life. His bold use of color, simplified forms, and exotic subject matter profoundly influenced modern art. His Tahitian paintings, with their vivid tropical hues, are among the most beloved works of the Post-Impressionist era.',
   },
 ];
 

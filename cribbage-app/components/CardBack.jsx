@@ -5,8 +5,9 @@
 //   'fullcard' svg — inline SVG scene filling the card
 //   'fullcard' image — external image filling the card (borderless)
 // Tap any card back to see a full-screen preview
+// Painting card backs show artist info button with bio
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCardBack } from './CardBackContext';
 
 /**
@@ -14,10 +15,12 @@ import { useCardBack } from './CardBackContext';
  */
 function CardBackPreview({ design, onClose }) {
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
+  const [showArtistInfo, setShowArtistInfo] = useState(false);
+  const hasArtist = design.artistName && design.artistBio;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
       onClick={onClose}
     >
       {/* Close button */}
@@ -33,65 +36,99 @@ function CardBackPreview({ design, onClose }) {
         {design.name}
       </div>
 
-      {/* Large card preview */}
-      {design.sceneImage ? (
-        <div className="rounded-xl overflow-hidden shadow-2xl" style={{ width: '240px', height: '336px' }}>
-          <img
-            src={design.sceneImage}
-            alt={design.name}
-            className="w-full h-full object-cover rounded-xl"
-            draggable={false}
-          />
-        </div>
-      ) : design.sceneSvg ? (
-        <div
-          className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl`}
-          style={{ width: '240px', height: '336px' }}
-        >
-          <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
-        </div>
-      ) : design.type === 'fullcard' ? (
-        <div
-          className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
-          style={{ width: '240px', height: '336px' }}
-        >
-          <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+      {/* Main content area */}
+      <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+        {/* Large card preview */}
+        {design.sceneImage ? (
+          <div className="rounded-xl overflow-hidden shadow-2xl" style={{ width: '240px', height: '336px' }}>
+            <img
+              src={design.sceneImage}
+              alt={design.name}
+              className="w-full h-full object-cover rounded-xl"
+              draggable={false}
+            />
+          </div>
+        ) : design.sceneSvg ? (
           <div
-            className="absolute inset-0 flex items-center justify-center select-none"
-            style={{ fontSize: '200px', lineHeight: 1, transform: 'scaleY(1.4)' }}
+            className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl`}
+            style={{ width: '240px', height: '336px' }}
           >
-            {design.centerIcon}
+            <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
           </div>
-        </div>
-      ) : (
-        <div
-          className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
-          style={{ width: '240px', height: '336px' }}
-        >
-          <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+        ) : design.type === 'fullcard' ? (
           <div
-            className="absolute rounded-lg"
-            style={{
-              top: '12px', left: '12px', right: '12px', bottom: '12px',
-              border: `2px solid ${design.accentColor}`,
-            }}
-          />
-          <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} font-bold select-none`}
-            style={{ fontSize: isEmoji ? '80px' : '60px' }}
+            className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
+            style={{ width: '240px', height: '336px' }}
           >
-            {design.centerIcon}
+            <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+            <div
+              className="absolute inset-0 flex items-center justify-center select-none"
+              style={{ fontSize: '200px', lineHeight: 1, transform: 'scaleY(1.4)' }}
+            >
+              {design.centerIcon}
+            </div>
           </div>
-          <div className="absolute top-2 left-2 select-none" style={{ fontSize: isEmoji ? '24px' : '16px', lineHeight: 1 }}>
-            {design.centerIcon}
+        ) : (
+          <div
+            className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
+            style={{ width: '240px', height: '336px' }}
+          >
+            <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+            <div
+              className="absolute rounded-lg"
+              style={{
+                top: '12px', left: '12px', right: '12px', bottom: '12px',
+                border: `2px solid ${design.accentColor}`,
+              }}
+            />
+            <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} font-bold select-none`}
+              style={{ fontSize: isEmoji ? '80px' : '60px' }}
+            >
+              {design.centerIcon}
+            </div>
+            <div className="absolute top-2 left-2 select-none" style={{ fontSize: isEmoji ? '24px' : '16px', lineHeight: 1 }}>
+              {design.centerIcon}
+            </div>
+            <div className="absolute bottom-2 right-2 select-none" style={{ fontSize: isEmoji ? '24px' : '16px', lineHeight: 1, transform: 'rotate(180deg)' }}>
+              {design.centerIcon}
+            </div>
           </div>
-          <div className="absolute bottom-2 right-2 select-none" style={{ fontSize: isEmoji ? '24px' : '16px', lineHeight: 1, transform: 'rotate(180deg)' }}>
-            {design.centerIcon}
+        )}
+
+        {/* Artist info button for paintings */}
+        {hasArtist && !showArtistInfo && (
+          <button
+            onClick={() => setShowArtistInfo(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-700/80 hover:bg-amber-600/80 text-white text-sm rounded-full transition-colors"
+          >
+            <span className="text-base">&#x1F3A8;</span>
+            About the Artist
+          </button>
+        )}
+
+        {/* Artist bio panel */}
+        {hasArtist && showArtistInfo && (
+          <div className="bg-gray-900/95 border border-amber-600/50 rounded-lg p-4 max-w-[280px] text-center">
+            <div className="text-amber-400 font-bold text-base mb-2">
+              &#x1F3A8; {design.artistName}
+            </div>
+            <p className="text-gray-300 text-xs leading-relaxed">
+              {design.artistBio}
+            </p>
+            <button
+              onClick={() => setShowArtistInfo(false)}
+              className="mt-3 text-amber-500 text-xs hover:text-amber-400"
+            >
+              Hide
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
+
+const CARD_PREVIEW_HINT_KEY = 'cribbage_card_preview_hint_seen';
 
 /**
  * @param {'sm'|'md'|'lg'} size - Card size variant
@@ -101,6 +138,20 @@ export default function CardBack({ size = 'md', className = '' }) {
   const design = useCardBack();
   const isFullcard = design.type === 'fullcard';
   const [showPreview, setShowPreview] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+
+  // Show one-time hint about tap-to-preview for painting cards
+  useEffect(() => {
+    if (design.sceneImage && typeof window !== 'undefined') {
+      const seen = localStorage.getItem(CARD_PREVIEW_HINT_KEY);
+      if (!seen) {
+        setShowHint(true);
+        localStorage.setItem(CARD_PREVIEW_HINT_KEY, 'true');
+        const timer = setTimeout(() => setShowHint(false), 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [design.sceneImage]);
 
   // Emoji icons (animals) render larger for visibility
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
@@ -115,6 +166,7 @@ export default function CardBack({ size = 'md', className = '' }) {
 
   const handleTap = (e) => {
     e.stopPropagation();
+    setShowHint(false);
     setShowPreview(true);
   };
 
@@ -176,7 +228,15 @@ export default function CardBack({ size = 'md', className = '' }) {
 
   return (
     <>
-      {card}
+      <div className="relative inline-block">
+        {card}
+        {/* One-time hint bubble */}
+        {showHint && (
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-amber-700 text-white text-[10px] px-2 py-1 rounded shadow-lg z-20 animate-pulse">
+            Tap card to preview!
+          </div>
+        )}
+      </div>
       {showPreview && <CardBackPreview design={design} onClose={() => setShowPreview(false)} />}
     </>
   );
