@@ -2,7 +2,7 @@
 
 // Celebration overlay for correct score counts
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { aiRandom } from '@/lib/ai/rng';
 
 // Fallback messages (used when no celebration phrase is provided)
@@ -27,18 +27,20 @@ export default function CorrectScoreCelebration({ score, phrase, onComplete }) {
     phrase || CELEBRATION_MESSAGES[Math.floor(aiRandom() * CELEBRATION_MESSAGES.length)]
   );
   const [isVisible, setIsVisible] = useState(true);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    // Auto-dismiss after animation
+    // Auto-dismiss after animation — use ref so timer doesn't reset on re-renders
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => {
-        if (onComplete) onComplete();
+        if (onCompleteRef.current) onCompleteRef.current();
       }, 300); // Wait for fade out
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, []); // Run once on mount only
 
   return (
     <div
