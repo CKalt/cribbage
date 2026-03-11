@@ -28,24 +28,29 @@ export default function CorrectScoreCelebration({ score, phrase, onComplete }) {
   );
   const [isVisible, setIsVisible] = useState(true);
   const onCompleteRef = useRef(onComplete);
+  const dismissedRef = useRef(false);
   onCompleteRef.current = onComplete;
+
+  const dismiss = () => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    setIsVisible(false);
+    setTimeout(() => {
+      if (onCompleteRef.current) onCompleteRef.current();
+    }, 300);
+  };
 
   useEffect(() => {
     // Auto-dismiss after animation — use ref so timer doesn't reset on re-renders
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(() => {
-        if (onCompleteRef.current) onCompleteRef.current();
-      }, 300); // Wait for fade out
-    }, 2000);
-
+    const timer = setTimeout(dismiss, 2000);
     return () => clearTimeout(timer);
   }, []); // Run once on mount only
 
   return (
     <div
+      onClick={dismiss}
       className={`
-        fixed inset-0 z-50 flex items-center justify-center
+        fixed inset-0 z-50 flex items-center justify-center cursor-pointer
         bg-black/60 backdrop-blur-sm
         transition-opacity duration-300
         ${isVisible ? 'opacity-100' : 'opacity-0'}
