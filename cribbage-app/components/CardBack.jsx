@@ -35,13 +35,18 @@ export default function CardBack({ size = 'md', className = '' }) {
           className="absolute inset-0 rounded"
           style={{ background: design.pattern }}
         />
-        {/* Full-card emoji — stretched to fill the card rectangle */}
-        <div
-          className="absolute inset-0 flex items-center justify-center select-none"
-          style={{ fontSize: s.fullPx, lineHeight: 1, transform: `scaleY(${s.fullScaleY})` }}
-        >
-          {design.centerIcon}
-        </div>
+        {design.sceneSvg ? (
+          /* SVG scene — scales to fill card via viewBox */
+          <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
+        ) : (
+          /* Full-card emoji — stretched to fill the card rectangle */
+          <div
+            className="absolute inset-0 flex items-center justify-center select-none"
+            style={{ fontSize: s.fullPx, lineHeight: 1, transform: `scaleY(${s.fullScaleY})` }}
+          >
+            {design.centerIcon}
+          </div>
+        )}
       </div>
     );
   }

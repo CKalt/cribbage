@@ -250,9 +250,13 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                               }}
                             />
                             {design.type === 'fullcard' ? (
-                              <div className="absolute inset-0 flex items-center justify-center select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.42)' }}>
-                                {design.centerIcon}
-                              </div>
+                              design.sceneSvg ? (
+                                <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.42)' }}>
+                                  {design.centerIcon}
+                                </div>
+                              )
                             ) : (
                               <>
                                 <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} ${isEmoji ? 'text-lg' : 'text-sm'} font-bold select-none`}>

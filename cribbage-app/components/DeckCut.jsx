@@ -171,17 +171,21 @@ export default function DeckCut({
               style={{ top: '40px' }}
             >
               <div className="flex flex-col items-center gap-1">
-                <div
-                  style={{
-                    transform: cardBack.type === 'fullcard' ? 'none' : 'rotate(-15deg)',
-                    fontSize: cardBack.type === 'fullcard' ? '48px' : (cardBack.centerIcon && cardBack.centerIcon.length > 1 ? '24px' : '18px'),
-                    color: cardBack.borderHex,
-                    opacity: 0.7,
-                    textShadow: `0 0 6px ${cardBack.accentColor}`,
-                  }}
-                >
-                  {cardBack.centerIcon}
-                </div>
+                {cardBack.sceneSvg ? (
+                  <div style={{ width: '60px', height: '42px', opacity: 0.8, borderRadius: '4px', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} />
+                ) : (
+                  <div
+                    style={{
+                      transform: cardBack.type === 'fullcard' ? 'none' : 'rotate(-15deg)',
+                      fontSize: cardBack.type === 'fullcard' ? '48px' : (cardBack.centerIcon && cardBack.centerIcon.length > 1 ? '24px' : '18px'),
+                      color: cardBack.borderHex,
+                      opacity: 0.7,
+                      textShadow: `0 0 6px ${cardBack.accentColor}`,
+                    }}
+                  >
+                    {cardBack.centerIcon}
+                  </div>
+                )}
                 {!disabled && (
                   <div
                     className="text-xs font-bold opacity-50"
