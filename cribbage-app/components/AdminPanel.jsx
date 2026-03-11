@@ -235,7 +235,7 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                         >
                           {/* Mini card preview */}
                           <div
-                            className={`${design.sceneImage ? '' : `${design.bg} ${design.border} border-2`} rounded mx-auto relative overflow-hidden`}
+                            className={`${design.bg} ${design.border} border-2 rounded mx-auto relative overflow-hidden`}
                             style={{ width: '48px', height: '68px' }}
                           >
                             {design.sceneImage ? (

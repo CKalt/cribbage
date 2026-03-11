@@ -291,7 +291,7 @@ const CARD_BACKS = [
   },
   {
     id: 'american-gothic',
-    type: 'fullcard',
+    type: 'painting',
     name: 'American Gothic',
     bg: 'bg-amber-950',
     border: 'border-yellow-700',
@@ -306,7 +306,7 @@ const CARD_BACKS = [
   },
   {
     id: 'the-scream',
-    type: 'fullcard',
+    type: 'painting',
     name: 'The Scream',
     bg: 'bg-orange-950',
     border: 'border-orange-600',
@@ -321,7 +321,7 @@ const CARD_BACKS = [
   },
   {
     id: 'mona-lisa',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Mona Lisa',
     bg: 'bg-amber-950',
     border: 'border-yellow-700',
@@ -448,7 +448,7 @@ const CARD_BACKS = [
   // ── Paintings (image-based, borderless) ──
   {
     id: 'lighthouse-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Lighthouse (Munch)',
     bg: 'bg-slate-800',
     border: 'border-amber-500',
@@ -463,7 +463,7 @@ const CARD_BACKS = [
   },
   {
     id: 'skyscraper-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: "Skyscraper (O'Keeffe)",
     bg: 'bg-gray-900',
     border: 'border-sky-400',
@@ -478,7 +478,7 @@ const CARD_BACKS = [
   },
   {
     id: 'desert-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Desert (Dali)',
     bg: 'bg-yellow-900',
     border: 'border-yellow-500',
@@ -493,7 +493,7 @@ const CARD_BACKS = [
   },
   {
     id: 'farm-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Farm (Benton)',
     bg: 'bg-green-100',
     border: 'border-red-500',
@@ -508,7 +508,7 @@ const CARD_BACKS = [
   },
   {
     id: 'pyramids-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Pyramids (G\u00e9r\u00f4me)',
     bg: 'bg-amber-200',
     border: 'border-amber-500',
@@ -523,7 +523,7 @@ const CARD_BACKS = [
   },
   {
     id: 'castle-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Castle (Kinkade)',
     bg: 'bg-stone-200',
     border: 'border-stone-500',
@@ -538,7 +538,7 @@ const CARD_BACKS = [
   },
   {
     id: 'sunrise-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Sunrise (Shan Shui)',
     bg: 'bg-orange-100',
     border: 'border-orange-400',
@@ -553,7 +553,7 @@ const CARD_BACKS = [
   },
   {
     id: 'beach-painting',
-    type: 'fullcard',
+    type: 'painting',
     name: 'Beach (Gauguin)',
     bg: 'bg-cyan-100',
     border: 'border-cyan-500',

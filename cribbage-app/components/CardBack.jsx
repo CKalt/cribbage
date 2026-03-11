@@ -136,7 +136,7 @@ const CARD_PREVIEW_HINT_KEY = 'cribbage_card_preview_hint_seen';
  */
 export default function CardBack({ size = 'md', className = '' }) {
   const design = useCardBack();
-  const isFullcard = design.type === 'fullcard';
+  const isFullcard = design.type === 'fullcard' || design.type === 'painting';
   const [showPreview, setShowPreview] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
@@ -172,7 +172,7 @@ export default function CardBack({ size = 'md', className = '' }) {
 
   const card = isFullcard ? (
     design.sceneImage ? (
-      <div className={`rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} onClick={handleTap}>
+      <div className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} onClick={handleTap}>
         <img
           src={design.sceneImage}
           alt={design.name}

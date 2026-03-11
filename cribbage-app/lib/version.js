@@ -1,5 +1,5 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b201-20260311';
+export const APP_VERSION = 'v0.3.0-b202-20260311';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
