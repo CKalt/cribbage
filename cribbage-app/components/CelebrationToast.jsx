@@ -3,7 +3,7 @@
 // Lightweight toast for celebration phrases + micro-animations
 // Non-blocking, auto-dismiss, accessible
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 /**
  * CelebrationToast — displays a phrase with optional animation.
@@ -15,26 +15,32 @@ import { useEffect, useState, useCallback } from 'react';
 export default function CelebrationToast({ phrase, animation, onDismiss }) {
   const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const onDismissRef = useRef(onDismiss);
+  const dismissedRef = useRef(false);
+  onDismissRef.current = onDismiss;
 
-  const dismiss = useCallback(() => {
+  const dismiss = () => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
     setExiting(true);
     setTimeout(() => {
       setVisible(false);
       setExiting(false);
-      if (onDismiss) onDismiss();
+      if (onDismissRef.current) onDismissRef.current();
     }, 400);
-  }, [onDismiss]);
+  };
 
   useEffect(() => {
     if (!phrase) return;
     setVisible(true);
     setExiting(false);
+    dismissedRef.current = false;
 
-    // Auto-dismiss after display duration
+    // Auto-dismiss after display duration — use ref so timer doesn't reset on re-renders
     const displayMs = animation ? Math.max(2500, animation.durationMs + 1000) : 2500;
     const timer = setTimeout(dismiss, displayMs);
     return () => clearTimeout(timer);
-  }, [phrase, animation, dismiss]);
+  }, [phrase]); // Only re-run when phrase changes, not on every render
 
   if (!visible || !phrase) return null;
 
@@ -43,7 +49,8 @@ export default function CelebrationToast({ phrase, animation, onDismiss }) {
 
   return (
     <div
-      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none"
+      onClick={dismiss}
+      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 cursor-pointer"
       aria-live="polite"
       role="status"
     >
