@@ -1,5 +1,8 @@
 // Decorative Card Back — renders the face-down side of a playing card
 // Uses the current game's card back design from context
+// Supports two types:
+//   'icon' (default) — center icon + pattern + corner accents
+//   'fullcard' — single large emoji filling the entire card
 
 import { useCardBack } from './CardBackContext';
 
@@ -9,17 +12,36 @@ import { useCardBack } from './CardBackContext';
  */
 export default function CardBack({ size = 'md', className = '' }) {
   const design = useCardBack();
+  const isFullcard = design.type === 'fullcard';
 
   // Emoji icons (animals) render larger for visibility
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
 
   const sizes = {
-    sm: { outer: 'w-8 h-12', icon: isEmoji ? 'text-base' : 'text-xs', corner: isEmoji ? '8px' : '6px', border: 'border', inset: 1 },
-    md: { outer: 'w-10 h-14', icon: isEmoji ? 'text-xl' : 'text-sm', corner: isEmoji ? '10px' : '6px', border: 'border-2', inset: 2 },
-    lg: { outer: 'w-12 h-16', icon: isEmoji ? 'text-2xl' : 'text-base', corner: isEmoji ? '12px' : '6px', border: 'border-2', inset: 2 },
+    sm: { outer: 'w-8 h-12', icon: isEmoji ? 'text-base' : 'text-xs', corner: isEmoji ? '8px' : '6px', full: 'text-3xl', border: 'border', inset: 1 },
+    md: { outer: 'w-10 h-14', icon: isEmoji ? 'text-xl' : 'text-sm', corner: isEmoji ? '10px' : '6px', full: 'text-4xl', border: 'border-2', inset: 2 },
+    lg: { outer: 'w-12 h-16', icon: isEmoji ? 'text-2xl' : 'text-base', corner: isEmoji ? '12px' : '6px', full: 'text-5xl', border: 'border-2', inset: 2 },
   };
 
   const s = sizes[size] || sizes.md;
+
+  if (isFullcard) {
+    return (
+      <div
+        className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden ${className}`}
+      >
+        {/* Pattern overlay */}
+        <div
+          className="absolute inset-0 rounded"
+          style={{ background: design.pattern }}
+        />
+        {/* Full-card emoji */}
+        <div className={`absolute inset-0 flex items-center justify-center select-none ${s.full}`}>
+          {design.centerIcon}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

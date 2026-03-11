@@ -228,6 +228,7 @@ const CARD_BACKS = [
   // ── Landmarks & Scenes ──
   {
     id: 'desert',
+    type: 'fullcard',
     name: 'Desert',
     bg: 'bg-yellow-900',
     border: 'border-yellow-500',
@@ -239,6 +240,7 @@ const CARD_BACKS = [
   },
   {
     id: 'skyscraper',
+    type: 'fullcard',
     name: 'Skyscraper',
     bg: 'bg-gray-900',
     border: 'border-sky-400',

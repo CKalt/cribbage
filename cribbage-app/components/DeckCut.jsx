@@ -173,8 +173,8 @@ export default function DeckCut({
               <div className="flex flex-col items-center gap-1">
                 <div
                   style={{
-                    transform: 'rotate(-15deg)',
-                    fontSize: cardBack.centerIcon && cardBack.centerIcon.length > 1 ? '24px' : '18px',
+                    transform: cardBack.type === 'fullcard' ? 'none' : 'rotate(-15deg)',
+                    fontSize: cardBack.type === 'fullcard' ? '36px' : (cardBack.centerIcon && cardBack.centerIcon.length > 1 ? '24px' : '18px'),
                     color: cardBack.borderHex,
                     opacity: 0.7,
                     textShadow: `0 0 6px ${cardBack.accentColor}`,

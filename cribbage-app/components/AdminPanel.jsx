@@ -249,16 +249,23 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                                 border: `1px solid ${design.accentColor}`,
                               }}
                             />
-                            <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} ${isEmoji ? 'text-lg' : 'text-sm'} font-bold select-none`}>
-                              {design.centerIcon}
-                            </div>
-                            {/* Corner accents */}
-                            <div className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: isEmoji ? '9px' : '6px', lineHeight: 1 }}>
-                              {design.centerIcon}
-                            </div>
-                            <div className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: isEmoji ? '9px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>
-                              {design.centerIcon}
-                            </div>
+                            {design.type === 'fullcard' ? (
+                              <div className="absolute inset-0 flex items-center justify-center select-none text-3xl">
+                                {design.centerIcon}
+                              </div>
+                            ) : (
+                              <>
+                                <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} ${isEmoji ? 'text-lg' : 'text-sm'} font-bold select-none`}>
+                                  {design.centerIcon}
+                                </div>
+                                <div className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: isEmoji ? '9px' : '6px', lineHeight: 1 }}>
+                                  {design.centerIcon}
+                                </div>
+                                <div className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: isEmoji ? '9px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>
+                                  {design.centerIcon}
+                                </div>
+                              </>
+                            )}
                           </div>
                           <div className="text-white text-xs mt-1 text-center truncate">
                             {design.name}
