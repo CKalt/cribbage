@@ -501,9 +501,22 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerScore !== undefined) setComputerScore(restored.computerScore);
     if (restored.playerBackPeg !== undefined) setPlayerBackPeg(restored.playerBackPeg);
     if (restored.computerBackPeg !== undefined) setComputerBackPeg(restored.computerBackPeg);
-    if (restored.cardBackId) {
-      const savedBack = getCardBackById(restored.cardBackId);
-      if (savedBack) setCardBack(savedBack);
+    // Restore card back design — use saved ID, or derive a stable one from game state
+    {
+      let restoredBack = null;
+      if (restored.cardBackId) {
+        restoredBack = getCardBackById(restored.cardBackId);
+      }
+      if (!restoredBack) {
+        // Old save without cardBackId, or design was removed — derive stable seed
+        // from dealer + hand contents (these don't change within a hand)
+        const seed = (restored.dealer === 'player' ? 7 : 13) *
+          ((restored.playerHand || []).length + 1) *
+          ((restored.computerHand || []).length + 1) *
+          ((restored.deck || []).length + 1);
+        restoredBack = pickCardBack(seed, disabledCardBacksRef.current);
+      }
+      setCardBack(restoredBack);
     }
     if (restored.selectedCards) setSelectedCards(restored.selectedCards);
     if (restored.playerPlayHand) setPlayerPlayHand(restored.playerPlayHand);
