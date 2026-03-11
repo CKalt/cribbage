@@ -250,7 +250,7 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                               }}
                             />
                             {design.type === 'fullcard' ? (
-                              <div className="absolute inset-0 flex items-center justify-center select-none text-3xl">
+                              <div className="absolute inset-0 flex items-center justify-center select-none" style={{ fontSize: '42px', lineHeight: 1 }}>
                                 {design.centerIcon}
                               </div>
                             ) : (
