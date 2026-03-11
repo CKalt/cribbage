@@ -1,10 +1,97 @@
 // Decorative Card Back — renders the face-down side of a playing card
 // Uses the current game's card back design from context
-// Supports two types:
+// Supports three render modes:
 //   'icon' (default) — center icon + pattern + corner accents
-//   'fullcard' — single large emoji filling the entire card
+//   'fullcard' svg — inline SVG scene filling the card
+//   'fullcard' image — external image filling the card (borderless)
+// Tap any card back to see a full-screen preview
 
+import { useState } from 'react';
 import { useCardBack } from './CardBackContext';
+
+/**
+ * Full-screen preview overlay for card back designs
+ */
+function CardBackPreview({ design, onClose }) {
+  const isEmoji = design.centerIcon && design.centerIcon.length > 1;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white text-3xl leading-none bg-black/50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/70 z-10"
+      >
+        &times;
+      </button>
+
+      {/* Card name */}
+      <div className="absolute top-4 left-0 right-0 text-center text-white text-lg font-semibold">
+        {design.name}
+      </div>
+
+      {/* Large card preview */}
+      {design.sceneImage ? (
+        <div className="rounded-xl overflow-hidden shadow-2xl" style={{ width: '240px', height: '336px' }}>
+          <img
+            src={design.sceneImage}
+            alt={design.name}
+            className="w-full h-full object-cover rounded-xl"
+            draggable={false}
+          />
+        </div>
+      ) : design.sceneSvg ? (
+        <div
+          className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl`}
+          style={{ width: '240px', height: '336px' }}
+        >
+          <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
+        </div>
+      ) : design.type === 'fullcard' ? (
+        <div
+          className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
+          style={{ width: '240px', height: '336px' }}
+        >
+          <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+          <div
+            className="absolute inset-0 flex items-center justify-center select-none"
+            style={{ fontSize: '200px', lineHeight: 1, transform: 'scaleY(1.4)' }}
+          >
+            {design.centerIcon}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`${design.bg} border-4 ${design.border} rounded-xl overflow-hidden shadow-2xl relative`}
+          style={{ width: '240px', height: '336px' }}
+        >
+          <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+          <div
+            className="absolute rounded-lg"
+            style={{
+              top: '12px', left: '12px', right: '12px', bottom: '12px',
+              border: `2px solid ${design.accentColor}`,
+            }}
+          />
+          <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} font-bold select-none`}
+            style={{ fontSize: isEmoji ? '80px' : '60px' }}
+          >
+            {design.centerIcon}
+          </div>
+          <div className="absolute top-2 left-2 select-none" style={{ fontSize: isEmoji ? '24px' : '16px', lineHeight: 1 }}>
+            {design.centerIcon}
+          </div>
+          <div className="absolute bottom-2 right-2 select-none" style={{ fontSize: isEmoji ? '24px' : '16px', lineHeight: 1, transform: 'rotate(180deg)' }}>
+            {design.centerIcon}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * @param {'sm'|'md'|'lg'} size - Card size variant
@@ -13,6 +100,7 @@ import { useCardBack } from './CardBackContext';
 export default function CardBack({ size = 'md', className = '' }) {
   const design = useCardBack();
   const isFullcard = design.type === 'fullcard';
+  const [showPreview, setShowPreview] = useState(false);
 
   // Emoji icons (animals) render larger for visibility
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
@@ -25,34 +113,30 @@ export default function CardBack({ size = 'md', className = '' }) {
 
   const s = sizes[size] || sizes.md;
 
-  if (isFullcard) {
-    // Image-based card backs (e.g., Mona Lisa) — image fills entire card, no border added
-    if (design.sceneImage) {
-      return (
-        <div className={`rounded ${s.outer} relative overflow-hidden ${className}`}>
-          <img
-            src={design.sceneImage}
-            alt={design.name}
-            className="absolute inset-0 w-full h-full object-cover rounded"
-            draggable={false}
-          />
-        </div>
-      );
-    }
-    return (
-      <div
-        className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden ${className}`}
-      >
-        {/* Pattern overlay */}
-        <div
-          className="absolute inset-0 rounded"
-          style={{ background: design.pattern }}
+  const handleTap = (e) => {
+    e.stopPropagation();
+    setShowPreview(true);
+  };
+
+  const card = isFullcard ? (
+    design.sceneImage ? (
+      <div className={`rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} onClick={handleTap}>
+        <img
+          src={design.sceneImage}
+          alt={design.name}
+          className="absolute inset-0 w-full h-full object-cover rounded"
+          draggable={false}
         />
+      </div>
+    ) : (
+      <div
+        className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`}
+        onClick={handleTap}
+      >
+        <div className="absolute inset-0 rounded" style={{ background: design.pattern }} />
         {design.sceneSvg ? (
-          /* SVG scene — scales to fill card via viewBox */
           <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
         ) : (
-          /* Full-card emoji — stretched to fill the card rectangle */
           <div
             className="absolute inset-0 flex items-center justify-center select-none"
             style={{ fontSize: s.fullPx, lineHeight: 1, transform: `scaleY(${s.fullScaleY})` }}
@@ -61,19 +145,13 @@ export default function CardBack({ size = 'md', className = '' }) {
           </div>
         )}
       </div>
-    );
-  }
-
-  return (
+    )
+  ) : (
     <div
-      className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden ${className}`}
+      className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`}
+      onClick={handleTap}
     >
-      {/* Pattern overlay */}
-      <div
-        className="absolute inset-0 rounded"
-        style={{ background: design.pattern }}
-      />
-      {/* Inner border frame */}
+      <div className="absolute inset-0 rounded" style={{ background: design.pattern }} />
       <div
         className="absolute rounded"
         style={{
@@ -84,18 +162,23 @@ export default function CardBack({ size = 'md', className = '' }) {
           border: `1px solid ${design.accentColor}`,
         }}
       />
-      {/* Center icon */}
       <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} ${s.icon} font-bold select-none`}>
         {design.centerIcon}
       </div>
-      {/* Corner accents */}
-      <div className={`absolute top-0.5 left-0.5 select-none`} style={{ fontSize: s.corner, lineHeight: 1 }}>
+      <div className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: s.corner, lineHeight: 1 }}>
         {design.centerIcon}
       </div>
-      <div className={`absolute bottom-0.5 right-0.5 select-none`} style={{ fontSize: s.corner, lineHeight: 1, transform: 'rotate(180deg)' }}>
+      <div className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: s.corner, lineHeight: 1, transform: 'rotate(180deg)' }}>
         {design.centerIcon}
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {card}
+      {showPreview && <CardBackPreview design={design} onClose={() => setShowPreview(false)} />}
+    </>
   );
 }
 
