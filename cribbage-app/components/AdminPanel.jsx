@@ -237,11 +237,11 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                           {/* Card preview — tap to open full preview */}
                           <div
                             className={`${design.sceneImage ? '' : `${design.bg} ${design.border} border-2`} rounded mx-auto relative overflow-hidden cursor-pointer`}
-                            style={{ width: '48px', height: '68px' }}
+                            style={{ width: '48px', height: '68px', ...(design.sceneImage ? { backgroundColor: design.bgHex || '#fef3c7' } : {}) }}
                             onClick={() => setPreviewDesign(design)}
                           >
                             {design.sceneImage ? (
-                              <img src={design.sceneImage} alt={design.name} className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} />
+                              <img src={design.sceneImage} alt={design.name} className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} />
                             ) : (<>
                             <div
                               className="absolute inset-0 rounded"

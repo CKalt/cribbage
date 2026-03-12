@@ -38,6 +38,7 @@ import BugReportViewer from './BugReportViewer';
 import AdminPanel from './AdminPanel';
 import Leaderboard from './Leaderboard';
 import { CardBackContext } from './CardBackContext';
+import { CardBackPreview } from './CardBack';
 import { pickCardBack, getCardBackById } from '@/lib/cardBacks';
 import { APP_VERSION } from '@/lib/version';
 import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
@@ -64,6 +65,7 @@ export default function CribbageGame({ onLogout }) {
   // Card back design — random per game, respects admin-disabled designs
   const disabledCardBacksRef = useRef([]);
   const [cardBack, setCardBack] = useState(() => pickCardBack(Date.now()));
+  const [showCardBackPreview, setShowCardBackPreview] = useState(false);
 
   // Fetch disabled card back IDs on mount
   useEffect(() => {
@@ -3310,12 +3312,12 @@ export default function CribbageGame({ onLogout }) {
                         const remaining = Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length);
                         return remaining > 0 ? (
                         <div className="flex flex-col items-center">
-                          <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+                          <div ref={deckPileRef} className="relative cursor-pointer" style={{ width: '40px', height: '56px' }} onClick={() => setShowCardBackPreview(true)}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
                               <div key={i} className={`absolute ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded overflow-hidden flex items-center justify-center`}
-                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
+                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px`, ...(cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : {}) }}
                               >
-                                {cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '40px', lineHeight: 1, transform: 'scaleY(1.4)' }}>{cardBack.centerIcon}</span>) : <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>}</>}
+                                {cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '40px', lineHeight: 1, transform: 'scaleY(1.4)' }}>{cardBack.centerIcon}</span>) : <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>}</>}
                               </div>
                             ))}
                           </div>
@@ -3327,17 +3329,17 @@ export default function CribbageGame({ onLogout }) {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
                         <div ref={cribPileRef} className="flex flex-col items-center">
-                          <div className="relative w-12 h-16">
+                          <div className="relative w-12 h-16 cursor-pointer" onClick={() => pileCount > 0 && setShowCardBackPreview(true)}>
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
                                 <span className="text-[10px] text-green-600">Crib</span>
                               </div>
                             ) : (
                               <>
-                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
-                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
-                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
-                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.type !== 'fullcard' ? cardBack.iconColor : ''}`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.33)' }}>{cardBack.centerIcon}</span>) : (<><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span><span className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1 }}>{cardBack.centerIcon}</span><span className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>{cardBack.centerIcon}</span></>)}</>}</div>}
+                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.type !== 'fullcard' ? cardBack.iconColor : ''}`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.33)' }}>{cardBack.centerIcon}</span>) : (<><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span><span className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1 }}>{cardBack.centerIcon}</span><span className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>{cardBack.centerIcon}</span></>)}</>}</div>}
                               </>
                             )}
                           </div>
@@ -3537,12 +3539,12 @@ export default function CribbageGame({ onLogout }) {
                         const remaining = Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length);
                         return remaining > 0 ? (
                         <div className="flex flex-col items-center">
-                          <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+                          <div ref={deckPileRef} className="relative cursor-pointer" style={{ width: '40px', height: '56px' }} onClick={() => setShowCardBackPreview(true)}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
                               <div key={i} className={`absolute ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded overflow-hidden flex items-center justify-center`}
-                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
+                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px`, ...(cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : {}) }}
                               >
-                                {cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '40px', lineHeight: 1, transform: 'scaleY(1.4)' }}>{cardBack.centerIcon}</span>) : <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>}</>}
+                                {cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '40px', lineHeight: 1, transform: 'scaleY(1.4)' }}>{cardBack.centerIcon}</span>) : <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>}</>}
                               </div>
                             ))}
                           </div>
@@ -3554,17 +3556,17 @@ export default function CribbageGame({ onLogout }) {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
                         <div ref={cribPileRef} className="flex flex-col items-center">
-                          <div className="relative w-12 h-16">
+                          <div className="relative w-12 h-16 cursor-pointer" onClick={() => pileCount > 0 && setShowCardBackPreview(true)}>
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
                                 <span className="text-[10px] text-green-600">Crib</span>
                               </div>
                             ) : (
                               <>
-                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
-                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
-                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
-                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.type !== 'fullcard' ? cardBack.iconColor : ''}`}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.33)' }}>{cardBack.centerIcon}</span>) : (<><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span><span className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1 }}>{cardBack.centerIcon}</span><span className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>{cardBack.centerIcon}</span></>)}</>}</div>}
+                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.type !== 'fullcard' ? cardBack.iconColor : ''}`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.33)' }}>{cardBack.centerIcon}</span>) : (<><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span><span className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1 }}>{cardBack.centerIcon}</span><span className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>{cardBack.centerIcon}</span></>)}</>}</div>}
                               </>
                             )}
                           </div>
@@ -3827,6 +3829,7 @@ export default function CribbageGame({ onLogout }) {
       )}
     </div>
     </>
+    {showCardBackPreview && <CardBackPreview design={cardBack} onClose={() => setShowCardBackPreview(false)} />}
     </CardBackContext.Provider>
   );
 }

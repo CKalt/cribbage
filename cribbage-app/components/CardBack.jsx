@@ -172,11 +172,11 @@ export default function CardBack({ size = 'md', className = '' }) {
 
   const card = isFullcard ? (
     design.sceneImage ? (
-      <div className={`rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} onClick={handleTap}>
+      <div className={`rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} style={{ backgroundColor: design.bgHex || '#fef3c7' }} onClick={handleTap}>
         <img
           src={design.sceneImage}
           alt={design.name}
-          className="absolute inset-0 w-full h-full object-cover rounded"
+          className="absolute inset-0 w-full h-full object-contain rounded"
           draggable={false}
         />
       </div>

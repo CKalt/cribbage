@@ -56,10 +56,10 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
       {faceDown ? (
         <div
           className={`${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded relative overflow-hidden`}
-          style={{ width: w, height: h }}
+          style={{ width: w, height: h, ...(cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : {}) }}
         >
           {cardBack.sceneImage ? (
-            <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded" draggable={false} />
+            <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} />
           ) : (
             <>
               <div className="absolute inset-0 rounded" style={{ background: cardBack.pattern }} />
