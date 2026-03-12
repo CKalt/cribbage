@@ -3055,11 +3055,11 @@ export default function CribbageGame({ onLogout }) {
                           showCutAnimation={true}
                         />
                       ) : playerCutCard ? (
-                        <div style={{ height: 152 }} className="flex items-center justify-center">
+                        <div style={{ height: 140 }} className="flex items-center justify-center">
                           <div className="text-gray-500 animate-pulse">Cutting...</div>
                         </div>
                       ) : (
-                        <div style={{ height: 152 }} className="flex items-center justify-center">
+                        <div style={{ height: 140 }} className="flex items-center justify-center">
                           <div className="text-gray-600 text-sm">Waiting...</div>
                         </div>
                       )}
