@@ -55,7 +55,7 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
     >
       {faceDown ? (
         <div
-          className={`${cardBack.bg} border-2 ${cardBack.border} rounded relative overflow-hidden`}
+          className={`${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded relative overflow-hidden`}
           style={{ width: w, height: h }}
         >
           {cardBack.sceneImage ? (

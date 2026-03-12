@@ -1,14 +1,14 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b209-20260312';
+export const APP_VERSION = 'v0.3.0-b210-20260312';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Painting cards now show cream border + ornate frame with no extra CSS border
+- Auto-crop tooling removes white background, preserves artwork framing
 - Tap any face-down card for a full-screen preview
-- Painting images cropped to show pure artwork, no ornate frames
 - "In the style of" artist credits with mini biographies
 - During counting, non-active hands are dimmed so it's clear which hand to count
 - Yellow highlight stays visible during score feedback
-- 33 card back designs with full-card scenes
 
 Happy playing!`;
 

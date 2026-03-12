@@ -172,7 +172,7 @@ export default function CardBack({ size = 'md', className = '' }) {
 
   const card = isFullcard ? (
     design.sceneImage ? (
-      <div className={`${design.bg} ${s.border} ${design.border} rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} onClick={handleTap}>
+      <div className={`rounded ${s.outer} relative overflow-hidden cursor-pointer ${className}`} onClick={handleTap}>
         <img
           src={design.sceneImage}
           alt={design.name}

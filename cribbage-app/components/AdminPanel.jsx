@@ -236,7 +236,7 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                         >
                           {/* Card preview — tap to open full preview */}
                           <div
-                            className={`${design.bg} ${design.border} border-2 rounded mx-auto relative overflow-hidden cursor-pointer`}
+                            className={`${design.sceneImage ? '' : `${design.bg} ${design.border} border-2`} rounded mx-auto relative overflow-hidden cursor-pointer`}
                             style={{ width: '48px', height: '68px' }}
                             onClick={() => setPreviewDesign(design)}
                           >
