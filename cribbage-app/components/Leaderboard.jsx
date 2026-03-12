@@ -12,7 +12,17 @@ export default function Leaderboard({ isOpen, onClose }) {
   const [expertStats, setExpertStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('normal');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('leaderboardTab') || 'normal';
+    }
+    return 'normal';
+  });
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    localStorage.setItem('leaderboardTab', tab);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -73,7 +83,7 @@ export default function Leaderboard({ isOpen, onClose }) {
         {/* Tabs */}
         <div className="flex mb-3 border-b border-gray-600">
           <button
-            onClick={() => setActiveTab('normal')}
+            onClick={() => handleTabChange('normal')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'normal'
                 ? 'text-green-400 border-green-400'
@@ -83,7 +93,7 @@ export default function Leaderboard({ isOpen, onClose }) {
             Normal
           </button>
           <button
-            onClick={() => setActiveTab('expert')}
+            onClick={() => handleTabChange('expert')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'expert'
                 ? 'text-orange-400 border-orange-400'
