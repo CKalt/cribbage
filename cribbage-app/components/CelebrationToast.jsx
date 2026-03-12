@@ -37,7 +37,7 @@ export default function CelebrationToast({ phrase, animation, onDismiss }) {
     dismissedRef.current = false;
 
     // Auto-dismiss after display duration — use ref so timer doesn't reset on re-renders
-    const displayMs = animation ? Math.max(2500, animation.durationMs + 1000) : 2500;
+    const displayMs = animation ? Math.max(1800, animation.durationMs + 500) : 1800;
     const timer = setTimeout(dismiss, displayMs);
     return () => clearTimeout(timer);
   }, [phrase]); // Only re-run when phrase changes, not on every render
@@ -65,6 +65,7 @@ export default function CelebrationToast({ phrase, animation, onDismiss }) {
         `}
       >
         {phrase}
+        <div className="text-[10px] text-amber-400/50 mt-1">tap to dismiss</div>
       </div>
 
       {/* Score panel animation anchor — rendered but invisible, positioned near top */}
