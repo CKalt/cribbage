@@ -3480,8 +3480,8 @@ export default function CribbageGame({ onLogout }) {
                             }}>
                               {gameState === 'play' && peggingSelectedCard &&
                                peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
-                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10">
-                                  Click again to play, or another card to select
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10 pointer-events-none">
+                                  Tap again to play, or tap another card
                                 </div>
                               )}
                               <PlayingCard
