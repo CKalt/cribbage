@@ -41,6 +41,9 @@ import GameLobby from './GameLobby';
 import InviteFriend from './InviteFriend';
 import MultiplayerGame from './MultiplayerGame';
 import ProfileModal from './ProfileModal';
+import { CardBackContext } from './CardBackContext';
+import { CardBackPreview } from './CardBack';
+import { pickCardBack, getCardBackById } from '@/lib/cardBacks';
 import { APP_VERSION } from '@/lib/version';
 import { celebrateHand, celebratePegging, celebrateGameEnd, celebrateCut } from '@/lib/celebrations';
 import { getRequiredAction, actionRequiresButton } from '@/lib/gameActions';
@@ -69,6 +72,23 @@ export default function CribbageGame({ onLogout }) {
   const [showInvitationBanner, setShowInvitationBanner] = useState(true);
   const [acceptedGame, setAcceptedGame] = useState(null);
   // personalMessage state removed — now handled by VersionNotification
+
+  // Card back design — random per game, respects admin-disabled designs
+  const disabledCardBacksRef = useRef([]);
+  const [cardBack, setCardBack] = useState(() => pickCardBack(Date.now()));
+  const [showCardBackPreview, setShowCardBackPreview] = useState(false);
+
+  // Fetch disabled card back IDs on mount
+  useEffect(() => {
+    fetch('/api/admin/card-backs')
+      .then(r => r.json())
+      .then(data => {
+        if (data.disabledIds) {
+          disabledCardBacksRef.current = data.disabledIds;
+        }
+      })
+      .catch(() => {}); // non-critical, fall back to all designs
+  }, []);
 
   // Game flow state
   const [gameState, setGameState] = useState('menu');
@@ -256,7 +276,8 @@ export default function CribbageGame({ onLogout }) {
     return createGameStateSnapshot({
       gameState, dealer, currentPlayer, message,
       deck, playerHand, computerHand, crib, cutCard,
-      playerScore, computerScore, playerBackPeg, computerBackPeg, selectedCards,
+      playerScore, computerScore, playerBackPeg, computerBackPeg,
+      cardBackId: cardBack.id, selectedCards,
       playerPlayHand, computerPlayHand,
       playerPlayedCards, computerPlayedCards,
       allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
@@ -271,7 +292,8 @@ export default function CribbageGame({ onLogout }) {
   }, [
     gameState, dealer, currentPlayer, message,
     deck, playerHand, computerHand, crib, cutCard,
-    playerScore, computerScore, playerBackPeg, computerBackPeg, selectedCards,
+    playerScore, computerScore, playerBackPeg, computerBackPeg, cardBack,
+    selectedCards,
     playerPlayHand, computerPlayHand,
     playerPlayedCards, computerPlayedCards,
     allPlayedCards, currentCount, lastPlayedBy, lastGoPlayer,
@@ -530,6 +552,21 @@ export default function CribbageGame({ onLogout }) {
     if (restored.computerScore !== undefined) setComputerScore(restored.computerScore);
     if (restored.playerBackPeg !== undefined) setPlayerBackPeg(restored.playerBackPeg);
     if (restored.computerBackPeg !== undefined) setComputerBackPeg(restored.computerBackPeg);
+    // Restore card back design — use saved ID, or derive a stable one from game state
+    {
+      let restoredBack = null;
+      if (restored.cardBackId) {
+        restoredBack = getCardBackById(restored.cardBackId);
+      }
+      if (!restoredBack) {
+        const seed = (restored.dealer === 'player' ? 7 : 13) *
+          ((restored.playerHand || []).length + 1) *
+          ((restored.computerHand || []).length + 1) *
+          ((restored.deck || []).length + 1);
+        restoredBack = pickCardBack(seed, disabledCardBacksRef.current);
+      }
+      setCardBack(restoredBack);
+    }
     if (restored.selectedCards) setSelectedCards(restored.selectedCards);
     if (restored.playerPlayHand) setPlayerPlayHand(restored.playerPlayHand);
     if (restored.computerPlayHand) setComputerPlayHand(restored.computerPlayHand);
@@ -944,6 +981,7 @@ export default function CribbageGame({ onLogout }) {
 
   // Start new game
   const startNewGame = () => {
+    setCardBack(pickCardBack(Date.now(), disabledCardBacksRef.current));
     const newDeck = shuffleDeck(createDeck());
     setDeck(newDeck);
     setPlayerScore(0);
@@ -1040,7 +1078,7 @@ export default function CribbageGame({ onLogout }) {
         }
         // No auto-deal - wait for user to click button
       }, 1500);
-    }, 1200);
+    }, 2200); // Allow time for player's lift animation + deck reset
   };
 
   // Proceed to dealing after cut
@@ -1603,9 +1641,21 @@ export default function CribbageGame({ onLogout }) {
               setCurrentPlayer('player');
               setMessage('Your turn');
             } else if (otherPlayerHand.length > 0 && nextPlayer === 'computer') {
-              // Player has cards - let them play or say Go
-              setCurrentPlayer('player');
-              setMessage('Your turn');
+              // Computer's turn but can't play - computer says Go first
+              setLastGoPlayer('computer');
+              logGameEvent('COMPUTER_GO', { player: 'computer', currentCount: currentCount, remainingCards: nextPlayerHand.length });
+              setPeggingHistory(prev => [...prev, { type: 'go', player: 'computer', count: currentCount }]);
+              // Check if the player (other player) can actually play at this count
+              if (otherPlayerCanPlay) {
+                // Player has playable cards — their turn
+                setCurrentPlayer('player');
+                setMessage('Computer says "Go" - Your turn');
+              } else {
+                // Player also can't play — award last card point to whoever played last
+                setCurrentPlayer('player');
+                setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
+                setMessage(`Computer says "Go" - ${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
+              }
             } else if (lastPlayedBy) {
               // One or both players out of cards and neither can play - award last card directly
               // But first log the Go from whoever couldn't play
@@ -2753,6 +2803,19 @@ export default function CribbageGame({ onLogout }) {
   const playerCanPlay = playerPlayHand.some(card => currentCount + card.value <= 31);
 
   return (
+    <CardBackContext.Provider value={cardBack}>
+    <>
+    {flyingCard && (
+      <FlyingCard
+        key={`${flyingCard.card.rank}${flyingCard.card.suit}${flyingCard.faceDown ? '-fd' : ''}${flyingCard.className || ''}`}
+        card={flyingCard.card}
+        startRect={flyingCard.startRect}
+        endRect={flyingCard.endRect}
+        onComplete={flyingCard.onComplete}
+        faceDown={flyingCard.faceDown || false}
+        className={flyingCard.className || 'flying-card'}
+      />
+    )}
     <div className="min-h-screen bg-green-900 p-4">
       {/* Prominent Invitation Banner - shows when there are pending invitations */}
       {pendingInvitations.length > 0 && showInvitationBanner && !activeMultiplayerGameId && (
@@ -3196,46 +3259,55 @@ export default function CribbageGame({ onLogout }) {
                 <div className="mb-6">
                   <div className="text-lg mb-4">{message}</div>
 
-                  {/* Visual deck cut */}
-                  <div className="flex justify-center gap-12 mb-6">
-                    {/* Player's cut */}
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-2">Your cut</div>
+                  {/* Single centered deck — sequential cuts */}
+                  <div className="flex justify-center mb-4">
+                    {!computerCutCard ? (
+                      /* Phase 1 & 2: Player cuts, then deck resets for computer */
                       <DeckCut
                         onCut={playerCutDeck}
                         disabled={!!playerCutCard}
-                        label=""
-                        revealedCard={playerCutCard}
-                        showCutAnimation={!!playerCutCard}
+                        label={!playerCutCard ? '' : ''}
+                        revealedCard={playerCutCard && !computerCutCard ? playerCutCard : null}
+                        showCutAnimation={!!playerCutCard && !computerCutCard}
                       />
-                    </div>
-
-                    {/* Computer's cut */}
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-2">Computer's cut</div>
-                      {computerCutCard ? (
-                        <DeckCut
-                          disabled={true}
-                          label=""
-                          revealedCard={computerCutCard}
-                          showCutAnimation={true}
-                        />
-                      ) : playerCutCard ? (
-                        <div className="h-64 flex items-center justify-center">
-                          <div className="text-gray-500 animate-pulse">Cutting...</div>
-                        </div>
-                      ) : (
-                        <div className="h-64 flex items-center justify-center">
-                          <div className="text-gray-600 text-sm">Waiting for your cut</div>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      /* Phase 3: Computer cuts from the same deck */
+                      <DeckCut
+                        disabled={true}
+                        label=""
+                        revealedCard={computerCutCard}
+                        showCutAnimation={true}
+                      />
+                    )}
                   </div>
 
+                  {/* Result cards side by side once both have cut */}
                   {cutResultReady && (
-                    <Button onClick={proceedToDeal} className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3">
-                      {dealer === 'player' ? 'Deal the Cards' : 'Let Computer Deal'}
-                    </Button>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="flex justify-center gap-8">
+                        <div className="text-center">
+                          <div className={`rounded-lg shadow-lg flex items-center justify-center border-2 bg-white ${playerCutCard.suit === '♥' || playerCutCard.suit === '♦' ? 'text-red-600 border-red-300' : 'text-black border-gray-300'}`} style={{ width: 64, height: 90 }}>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{playerCutCard.rank}</div>
+                              <div className="text-xl">{playerCutCard.suit}</div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">Your cut</div>
+                        </div>
+                        <div className="text-center">
+                          <div className={`rounded-lg shadow-lg flex items-center justify-center border-2 bg-white ${computerCutCard.suit === '♥' || computerCutCard.suit === '♦' ? 'text-red-600 border-red-300' : 'text-black border-gray-300'}`} style={{ width: 64, height: 90 }}>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{computerCutCard.rank}</div>
+                              <div className="text-xl">{computerCutCard.suit}</div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">Computer's cut</div>
+                        </div>
+                      </div>
+                      <Button onClick={proceedToDeal} className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3">
+                        {dealer === 'player' ? 'Deal the Cards' : 'Let Computer Deal'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -3265,21 +3337,12 @@ export default function CribbageGame({ onLogout }) {
                   <div className="flex justify-center">
                     {dealer === 'player' ? (
                       // Computer is non-dealer, they cut - auto-cut after delay
-                      <div className="text-center">
-                        <DeckCut
-                          disabled={true}
-                          label="Computer is cutting..."
-                          revealedCard={pendingCutCard}
-                          showCutAnimation={!!pendingCutCard}
-                        />
-                        {!pendingCutCard && (
-                          <div className="mt-4">
-                            <div className="text-gray-400 animate-pulse">Computer is cutting the deck...</div>
-                            {/* Auto-trigger computer cut */}
-                            <script dangerouslySetInnerHTML={{ __html: '' }} />
-                          </div>
-                        )}
-                      </div>
+                      <DeckCut
+                        disabled={true}
+                        label={pendingCutCard ? '' : 'Computer is cutting...'}
+                        revealedCard={pendingCutCard}
+                        showCutAnimation={!!pendingCutCard}
+                      />
                     ) : (
                       // Player is non-dealer, they cut
                       <DeckCut
@@ -3459,20 +3522,16 @@ export default function CribbageGame({ onLogout }) {
                     counterIsComputer && computerClaimedScore !== null && handsCountedThisRound === 2;
                   // Keep border visible during entire crib reveal so the box never disappears
                   const showBorder = handHighlighted || cribHighlighted || showCribHere;
-                  // Dim this section when it's not the active hand during counting
-                  const computerIsDealer = dealer === 'computer';
-                  const dimmed = gameState === 'counting' && (
-                    (!showCribHere && (
-                      (handsCountedThisRound === 0 && computerIsDealer) ||
-                      (handsCountedThisRound === 1 && !computerIsDealer) ||
-                      handsCountedThisRound === 2
-                    )) ||
-                    (showCribHere && handsCountedThisRound < 2)
-                  );
+                  // Dim this section when counting and it's not the active hand
+                  const computerDimmed = gameState === 'counting' && !showCribHere && !handHighlighted && handsCountedThisRound < 3;
+                  const computerCribDimmed = gameState === 'counting' && showCribHere && !cribHighlighted && handsCountedThisRound < 3;
+                  const isDimmed = computerDimmed || computerCribDimmed;
                   return (
                   <div className={`mb-6 p-2 rounded transition-opacity duration-300 ${
+                    isDimmed ? 'opacity-30' : ''
+                  } ${
                     showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
-                  } ${dimmed ? 'opacity-30' : ''}`}>
+                  }`}>
                     <div className="text-sm mb-2">
                       {showCribHere ? "Crib (Computer's):" : gameState === 'dealing' ? "Computer's Hand:" : `Computer's Hand: ${gameState === 'play' ? `${computerPlayHand.length} cards` : ''}`}
                     </div>
@@ -3482,11 +3541,13 @@ export default function CribbageGame({ onLogout }) {
                         const remaining = Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length);
                         return remaining > 0 ? (
                         <div className="flex flex-col items-center">
-                          <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+                          <div ref={deckPileRef} className="relative cursor-pointer" style={{ width: '40px', height: '56px' }} onClick={() => setShowCardBackPreview(true)}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
-                              <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
-                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
-                              />
+                              <div key={i} className={`absolute ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded overflow-hidden flex items-center justify-center`}
+                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px`, ...(cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : {}) }}
+                              >
+                                {cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '40px', lineHeight: 1, transform: 'scaleY(1.4)' }}>{cardBack.centerIcon}</span>) : <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>}</>}
+                              </div>
                             ))}
                           </div>
                           <div className="text-[10px] text-gray-400 mt-4">Deck</div>
@@ -3497,17 +3558,17 @@ export default function CribbageGame({ onLogout }) {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
                         <div ref={cribPileRef} className="flex flex-col items-center">
-                          <div className="relative w-12 h-16">
+                          <div className="relative w-12 h-16 cursor-pointer" onClick={() => pileCount > 0 && setShowCardBackPreview(true)}>
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
                                 <span className="text-[10px] text-green-600">Crib</span>
                               </div>
                             ) : (
                               <>
-                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
-                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.type !== 'fullcard' ? cardBack.iconColor : ''}`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.33)' }}>{cardBack.centerIcon}</span>) : (<><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span><span className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1 }}>{cardBack.centerIcon}</span><span className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>{cardBack.centerIcon}</span></>)}</>}</div>}
                               </>
                             )}
                           </div>
@@ -3538,7 +3599,7 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
-                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-1">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
@@ -3614,21 +3675,17 @@ export default function CribbageGame({ onLogout }) {
                   );
                   const cribHighlighted = showCribHere && cribRevealPhase !== 'revealing' &&
                     !counterIsComputer && handsCountedThisRound === 2;
+                  // Dim this section when counting and it's not the active hand
+                  const playerDimmed = gameState === 'counting' && !showCribHere && !handHighlighted && handsCountedThisRound < 3;
+                  const playerCribDimmed = gameState === 'counting' && showCribHere && !cribHighlighted && handsCountedThisRound < 3;
                   const showBorder = handHighlighted || cribHighlighted || showCribHere;
-                  // Dim this section when it's not the active hand during counting
-                  const playerIsDealer = dealer === 'player';
-                  const dimmed = gameState === 'counting' && (
-                    (!showCribHere && (
-                      (handsCountedThisRound === 0 && playerIsDealer) ||
-                      (handsCountedThisRound === 1 && !playerIsDealer) ||
-                      handsCountedThisRound === 2
-                    )) ||
-                    (showCribHere && handsCountedThisRound < 2)
-                  );
+                  const isDimmed = playerDimmed || playerCribDimmed;
                   return (
                   <div className={`mb-6 p-2 rounded transition-opacity duration-300 ${
+                    isDimmed ? 'opacity-30' : ''
+                  } ${
                     showBorder ? 'bg-yellow-900/30 border-2 border-yellow-500' : ''
-                  } ${dimmed ? 'opacity-30' : ''}`}>
+                  }`}>
                     <div className="text-sm mb-2">
                       {showCribHere ? "Crib (Yours):" : gameState === 'dealing' ? 'Your Hand:' : `Your Hand: (${gameState === 'play' ? playerPlayHand.length : gameState === 'counting' ? 4 : playerHand.length} cards)`}
                     </div>
@@ -3654,8 +3711,8 @@ export default function CribbageGame({ onLogout }) {
                             }}>
                               {gameState === 'play' && peggingSelectedCard &&
                                peggingSelectedCard.rank === card.rank && peggingSelectedCard.suit === card.suit && (
-                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10">
-                                  Click again to play, or another card to select
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded shadow-lg border border-cyan-400/30 z-10 pointer-events-none">
+                                  Tap again to play, or tap another card
                                 </div>
                               )}
                               <PlayingCard
@@ -3697,7 +3754,7 @@ export default function CribbageGame({ onLogout }) {
                         </div>
                         {/* Crib cards - same grid cell so cell expands to fit both */}
                         {showCribHere && (
-                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-3">
+                          <div ref={cribDisplayRef} className="col-start-1 row-start-1 flex justify-center [&>*:not(:first-child)]:-ml-1">
                             {(cribRevealPhase === 'revealing' ? cribRevealedCards : crib).map((card, idx) => (
                               <div key={idx} style={{ marginTop: idx % 2 === 1 ? '4px' : '0' }}>
                                 <PlayingCard card={card} highlighted={cribHighlighted} />
@@ -3711,11 +3768,13 @@ export default function CribbageGame({ onLogout }) {
                         const remaining = Math.max(0, 12 - dealtPlayerCards.length - dealtComputerCards.length);
                         return remaining > 0 ? (
                         <div className="flex flex-col items-center">
-                          <div ref={deckPileRef} className="relative" style={{ width: '40px', height: '56px' }}>
+                          <div ref={deckPileRef} className="relative cursor-pointer" style={{ width: '40px', height: '56px' }} onClick={() => setShowCardBackPreview(true)}>
                             {Array.from({ length: Math.min(3, remaining) }).map((_, i) => (
-                              <div key={i} className="absolute bg-blue-900 border-2 border-blue-700 rounded"
-                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px` }}
-                              />
+                              <div key={i} className={`absolute ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded overflow-hidden flex items-center justify-center`}
+                                style={{ width: '40px', height: '56px', top: `${-i * 2}px`, left: `${i * 1}px`, ...(cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : {}) }}
+                              >
+                                {cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '40px', lineHeight: 1, transform: 'scaleY(1.4)' }}>{cardBack.centerIcon}</span>) : <span className={`relative ${cardBack.iconColor} select-none ${cardBack.centerIcon.length > 1 ? 'text-lg' : 'text-sm'}`}>{cardBack.centerIcon}</span>}</>}
+                              </div>
                             ))}
                           </div>
                           <div className="text-[10px] text-gray-400 mt-4">Deck</div>
@@ -3726,17 +3785,17 @@ export default function CribbageGame({ onLogout }) {
                         const pileCount = gameState === 'cribSelect' ? cribCardsInPile : 4;
                         return (
                         <div ref={cribPileRef} className="flex flex-col items-center">
-                          <div className="relative w-12 h-16">
+                          <div className="relative w-12 h-16 cursor-pointer" onClick={() => pileCount > 0 && setShowCardBackPreview(true)}>
                             {pileCount === 0 ? (
                               <div className="w-12 h-16 border-2 border-dashed border-green-600 rounded flex items-center justify-center">
                                 <span className="text-[10px] text-green-600">Crib</span>
                               </div>
                             ) : (
                               <>
-                                {pileCount >= 1 && <div className="absolute top-0 left-0 bg-blue-900 border-2 border-blue-700 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 2 && <div className="absolute top-1 left-0.5 bg-blue-800 border-2 border-blue-600 rounded w-12 h-16 shadow-md" />}
-                                {pileCount >= 3 && <div className="absolute top-2 left-1 bg-blue-700 border-2 border-blue-500 rounded w-12 h-16 shadow-lg" />}
-                                {pileCount >= 4 && <div className="absolute top-3 left-1.5 bg-blue-900 border-2 border-blue-400 rounded w-12 h-16 shadow-lg flex items-center justify-center font-bold text-xs text-blue-200">Crib</div>}
+                                {pileCount >= 1 && <div className={`absolute top-0 left-0 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 2 && <div className={`absolute top-1 left-0.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-md overflow-hidden opacity-90`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 3 && <div className={`absolute top-2 left-1 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden opacity-80`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <div className="absolute inset-0" style={{ background: cardBack.pattern }} />}</div>}
+                                {pileCount >= 4 && <div className={`absolute top-3 left-1.5 ${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded w-12 h-16 shadow-lg overflow-hidden flex items-center justify-center ${cardBack.type !== 'fullcard' ? cardBack.iconColor : ''}`} style={cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : undefined}>{cardBack.sceneImage ? <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} /> : <><div className="absolute inset-0" style={{ background: cardBack.pattern }} />{cardBack.type === 'fullcard' ? (cardBack.sceneSvg ? <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} /> : <span className="relative select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.33)' }}>{cardBack.centerIcon}</span>) : (<><span className={`relative select-none ${cardBack.centerIcon.length > 1 ? 'text-2xl' : 'text-base'}`}>{cardBack.centerIcon}</span><span className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1 }}>{cardBack.centerIcon}</span><span className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: cardBack.centerIcon.length > 1 ? '10px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>{cardBack.centerIcon}</span></>)}</>}</div>}
                               </>
                             )}
                           </div>
@@ -4051,5 +4110,8 @@ export default function CribbageGame({ onLogout }) {
         />
       )}
     </div>
+    </>
+    {showCardBackPreview && <CardBackPreview design={cardBack} onClose={() => setShowCardBackPreview(false)} />}
+    </CardBackContext.Provider>
   );
 }

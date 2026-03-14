@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useCardBack } from './CardBackContext';
 
 /**
  * Animated card overlay that flies from one position to another.
@@ -15,6 +16,7 @@ import { createPortal } from 'react-dom';
  */
 export default function FlyingCard({ card, startRect, endRect, onComplete, faceDown = false, className = 'flying-card' }) {
   const ref = useRef(null);
+  const cardBack = useCardBack();
 
   useEffect(() => {
     // Safety: if animation doesn't fire onAnimationEnd, clean up after timeout
@@ -31,6 +33,10 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
 
   const isRed = card.suit === '♥' || card.suit === '♦';
 
+  // Use explicit pixel dimensions for reliable rendering during animation
+  const w = startRect.width || 40;
+  const h = startRect.height || 56;
+
   const overlay = (
     <div
       ref={ref}
@@ -38,8 +44,8 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
       style={{
         top: startRect.top,
         left: startRect.left,
-        width: startRect.width,
-        height: startRect.height,
+        width: w,
+        height: h,
         '--fly-x': `${flyX}px`,
         '--fly-y': `${flyY}px`,
       }}
@@ -48,8 +54,24 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
       }}
     >
       {faceDown ? (
-        <div className="bg-blue-900 border-2 border-blue-700 text-blue-300 rounded w-full h-full flex items-center justify-center font-bold text-lg">
-          ?
+        <div
+          className={`${cardBack.sceneImage ? '' : `${cardBack.bg} border-2 ${cardBack.border}`} rounded relative overflow-hidden`}
+          style={{ width: w, height: h, ...(cardBack.sceneImage ? { backgroundColor: cardBack.bgHex || '#fef3c7' } : {}) }}
+        >
+          {cardBack.sceneImage ? (
+            <img src={cardBack.sceneImage} alt="" className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} />
+          ) : (
+            <>
+              <div className="absolute inset-0 rounded" style={{ background: cardBack.pattern }} />
+              {cardBack.sceneSvg ? (
+                <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: cardBack.sceneSvg }} />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center select-none" style={{ fontSize: '20px', lineHeight: 1 }}>
+                  <span className={cardBack.iconColor}>{cardBack.centerIcon}</span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <div className={`bg-white rounded p-2 text-xl font-bold w-full h-full flex items-center justify-center ${

@@ -4,39 +4,39 @@ const nextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  // Disable static asset caching to ensure version updates are seen immediately
   generateBuildId: async () => {
-    // Use timestamp as build ID to bust cache on every deploy
+    // Timestamp build ID ensures JS/CSS chunks are unique per deploy
     return `build-${Date.now()}`;
   },
   async headers() {
     return [
       {
-        // Apply to all routes
-        source: '/:path*',
+        // Static images — cache aggressively (30 days)
+        // These change rarely; when they do, filenames change or build ID busts cache
+        source: '/card-backs/:path*',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
-          },
+          { key: 'Cache-Control', value: 'public, max-age=2592000, immutable' },
         ],
       },
       {
-        // Specifically target Next.js static chunks
+        // Next.js build chunks — immutable because build ID makes URLs unique per deploy
         source: '/_next/static/:path*',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        // API routes — never cache
+        source: '/api/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+        ],
+      },
+      {
+        // HTML pages — no cache so version checks and updates work immediately
+        source: '/',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
         ],
       },
     ];

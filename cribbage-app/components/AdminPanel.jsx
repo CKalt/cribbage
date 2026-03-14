@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { getAllCardBacks } from '@/lib/cardBacks';
+import { CardBackPreview } from './CardBack';
 
 /**
  * Admin Panel - shows game stats and bug reports for all users
@@ -17,6 +19,9 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
+  const [disabledCardBacks, setDisabledCardBacks] = useState([]);
+  const [previewDesign, setPreviewDesign] = useState(null);
+  const [cardBacksLoading, setCardBacksLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -27,6 +32,8 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
         fetchReports();
       } else if (activeTab === 'multiplayer') {
         fetchMultiplayer();
+      } else if (activeTab === 'cardbacks') {
+        fetchDisabledCardBacks();
       }
     }
   }, [isOpen, activeTab]);
@@ -106,6 +113,41 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
     }
   };
 
+  const fetchDisabledCardBacks = async () => {
+    setCardBacksLoading(true);
+    try {
+      const response = await fetch(`/api/admin/card-backs?email=${encodeURIComponent(userEmail)}`);
+      const data = await response.json();
+      if (data.success) {
+        setDisabledCardBacks(data.disabledIds || []);
+      }
+    } catch (err) {
+      console.error('Error fetching card back config:', err);
+    } finally {
+      setCardBacksLoading(false);
+    }
+  };
+
+  const toggleCardBack = async (cardBackId, currentlyDisabled) => {
+    try {
+      const response = await fetch('/api/admin/card-backs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          cardBackId,
+          disabled: !currentlyDisabled,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDisabledCardBacks(data.disabledIds);
+      }
+    } catch (err) {
+      console.error('Error toggling card back:', err);
+    }
+  };
+
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Never';
     const date = new Date(timestamp);
@@ -174,6 +216,16 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
           >
             Multiplayer
           </button>
+          <button
+            onClick={() => setActiveTab('cardbacks')}
+            className={`px-3 py-1 text-sm rounded ${
+              activeTab === 'cardbacks'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Card Backs
+          </button>
         </div>
 
         {/* Content */}
@@ -212,6 +264,97 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                     ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+          ) : activeTab === 'cardbacks' ? (
+            /* Card Backs Tab */
+            <div>
+              {cardBacksLoading ? (
+                <div className="text-gray-400 text-center py-8">Loading...</div>
+              ) : (
+                <>
+                  <div className="text-gray-400 text-xs mb-3">
+                    {getAllCardBacks().length} designs total — {getAllCardBacks().length - disabledCardBacks.length} enabled
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {getAllCardBacks().map(design => {
+                      const isDisabled = disabledCardBacks.includes(design.id);
+                      const isEmoji = design.centerIcon && design.centerIcon.length > 1;
+                      return (
+                        <div
+                          key={design.id}
+                          className={`relative rounded-lg p-2 border-2 transition-all ${
+                            isDisabled
+                              ? 'border-red-500/50 opacity-40 grayscale'
+                              : 'border-green-500/50'
+                          }`}
+                        >
+                          {/* Card preview — tap to open full preview */}
+                          <div
+                            className={`${design.sceneImage ? '' : `${design.bg} ${design.border} border-2`} rounded mx-auto relative overflow-hidden cursor-pointer`}
+                            style={{ width: '48px', height: '68px', ...(design.sceneImage ? { backgroundColor: design.bgHex || '#fef3c7' } : {}) }}
+                            onClick={() => setPreviewDesign(design)}
+                          >
+                            {design.sceneImage ? (
+                              <img src={design.sceneImage} alt={design.name} className="absolute inset-0 w-full h-full object-contain rounded" draggable={false} />
+                            ) : (<>
+                            <div
+                              className="absolute inset-0 rounded"
+                              style={{ background: design.pattern }}
+                            />
+                            <div
+                              className="absolute rounded"
+                              style={{
+                                top: '4px', left: '4px', right: '4px', bottom: '4px',
+                                border: `1px solid ${design.accentColor}`,
+                              }}
+                            />
+                            {design.type === 'fullcard' ? (
+                              design.sceneSvg ? (
+                                <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center select-none" style={{ fontSize: '48px', lineHeight: 1, transform: 'scaleY(1.42)' }}>
+                                  {design.centerIcon}
+                                </div>
+                              )
+                            ) : (
+                              <>
+                                <div className={`absolute inset-0 flex items-center justify-center ${design.iconColor} ${isEmoji ? 'text-lg' : 'text-sm'} font-bold select-none`}>
+                                  {design.centerIcon}
+                                </div>
+                                <div className="absolute top-0.5 left-0.5 select-none" style={{ fontSize: isEmoji ? '9px' : '6px', lineHeight: 1 }}>
+                                  {design.centerIcon}
+                                </div>
+                                <div className="absolute bottom-0.5 right-0.5 select-none" style={{ fontSize: isEmoji ? '9px' : '6px', lineHeight: 1, transform: 'rotate(180deg)' }}>
+                                  {design.centerIcon}
+                                </div>
+                              </>
+                            )}
+                            </>)}
+                          </div>
+                          <div className="text-white text-xs mt-1 text-center truncate">
+                            {design.name}
+                          </div>
+                          {/* Enable/disable toggle */}
+                          <button
+                            onClick={() => toggleCardBack(design.id, isDisabled)}
+                            className={`mt-1 w-full text-[10px] py-0.5 rounded transition-colors ${
+                              isDisabled
+                                ? 'bg-red-900/50 text-red-300 hover:bg-red-800/50'
+                                : 'bg-green-900/50 text-green-300 hover:bg-green-800/50'
+                            }`}
+                          >
+                            {isDisabled ? 'Disabled' : 'Enabled'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {previewDesign && <CardBackPreview design={previewDesign} onClose={() => setPreviewDesign(null)} />}
+                  <div className="text-gray-500 text-xs mt-3 text-center">
+                    Tap card to preview — use button to enable/disable
+                  </div>
+                </>
               )}
             </div>
           ) : activeTab === 'reports' ? (

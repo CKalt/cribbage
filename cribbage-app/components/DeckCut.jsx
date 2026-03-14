@@ -1,280 +1,261 @@
 'use client';
 
-// DeckCut Component - Visual deck cutting experience
+// DeckCut Component — Lift-and-reveal deck cutting experience
+// Shows a large card-back stack. On tap, top portion lifts to reveal cut card.
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useCardBack } from './CardBackContext';
 
 /**
- * Visual deck that player can cut by tapping
- * @param {Function} onCut - Callback with cut position (0-1) and resulting card
- * @param {boolean} disabled - Whether cutting is disabled
- * @param {string} label - Label text (e.g., "Cut for dealer")
- * @param {Object} revealedCard - Card to show after cut (null before cut)
- * @param {boolean} showCutAnimation - Whether to show the cut animation
+ * Renders the card back design at a custom size (larger than CardBack component supports).
+ * Replicates the rendering logic from CardBack.jsx for all card types.
  */
-export default function DeckCut({
-  onCut,
-  disabled = false,
-  label = "Tap the deck to cut",
-  revealedCard = null,
-  showCutAnimation = false
-}) {
-  const [cutPosition, setCutPosition] = useState(null); // 0-1 representing where user tapped
-  const [isAnimating, setIsAnimating] = useState(false);
-  const deckRef = useRef(null);
+function DeckCardFace({ width = 120, height = 168 }) {
+  const design = useCardBack();
+  const isFullcard = design.type === 'fullcard' || design.type === 'painting';
+  const isEmoji = design.centerIcon && design.centerIcon.length > 1;
 
-  // Reset internal state when revealedCard is cleared (e.g., for re-cutting after tie)
-  useEffect(() => {
-    if (revealedCard === null && !showCutAnimation) {
-      setCutPosition(null);
-      setIsAnimating(false);
-    }
-  }, [revealedCard, showCutAnimation]);
+  const baseClasses = 'rounded-lg overflow-hidden relative';
 
-  // For externally-triggered animations (e.g., computer's cut), sync state with prop
-  const showAnimation = isAnimating || showCutAnimation;
-  const effectiveCutPosition = cutPosition !== null ? cutPosition : (showCutAnimation ? 0.5 : null);
-
-  const handleDeckClick = (e) => {
-    if (disabled || isAnimating || cutPosition !== null) return;
-
-    const rect = deckRef.current.getBoundingClientRect();
-    const clickY = e.clientY - rect.top;
-    const position = clickY / rect.height; // 0 = top, 1 = bottom
-
-    // Clamp to reasonable cut range (10%-90% of deck)
-    const clampedPosition = Math.max(0.1, Math.min(0.9, position));
-
-    setCutPosition(clampedPosition);
-    setIsAnimating(true);
-
-    // Trigger callback after animation starts
-    setTimeout(() => {
-      if (onCut) {
-        onCut(clampedPosition);
-      }
-    }, 300);
-  };
-
-  // Calculate how many cards in top/bottom portions based on cut
-  const topCards = effectiveCutPosition ? Math.round(effectiveCutPosition * 40) : 0;
-  const bottomCards = effectiveCutPosition ? 40 - topCards : 40;
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="text-sm text-gray-400 mb-4">{label}</div>
-
-      {/* Deck container */}
-      <div className="relative h-64 flex flex-col items-center justify-center">
-
-        {/* Top portion (after cut) */}
-        {effectiveCutPosition !== null && (
-          <div
-            className={`
-              absolute transition-all duration-500 ease-out
-              ${showAnimation ? 'opacity-100' : 'opacity-0'}
-            `}
-            style={{
-              top: '0px',
-              transform: showAnimation ? 'translateY(-20px) rotate(-3deg)' : 'translateY(0)',
-            }}
-          >
-            <div className="relative">
-              {/* Stack of cards - top portion */}
-              {Array.from({ length: Math.min(topCards, 15) }).map((_, i) => (
-                <div
-                  key={`top-${i}`}
-                  className="absolute bg-blue-800 border border-blue-600 rounded-sm"
-                  style={{
-                    width: '80px',
-                    height: '4px',
-                    top: `${i * 2}px`,
-                    left: `${i * 0.3}px`,
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Revealed card */}
-        {revealedCard && showAnimation && (
-          <div
-            className="absolute z-10 transition-all duration-700 ease-out"
-            style={{
-              top: '50%',
-              transform: 'translateY(-50%)',
-            }}
-          >
-            <div
-              className={`
-                w-20 h-28 bg-white rounded-lg shadow-xl
-                flex items-center justify-center
-                text-2xl font-bold
-                border-2 border-yellow-400
-                animate-card-reveal
-                ${revealedCard.suit === '♥' || revealedCard.suit === '♦' ? 'text-red-600' : 'text-black'}
-              `}
-            >
-              <div className="text-center">
-                <div className="text-3xl">{revealedCard.rank}</div>
-                <div className="text-2xl">{revealedCard.suit}</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Main deck / Bottom portion */}
-        <div
-          ref={deckRef}
-          onClick={handleDeckClick}
-          className={`
-            relative cursor-pointer transition-all duration-300
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
-            ${effectiveCutPosition !== null ? 'translate-y-8' : ''}
-          `}
-          style={{
-            width: '100px',
-            height: effectiveCutPosition !== null ? '80px' : '160px',
-          }}
-        >
-          {/* Card stack visual */}
-          {Array.from({ length: effectiveCutPosition !== null ? Math.min(bottomCards, 20) : 40 }).map((_, i) => (
-            <div
-              key={`card-${i}`}
-              className={`
-                absolute bg-gradient-to-br from-blue-700 to-blue-900
-                border border-blue-500 rounded-sm
-                ${!disabled && effectiveCutPosition === null ? 'hover:from-blue-600 hover:to-blue-800' : ''}
-              `}
-              style={{
-                width: '80px',
-                height: '4px',
-                top: `${i * 3}px`,
-                left: `${i * 0.5}px`,
-                boxShadow: i === (effectiveCutPosition !== null ? Math.min(bottomCards, 20) : 40) - 1
-                  ? '0 4px 8px rgba(0,0,0,0.4)'
-                  : '0 1px 2px rgba(0,0,0,0.2)',
-              }}
-            />
-          ))}
-
-          {/* Deck back design overlay */}
-          {effectiveCutPosition === null && !disabled && (
-            <div
-              className="absolute inset-0 pointer-events-none flex items-center justify-center"
-              style={{ top: '40px' }}
-            >
-              <div className="text-blue-400 text-xs font-bold opacity-50">
-                TAP TO CUT
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Cut indicator line on hover */}
-        {!disabled && effectiveCutPosition === null && (
-          <div className="absolute inset-0 pointer-events-none">
-            <div
-              className="absolute left-0 right-0 h-0.5 bg-yellow-400 opacity-0 hover:opacity-100 transition-opacity"
-              style={{ top: '50%' }}
-            />
-          </div>
-        )}
+  // Painting (sceneImage)
+  if (design.sceneImage) {
+    return (
+      <div
+        className={baseClasses}
+        style={{ width, height, backgroundColor: design.bgHex || '#fef3c7' }}
+      >
+        <img
+          src={design.sceneImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-contain rounded-lg"
+          draggable={false}
+        />
       </div>
+    );
+  }
 
-      {/* Instructions */}
-      {effectiveCutPosition === null && !disabled && (
-        <div className="text-xs text-gray-500 mt-4">
-          Tap anywhere on the deck to cut
+  // Fullcard with SVG scene
+  if (isFullcard && design.sceneSvg) {
+    return (
+      <div
+        className={baseClasses}
+        style={{ width, height, backgroundColor: design.bgHex, border: `2px solid ${design.borderHex}` }}
+      >
+        <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+        <div className="absolute inset-0" dangerouslySetInnerHTML={{ __html: design.sceneSvg }} />
+      </div>
+    );
+  }
+
+  // Fullcard with large center icon (e.g., fireworks)
+  if (isFullcard) {
+    return (
+      <div
+        className={baseClasses}
+        style={{ width, height, backgroundColor: design.bgHex, border: `2px solid ${design.borderHex}` }}
+      >
+        <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+        <div
+          className="absolute inset-0 flex items-center justify-center select-none"
+          style={{ fontSize: '72px', lineHeight: 1, transform: 'scaleY(1.3)' }}
+        >
+          {design.centerIcon}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Inline styles for animations */}
-      <style jsx>{`
-        @keyframes card-reveal {
-          0% {
-            transform: translateY(-50%) scale(0.5) rotateY(180deg);
-            opacity: 0;
-          }
-          50% {
-            transform: translateY(-50%) scale(1.1) rotateY(90deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(-50%) scale(1) rotateY(0deg);
-            opacity: 1;
-          }
-        }
-
-        .animate-card-reveal {
-          animation: card-reveal 0.6s ease-out forwards;
-          animation-delay: 0.3s;
-          opacity: 0;
-        }
-      `}</style>
+  // Standard icon type — pattern + center icon + corners
+  return (
+    <div
+      className={baseClasses}
+      style={{ width, height, backgroundColor: design.bgHex, border: `2px solid ${design.borderHex}` }}
+    >
+      <div className="absolute inset-0 rounded-lg" style={{ background: design.pattern }} />
+      <div
+        className="absolute rounded-lg"
+        style={{
+          top: 4, left: 4, right: 4, bottom: 4,
+          border: `1px solid ${design.accentColor}`,
+        }}
+      />
+      <div
+        className={`absolute inset-0 flex items-center justify-center select-none ${design.iconColor}`}
+        style={{ fontSize: isEmoji ? '36px' : '28px', fontWeight: 'bold' }}
+      >
+        {design.centerIcon}
+      </div>
+      <div className="absolute top-1 left-1.5 select-none" style={{ fontSize: isEmoji ? '16px' : '10px', lineHeight: 1 }}>
+        {design.centerIcon}
+      </div>
+      <div className="absolute bottom-1 right-1.5 select-none" style={{ fontSize: isEmoji ? '16px' : '10px', lineHeight: 1, transform: 'rotate(180deg)' }}>
+        {design.centerIcon}
+      </div>
     </div>
   );
 }
 
 /**
- * Side-by-side deck cuts for initial dealer determination
+ * A revealed playing card face (rank + suit on white background)
  */
-export function DualDeckCut({
-  onPlayerCut,
-  playerCard,
-  computerCard,
+function RevealedCard({ card, className = '' }) {
+  if (!card) return null;
+  const isRed = card.suit === '♥' || card.suit === '♦';
+  return (
+    <div
+      className={`rounded-lg shadow-xl flex items-center justify-center border-2 border-yellow-400 bg-white ${isRed ? 'text-red-600' : 'text-black'} ${className}`}
+      style={{ width: 80, height: 112 }}
+    >
+      <div className="text-center">
+        <div className="text-3xl font-bold">{card.rank}</div>
+        <div className="text-2xl">{card.suit}</div>
+      </div>
+    </div>
+  );
+}
+
+// Deck dimensions
+const DECK_W = 120;
+const DECK_H = 168;
+
+/**
+ * Visual deck that player can cut by tapping.
+ * Shows a 3D card stack. On tap, top portion lifts to reveal the cut card.
+ */
+export default function DeckCut({
+  onCut,
   disabled = false,
-  message
+  label = '',
+  revealedCard = null,
+  showCutAnimation = false
 }) {
-  const [playerHasCut, setPlayerHasCut] = useState(false);
-  const [showComputer, setShowComputer] = useState(false);
+  const [hasCut, setHasCut] = useState(false);
+  const [liftPhase, setLiftPhase] = useState('idle'); // idle | lifting | lifted | fading | done
+  const cardBack = useCardBack();
 
-  const handlePlayerCut = (position) => {
-    setPlayerHasCut(true);
+  // Reset when revealedCard is cleared (e.g., deck reset between dealer cuts)
+  useEffect(() => {
+    if (revealedCard === null && !showCutAnimation) {
+      setHasCut(false);
+      setLiftPhase('idle');
+    }
+  }, [revealedCard, showCutAnimation]);
 
-    // Trigger computer cut after player
-    setTimeout(() => {
-      setShowComputer(true);
-      if (onPlayerCut) {
-        onPlayerCut(position);
-      }
-    }, 800);
+  // When showCutAnimation is triggered externally (computer cut), start the lift
+  useEffect(() => {
+    if (showCutAnimation && !hasCut) {
+      startCutAnimation();
+    }
+  }, [showCutAnimation]);
+
+  const startCutAnimation = () => {
+    setHasCut(true);
+    setLiftPhase('lifting');
+    // Lift phase: top portion rises
+    setTimeout(() => setLiftPhase('lifted'), 50); // trigger CSS transition
+    // Fade phase: lifted portion starts fading
+    setTimeout(() => setLiftPhase('fading'), 600);
+    // Done: lifted portion gone
+    setTimeout(() => setLiftPhase('done'), 1000);
   };
+
+  const handleDeckClick = () => {
+    if (disabled || hasCut) return;
+    startCutAnimation();
+    // Trigger the onCut callback after a brief delay
+    setTimeout(() => {
+      if (onCut) onCut(0.4 + Math.random() * 0.2);
+    }, 400);
+  };
+
+  const isLifted = liftPhase === 'lifted' || liftPhase === 'fading' || liftPhase === 'done';
+  const showRevealedCard = hasCut && revealedCard;
 
   return (
     <div className="flex flex-col items-center">
-      {message && (
-        <div className="text-lg text-white mb-6">{message}</div>
-      )}
+      {label && <div className="text-sm text-gray-400 mb-3">{label}</div>}
 
-      <div className="flex justify-center gap-12">
-        {/* Player's cut */}
-        <div className="text-center">
-          <div className="text-sm text-gray-400 mb-2">Your cut</div>
-          <DeckCut
-            onCut={handlePlayerCut}
-            disabled={disabled || playerHasCut}
-            label=""
-            revealedCard={playerCard}
-            showCutAnimation={playerHasCut}
-          />
-        </div>
+      {/* Main container — holds deck + lifted portion + revealed card */}
+      <div
+        className="relative"
+        style={{ width: DECK_W, height: DECK_H + 90 }}
+      >
+        {/* Lifted top portion — rises up and fades */}
+        {hasCut && liftPhase !== 'idle' && liftPhase !== 'done' && (
+          <div
+            className="absolute left-0 z-20 pointer-events-none"
+            style={{
+              width: DECK_W,
+              height: DECK_H,
+              top: 0,
+              transition: 'all 0.5s ease-out',
+              transform: isLifted ? 'translateY(-70px) rotateZ(-6deg)' : 'translateY(0) rotateZ(0)',
+              opacity: liftPhase === 'fading' ? 0 : (isLifted ? 0.7 : 1),
+            }}
+          >
+            <DeckCardFace width={DECK_W} height={DECK_H} />
+          </div>
+        )}
 
-        {/* Computer's cut */}
-        <div className="text-center">
-          <div className="text-sm text-gray-400 mb-2">Computer's cut</div>
-          {showComputer ? (
-            <DeckCut
-              disabled={true}
-              label=""
-              revealedCard={computerCard}
-              showCutAnimation={true}
+        {/* Revealed card — fades in from the gap */}
+        {showRevealedCard && (
+          <div
+            className="absolute z-30 flex justify-center"
+            style={{
+              left: (DECK_W - 80) / 2,
+              top: 10,
+              transition: 'all 0.4s ease-out',
+              transitionDelay: '0.3s',
+              opacity: isLifted ? 1 : 0,
+              transform: isLifted ? 'scale(1)' : 'scale(0.85)',
+            }}
+          >
+            <RevealedCard card={revealedCard} />
+          </div>
+        )}
+
+        {/* Bottom deck — stays in place, shifts down slightly after cut */}
+        <div
+          onClick={handleDeckClick}
+          className={`
+            absolute left-0 transition-all duration-500
+            ${disabled ? 'opacity-60 cursor-not-allowed' : hasCut ? '' : 'cursor-pointer active:scale-[0.97]'}
+          `}
+          style={{
+            top: hasCut ? 130 : 0,
+            width: DECK_W,
+            height: DECK_H,
+          }}
+        >
+          {/* 3D depth layers */}
+          {[6, 5, 4, 3, 2, 1].map((i) => (
+            <div
+              key={i}
+              className="absolute rounded-lg"
+              style={{
+                width: DECK_W,
+                height: DECK_H,
+                backgroundColor: cardBack.bgHex || '#333',
+                border: `1px solid ${cardBack.borderHex || '#555'}`,
+                top: `${i * 1.5}px`,
+                left: `${i * 0.7}px`,
+                opacity: 0.3 + i * 0.05,
+                boxShadow: i === 6 ? '4px 6px 16px rgba(0,0,0,0.5)' : 'none',
+              }}
             />
-          ) : (
-            <div className="h-64 flex items-center justify-center">
-              <div className="text-gray-600 text-sm">Waiting...</div>
+          ))}
+
+          {/* Top card face */}
+          <div className="absolute top-0 left-0" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+            <DeckCardFace width={DECK_W} height={DECK_H} />
+          </div>
+
+          {/* Tap prompt */}
+          {!disabled && !hasCut && (
+            <div className="absolute z-10 flex items-end justify-center pointer-events-none" style={{ top: 0, left: 0, width: DECK_W, height: DECK_H, paddingBottom: 8 }}>
+              <div className="text-[10px] font-bold tracking-widest text-white/80 bg-black/40 px-3 py-1 rounded">
+                TAP TO CUT
+              </div>
             </div>
           )}
         </div>
