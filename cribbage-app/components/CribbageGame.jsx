@@ -1021,7 +1021,7 @@ export default function CribbageGame({ onLogout }) {
         }
         // No auto-deal - wait for user to click button
       }, 1500);
-    }, 1200);
+    }, 2200); // Allow time for player's lift animation + deck reset
   };
 
   // Proceed to dealing after cut
@@ -3030,46 +3030,55 @@ export default function CribbageGame({ onLogout }) {
                 <div className="mb-6">
                   <div className="text-lg mb-4">{message}</div>
 
-                  {/* Visual deck cut */}
-                  <div className="flex justify-center gap-12 mb-6">
-                    {/* Player's cut */}
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-2">Your cut</div>
+                  {/* Single centered deck — sequential cuts */}
+                  <div className="flex justify-center mb-4">
+                    {!computerCutCard ? (
+                      /* Phase 1 & 2: Player cuts, then deck resets for computer */
                       <DeckCut
                         onCut={playerCutDeck}
                         disabled={!!playerCutCard}
-                        label=""
-                        revealedCard={playerCutCard}
-                        showCutAnimation={!!playerCutCard}
+                        label={!playerCutCard ? '' : ''}
+                        revealedCard={playerCutCard && !computerCutCard ? playerCutCard : null}
+                        showCutAnimation={!!playerCutCard && !computerCutCard}
                       />
-                    </div>
-
-                    {/* Computer's cut */}
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-2">Computer's cut</div>
-                      {computerCutCard ? (
-                        <DeckCut
-                          disabled={true}
-                          label=""
-                          revealedCard={computerCutCard}
-                          showCutAnimation={true}
-                        />
-                      ) : playerCutCard ? (
-                        <div style={{ height: 140 }} className="flex items-center justify-center">
-                          <div className="text-gray-500 animate-pulse">Cutting...</div>
-                        </div>
-                      ) : (
-                        <div style={{ height: 140 }} className="flex items-center justify-center">
-                          <div className="text-gray-600 text-sm">Waiting...</div>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      /* Phase 3: Computer cuts from the same deck */
+                      <DeckCut
+                        disabled={true}
+                        label=""
+                        revealedCard={computerCutCard}
+                        showCutAnimation={true}
+                      />
+                    )}
                   </div>
 
+                  {/* Result cards side by side once both have cut */}
                   {cutResultReady && (
-                    <Button onClick={proceedToDeal} className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3">
-                      {dealer === 'player' ? 'Deal the Cards' : 'Let Computer Deal'}
-                    </Button>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="flex justify-center gap-8">
+                        <div className="text-center">
+                          <div className={`rounded-lg shadow-lg flex items-center justify-center border-2 bg-white ${playerCutCard.suit === '♥' || playerCutCard.suit === '♦' ? 'text-red-600 border-red-300' : 'text-black border-gray-300'}`} style={{ width: 64, height: 90 }}>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{playerCutCard.rank}</div>
+                              <div className="text-xl">{playerCutCard.suit}</div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">Your cut</div>
+                        </div>
+                        <div className="text-center">
+                          <div className={`rounded-lg shadow-lg flex items-center justify-center border-2 bg-white ${computerCutCard.suit === '♥' || computerCutCard.suit === '♦' ? 'text-red-600 border-red-300' : 'text-black border-gray-300'}`} style={{ width: 64, height: 90 }}>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{computerCutCard.rank}</div>
+                              <div className="text-xl">{computerCutCard.suit}</div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">Computer's cut</div>
+                        </div>
+                      </div>
+                      <Button onClick={proceedToDeal} className="bg-green-600 hover:bg-green-700 text-lg px-6 py-3">
+                        {dealer === 'player' ? 'Deal the Cards' : 'Let Computer Deal'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -3099,21 +3108,12 @@ export default function CribbageGame({ onLogout }) {
                   <div className="flex justify-center">
                     {dealer === 'player' ? (
                       // Computer is non-dealer, they cut - auto-cut after delay
-                      <div className="text-center">
-                        <DeckCut
-                          disabled={true}
-                          label="Computer is cutting..."
-                          revealedCard={pendingCutCard}
-                          showCutAnimation={!!pendingCutCard}
-                        />
-                        {!pendingCutCard && (
-                          <div className="mt-4">
-                            <div className="text-gray-400 animate-pulse">Computer is cutting the deck...</div>
-                            {/* Auto-trigger computer cut */}
-                            <script dangerouslySetInnerHTML={{ __html: '' }} />
-                          </div>
-                        )}
-                      </div>
+                      <DeckCut
+                        disabled={true}
+                        label={pendingCutCard ? '' : 'Computer is cutting...'}
+                        revealedCard={pendingCutCard}
+                        showCutAnimation={!!pendingCutCard}
+                      />
                     ) : (
                       // Player is non-dealer, they cut
                       <DeckCut
