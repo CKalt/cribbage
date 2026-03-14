@@ -1589,9 +1589,17 @@ export default function CribbageGame({ onLogout }) {
               setLastGoPlayer('computer');
               logGameEvent('COMPUTER_GO', { player: 'computer', currentCount: currentCount, remainingCards: nextPlayerHand.length });
               setPeggingHistory(prev => [...prev, { type: 'go', player: 'computer', count: currentCount }]);
-              // Now player's turn - they also can't play, so they'll need to say Go too
-              setCurrentPlayer('player');
-              setMessage('Computer says "Go" - Your turn');
+              // Check if the player (other player) can actually play at this count
+              if (otherPlayerCanPlay) {
+                // Player has playable cards — their turn
+                setCurrentPlayer('player');
+                setMessage('Computer says "Go" - Your turn');
+              } else {
+                // Player also can't play — award last card point to whoever played last
+                setCurrentPlayer('player');
+                setPendingScore({ player: lastPlayedBy, points: 1, reason: 'One for last card' });
+                setMessage(`Computer says "Go" - ${lastPlayedBy === 'player' ? 'You get' : 'Computer gets'} 1 point for last card - Click Accept`);
+              }
             } else if (lastPlayedBy) {
               // One or both players out of cards and neither can play - award last card directly
               // But first log the Go from whoever couldn't play
