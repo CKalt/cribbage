@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCardBack } from './CardBackContext';
-import { DeckCardFace, RevealedCard } from './DeckCut';
+import { DeckCardFace, RevealedCard } from './DeckCutShared';
 
 // Shared lift animation hook
 function useLiftAnimation({ revealedCard, showCutAnimation, onCut }) {
