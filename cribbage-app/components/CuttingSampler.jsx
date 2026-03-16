@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { CardBackContext } from './CardBackContext';
 import { pickCardBack } from '@/lib/cardBacks';
-import { AngledDeck, SideEdgeDeck, IsometricDeck } from './DeckCutVariants';
+import { AngledDeck, SideEdgeDeck, IsometricDeck, BookOpenDeck } from './DeckCutVariants';
 import DeckCut from './DeckCut';
 
 const STYLE_KEY = 'cribbage-deckcut-style';
@@ -22,6 +22,7 @@ function randomCard() {
 }
 
 const VARIANTS = [
+  { id: 'book-open', name: 'Book Open', description: 'Deck splits and top flips over to reveal card' },
   { id: 'classic', name: 'Classic', description: 'Current style — offset depth layers' },
   { id: 'angled', name: 'Angled Perspective', description: 'CSS 3D tilt with card-edge layers' },
   { id: 'side-edge', name: 'Side Edge', description: 'Visible card-edge band below face' },
@@ -43,7 +44,8 @@ function VariantPreview({ variant, isActive, onSelect }) {
     setShowAnimation(false);
   };
 
-  const Component = variant.id === 'angled' ? AngledDeck
+  const Component = variant.id === 'book-open' ? BookOpenDeck
+    : variant.id === 'angled' ? AngledDeck
     : variant.id === 'side-edge' ? SideEdgeDeck
     : variant.id === 'isometric' ? IsometricDeck
     : DeckCut;

@@ -1,8 +1,9 @@
 # Cutting Experience Sampling Plan
 
 **Created**: 2026-03-16
+**Updated**: 2026-03-16
 **Author**: Claude Code
-**Status**: Ready for Review
+**Status**: Ready for Review (v2 — Book-Open Reveal)
 
 ---
 
@@ -10,31 +11,31 @@
 
 - [Overview](#overview)
 - [Problem Statement](#problem-statement)
-- [Design: Three Visual Variants](#design-three-visual-variants)
-  - [Variant A: Angled Perspective](#variant-a-angled-perspective)
-  - [Variant B: Side-Edge Stack](#variant-b-side-edge-stack)
-  - [Variant C: Isometric Clean](#variant-c-isometric-clean)
-- 🤖 [x] [Phase 1: Create Variant Components](#phase-1-create-variant-components-🤖)
-  - 🤖 [x] [Step 1.1: Export shared internals from DeckCut.jsx](#step-11-export-shared-internals-from-decutjsx-🤖)
-  - 🤖 [x] [Step 1.2: Build Variant A — Angled Perspective](#step-12-build-variant-a--angled-perspective-🤖)
-  - 🤖 [x] [Step 1.3: Build Variant B — Side-Edge Stack](#step-13-build-variant-b--side-edge-stack-🤖)
-  - 🤖 [x] [Step 1.4: Build Variant C — Isometric Clean](#step-14-build-variant-c--isometric-clean-🤖)
-- 🤖 [x] [Phase 2: Add Cutting Tab to Admin Panel](#phase-2-add-cutting-tab-to-admin-panel-🤖)
-  - 🤖 [x] [Step 2.1: Add the tab button and routing](#step-21-add-the-tab-button-and-routing-🤖)
-  - 🤖 [x] [Step 2.2: Build the CuttingSampler component](#step-22-build-the-cuttingsampler-component-🤖)
-  - 🤖 [x] [Step 2.3: Wire up "Use This Style" persistence](#step-23-wire-up-use-this-style-persistence-🤖)
-- 🤖 [x] [Phase 3: Integrate Chosen Style into Game](#phase-3-integrate-chosen-style-into-game-🤖)
-  - 🤖 [x] [Step 3.1: DeckCut variant dispatcher](#step-31-deckcut-variant-dispatcher-🤖)
-  - 🤖 [x] [Step 3.2: Pass variant prop from CribbageGame](#step-32-pass-variant-prop-from-cribbagegame-🤖)
-- 🤖👤 [x] [Phase 4: Build, Deploy, and Verify](#phase-4-build-deploy-and-verify-🤖👤)
-  - 🤖 [x] [Step 4.1: Build and deploy](#step-41-build-and-deploy-🤖)
-  - 👤 [ ] [Step 4.2: Compare variants in Admin Panel and select one](#step-42-compare-variants-in-admin-panel-and-select-one-👤)
+- [Design: Book-Open Reveal](#design-book-open-reveal)
+  - [Visual Sequence](#visual-sequence)
+  - [The Deck at Rest](#the-deck-at-rest)
+  - [The Split](#the-split)
+  - [The Flip-Over Reveal](#the-flip-over-reveal)
+  - [CSS 3D Implementation Strategy](#css-3d-implementation-strategy)
+- 🤖 [x] [Phase 1: Build the Book-Open DeckCut](#phase-1-build-the-book-open-deckcut-🤖)
+  - 🤖 [x] [Step 1.1: Render the deck at rest — side-profile card stack](#step-11-render-the-deck-at-rest--side-profile-card-stack-🤖)
+  - 🤖 [x] [Step 1.2: Implement the split — two stacks separate](#step-12-implement-the-split--two-stacks-separate-🤖)
+  - 🤖 [x] [Step 1.3: Implement the flip-over reveal](#step-13-implement-the-flip-over-reveal-🤖)
+  - 🤖 [x] [Step 1.4: Wire up to CuttingSampler and game DeckCut](#step-14-wire-up-to-cuttingsampler-and-game-deckcut-🤖)
+- 🤖 [x] [Phase 2: Polish and Test](#phase-2-polish-and-test-🤖)
+  - 🤖 [x] [Step 2.1: Test with Playwright on localhost](#step-21-test-with-playwright-on-localhost-🤖)
+  - 🤖 [x] [Step 2.2: Test with all card back types](#step-22-test-with-all-card-back-types-🤖)
+- 🤖👤 [x] [Phase 3: Build, Deploy, and Verify](#phase-3-build-deploy-and-verify-🤖👤)
+  - 🤖 [x] [Step 3.1: Build and deploy](#step-31-build-and-deploy-🤖)
+  - 👤 [ ] [Step 3.2: Verify on Android](#step-32-verify-on-android-👤)
 
 ---
 
 ## Overview
 
-Add a **"Cutting" tab** to the Admin Panel that shows 2-3 visual variants of the deck-cutting experience side by side. Each variant renders a 3D deck stack using a randomly-selected card back (via the existing 2-stage type/instance selection), with a tap-to-cut cycle that plays the lift-and-reveal animation. The user can compare approaches and select one as the active style for gameplay.
+Replace the current deck-cut variants with a single, authentic **book-open reveal** animation. Instead of lifting a portion straight up, the deck splits at a random point and the top stack **rotates open like a book being opened** — but unlike a book, it's not connected at the binding, so both stacks separate completely. As the top stack rotates over, the bottom card of that stack (the cut card) is gradually revealed.
+
+This matches how a real person cuts a deck: grab the top portion, separate it from the bottom, and turn it over to show what's underneath.
 
 [Back to TOC](#table-of-contents)
 
@@ -42,228 +43,218 @@ Add a **"Cutting" tab** to the Admin Panel that shows 2-3 visual variants of the
 
 ## Problem Statement
 
-The deck cut visual has gone through several iterations (thin bars → tiny CardBack → 120px DeckCardFace), none of which have felt authentic. The core issue is that there's no way to iterate on the visual design without playing through a game. The user needs a sampling tool to preview and compare different 3D deck rendering approaches, then lock in the one that looks best.
+All previous deck-cut attempts lack **authenticity** because they treat the deck as a flat image that slides or lifts away. Real deck cutting has a distinctive physical motion:
+
+1. A whole deck sits on the table
+2. A hand grabs the top portion and lifts it slightly
+3. The two halves separate — a visible gap appears
+4. The top portion rotates/flips over in one fluid motion
+5. The bottom card of the top portion is revealed face-up
+
+No previous variant captures this **rotation** — they all just translate (move) the top portion without turning it. The key missing element is `rotateX` — the top stack must rotate around its bottom edge to reveal the underside card.
 
 [Back to TOC](#table-of-contents)
 
 ---
 
-## Design: Three Visual Variants
+## Design: Book-Open Reveal
 
-All variants share the same `DeckCardFace` component (renders card back at custom size) and `RevealedCard` component (white card with rank/suit). They differ in how the deck stack is rendered and how the cut animation plays.
+### Visual Sequence
 
-### Variant A: Angled Perspective
-
-The deck viewed from above-right at ~25 degrees. CSS 3D perspective creates a realistic viewing angle with visible card-edge thickness on two sides.
+The animation tells a story in 4 beats:
 
 ```
-     ┌─────────────┐ ← top card (full card back design)
-    ╱│            ╱│
-   ╱ │           ╱ │ ← right edge (12-15 layers, cream card-edge color)
-  ╱  │          ╱  │
- └───┼─────────┘   │
-     └─────────────┘ ← bottom edge (visible due to rotateX tilt)
-       soft shadow on "table"
+BEAT 1 — Deck at rest:           BEAT 2 — Split:
+
+  ┌───────────────────┐            ┌───────────────────┐ ← top stack
+  │  card back face   │            │  card back face   │    lifts slightly
+  │                   │            └───────────────────┘
+  │┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                    ↕ gap
+  │  edge  edge  edge │            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+  │  edge  edge  edge │            │  edge  edge  edge │ ← bottom stack
+  └───────────────────┘            └───────────────────┘
+
+
+BEAT 3 — Rotating over:          BEAT 4 — Revealed:
+
+       ╱─────────────╲              ┌───────────────────┐
+      ╱  card back    ╲             │   7 ♠             │
+     ╱   (rotating)    ╲            │                   │ ← revealed card
+    ╱___________________╲           └───────────────────┘
+         visible card                      ↕
+    ┌───────────────────┐            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+    │  edge  edge  edge │            │  edge  edge  edge │
+    └───────────────────┘            └───────────────────┘
 ```
 
-**CSS approach**:
-- Container: `perspective: 800px`
-- Deck: `transform: rotateX(25deg) rotateY(-8deg)`
-- 12-15 depth layers offset by 1px vertical + 0.3px horizontal each
-- Edge layers use card-edge color `#f5f0e8` (cream, like real card stock)
-- Card size: **140×196px**
+### The Deck at Rest
 
-**Cut animation**:
-- Top lifts `translateY(-90px) translateX(15px) rotateZ(-8deg)` — hand pulling cards off
-- Fade: 1→0.6→0 over 400ms
-- Revealed card: opacity 0→1 with scale(0.9→1), 300ms delay
+The deck is shown from a slightly elevated viewing angle — we see:
+- **Top**: The card back design (full `DeckCardFace` at ~130×90px, landscape-ish aspect for the "top surface" perspective)
+- **Front edge**: A thick band (~20-25px) of stacked card edges (alternating cream `#f5f0e8` / shadow `#e0d8c8` horizontal stripes), showing the deck's thickness
+- **Shadow**: Soft shadow beneath the deck, grounding it on the "table"
 
-[Back to TOC](#table-of-contents)
+The card back design is rendered with a slight `rotateX` perspective tilt (about 15-20 degrees) so it reads as lying flat on a table rather than facing the viewer.
 
-### Variant B: Side-Edge Stack
+**Size**: The whole deck visual is approximately 150px wide × 130px tall (card face + edge band + shadow).
 
-Deck viewed from near eye-level (~30° above). Emphasis is on the thick stack of card edges visible below the top card face.
+### The Split
 
-```
-  ┌─────────────────┐
-  │                 │ ← top card face (fully visible)
-  │   card back     │
-  │   design        │
-  ├─────────────────┤
-  ║ ═══════════════ ║ ← thick band of card edges
-  ║ ═══════════════ ║   (15-20 lines alternating cream/shadow)
-  ╚═════════════════╝
-       table shadow
-```
+On tap, the deck splits at a random visual point within the edge band:
+- The top stack (card face + upper portion of edges) lifts upward ~15px and separates from the bottom
+- A visible gap appears between the two halves
+- This happens over ~300ms with an ease-out transition
 
-**CSS approach**:
-- No CSS 3D — achieved with 2D layering
-- Top card: `DeckCardFace` at **130×182px**
-- Below the card: 20px-tall band of horizontal stripes (alternating `#f5f0e8` and `#e8e0d0`) for laminated-edge look
-- Subtle `rotateX(5deg)` on whole assembly
-- Card size: **130×182px** + 20px edge band
+The split point is randomized (30-70% through the edge band) so it looks different each time — sometimes a thin top stack, sometimes a thick one.
 
-**Cut animation**:
-- Top card lifts straight up: `translateY(-100px) rotateZ(-4deg)`
-- Edge band splits visually (top half goes with lifted card)
-- Revealed card slides up from within the gap
+### The Flip-Over Reveal
 
-[Back to TOC](#table-of-contents)
+After the split, the top stack rotates around its **bottom edge** (the edge closest to the gap):
 
-### Variant C: Isometric Clean
+1. **Rotation** (0→180 degrees on X axis): The top stack rotates like opening a book face-down — `rotateX(0deg)` → `rotateX(-180deg)`. The `transform-origin` is set to `bottom center` so it pivots at the gap edge.
 
-A graphic-design-style isometric stack. No CSS 3D — depth created by stacking offset card copies with a strong drop shadow. Polished and app-like.
+2. **During rotation**: At ~90 degrees, the top stack is edge-on (nearly invisible). Past 90 degrees, we start seeing the **underside** — which shows the revealed card face (rank + suit on white background).
+
+3. **CSS 3D trick**: The top stack is a two-sided element:
+   - **Front face** (`backface-visibility: hidden`): The card back design + edge thickness
+   - **Back face** (`backface-visibility: hidden`, `rotateX(180deg)`): The revealed card (rank + suit)
+
+   This way, as the stack rotates past 90 degrees, the card back naturally disappears and the revealed card naturally appears — no opacity tricks needed.
+
+4. **Timing**: The rotation takes ~600-800ms with an `ease-in-out` curve (slow start as the "hand" lifts, fast through the middle, slow landing).
+
+5. **Final state**: The revealed card sits face-up above the bottom stack, both resting on the table. The top-stack card back is now face-down (hidden) on top of the revealed card.
+
+### CSS 3D Implementation Strategy
 
 ```
-  ┌─────────────┐
-  │ card back   │
-  │ design      │  ← top card
-  └─┬───────────┘
-    └─┬───────────┐
-      └─┬─────────┘  ← 8-10 offset copies creating depth
-        └─────────┘
-         soft shadow
+Container:
+  perspective: 1000px
+  perspective-origin: center 30%  (viewing from slightly above)
+
+Deck at rest:
+  transform: rotateX(20deg)  — tilted to show table perspective
+
+Top stack (pre-split):
+  transform-origin: bottom center
+  transform: rotateX(0deg)     — lying flat
+  transition: transform 0.7s ease-in-out
+
+Top stack (post-split, pre-flip):
+  transform: translateY(-15px)  — lift slightly
+
+Top stack (flipping):
+  transform: rotateX(-180deg)   — rotate around bottom edge
+
+Top stack structure:
+  <div class="top-stack" style="transform-style: preserve-3d">
+    <!-- Front: card back -->
+    <div style="backface-visibility: hidden">
+      <DeckCardFace />
+      <EdgeBand count={topEdges} />
+    </div>
+    <!-- Back: revealed card (pre-rotated 180) -->
+    <div style="backface-visibility: hidden; transform: rotateX(180deg); position: absolute; inset: 0">
+      <RevealedCard />
+    </div>
+  </div>
 ```
 
-**CSS approach**:
-- 8-10 stacked `DeckCardFace` elements, each offset by `(2px, 2px)`
-- Each layer at decreasing opacity
-- Top card with `box-shadow: 0 4px 12px rgba(0,0,0,0.3)`
-- Large soft shadow beneath entire stack
-- Card size: **130×182px**
-
-**Cut animation**:
-- Top card lifts `translateY(-80px) translateX(10px) rotateZ(3deg)`
-- Clean opacity fade
-- Revealed card pops in with slight bounce: `scale(0.8→1.05→1)` via keyframes
+The edge band (front of stack) uses the same alternating stripe pattern from the Side-Edge variant: horizontal lines of `#f5f0e8` and `#e0d8c8`, with the number of stripes proportional to the split point (more stripes = thicker top stack).
 
 [Back to TOC](#table-of-contents)
 
 ---
 
-## Phase 1: Create Variant Components 🤖
+## Phase 1: Build the Book-Open DeckCut 🤖
 
-### Step 1.1: Export shared internals from DeckCut.jsx 🤖
+### Step 1.1: Render the deck at rest — side-profile card stack 🤖
 
-Add `export` keyword to `DeckCardFace` and `RevealedCard` functions in `components/DeckCut.jsx` so the variant file can import them.
+In `components/DeckCutVariants.jsx`, create a `BookOpenDeck` component:
 
-**File**: `components/DeckCut.jsx`
+- Render the card back at ~130×90px with `rotateX(20deg)` perspective tilt (lying on table)
+- Below it, render a 20-25px edge band with alternating cream/shadow stripes
+- Wrap in a container with `perspective: 1000px`
+- Add soft `box-shadow` beneath for table grounding
+- "TAP TO CUT" prompt on the card face
 
-[Back to TOC](#table-of-contents)
+The card back image needs to be rendered in a slightly compressed vertical space (due to the perspective tilt) — this is handled automatically by CSS `rotateX`.
 
-### Step 1.2: Build Variant A — Angled Perspective 🤖
-
-Create `components/DeckCutVariants.jsx` with `AngledDeck` component:
-- Uses CSS 3D `perspective` + `rotateX(25deg) rotateY(-8deg)`
-- 12-15 card-edge layers at `#f5f0e8`
-- `DeckCardFace` at 140×196px as top card
-- Self-contained lift animation state machine (idle→lifting→lifted→fading→done)
-- Accepts `onCut`, `disabled`, `revealedCard`, `showCutAnimation` props (same as DeckCut)
+**File**: `components/DeckCutVariants.jsx`
 
 [Back to TOC](#table-of-contents)
 
-### Step 1.3: Build Variant B — Side-Edge Stack 🤖
+### Step 1.2: Implement the split — two stacks separate 🤖
 
-Add `SideEdgeDeck` component to `DeckCutVariants.jsx`:
-- 2D layering approach
-- `DeckCardFace` at 130×182px + 20px card-edge band below
-- Edge band uses alternating horizontal stripes for realism
-- Lift animation: straight-up pull with edge band split
+On tap:
+1. Choose a random split point (30-70% of the edge band)
+2. The edge band splits into top-edges and bottom-edges
+3. The top stack (card face + top-edges) translates `translateY(-15px)` over 300ms
+4. A visible gap appears between top and bottom stacks
 
-[Back to TOC](#table-of-contents)
+State machine: `idle` → `splitting` → `split` → `flipping` → `revealed`
 
-### Step 1.4: Build Variant C — Isometric Clean 🤖
-
-Add `IsometricDeck` component to `DeckCutVariants.jsx`:
-- 8-10 offset copies, no CSS 3D
-- `DeckCardFace` at 130×182px
-- Strong drop shadow, clean offset layering
-- Bounce reveal animation via keyframes
+**File**: `components/DeckCutVariants.jsx`
 
 [Back to TOC](#table-of-contents)
 
----
+### Step 1.3: Implement the flip-over reveal 🤖
 
-## Phase 2: Add Cutting Tab to Admin Panel 🤖
+After the split (300ms delay), the top stack rotates:
+- `transform-origin: bottom center`
+- `rotateX(0deg)` → `rotateX(-180deg)` over 700ms ease-in-out
+- Front face: card back + edge stripes (with `backface-visibility: hidden`)
+- Back face: the `RevealedCard` component (pre-rotated 180 degrees, also `backface-visibility: hidden`)
+- The CSS 3D `preserve-3d` on the container makes the card naturally flip from showing the back design to showing the cut card
 
-### Step 2.1: Add the tab button and routing 🤖
-
-In `components/AdminPanel.jsx`:
-- Add a `"Cutting"` tab button after `"Card Backs"`, value `'cutting'`
-- Add `activeTab === 'cutting'` content branch that renders `<CuttingSampler />`
-- No API fetch needed on tab open
-
-**File**: `components/AdminPanel.jsx`
+**File**: `components/DeckCutVariants.jsx`
 
 [Back to TOC](#table-of-contents)
 
-### Step 2.2: Build the CuttingSampler component 🤖
+### Step 1.4: Wire up to CuttingSampler and game DeckCut 🤖
 
-Create `components/CuttingSampler.jsx`:
+- Add `BookOpenDeck` to the `CuttingSampler` variant list (replace or add alongside existing variants)
+- Add `'book-open'` as a variant option in `DeckCut.jsx` dispatcher
+- Update the `VARIANTS` array in `CuttingSampler.jsx`
 
-**CardBackContext wrapping**: AdminPanel renders outside the game's CardBackContext. CuttingSampler must:
-1. Call `pickCardBack(Date.now())` to get a random card back design
-2. Wrap variants in `<CardBackContext.Provider value={design}>`
-3. Provide a **"Shuffle Card Back"** button that picks a new random design — so the user can see how each variant looks with different card types (painting, SVG, icon)
-
-**Layout**:
-- Vertically stacked on mobile (each variant in its own card)
-- Each variant card contains:
-  - Title: "Angled Perspective" / "Side Edge" / "Isometric"
-  - The variant component with tap-to-cut behavior
-  - **"Reset"** button to reset the cut state
-  - **"Use This Style"** button (green checkmark if currently active)
-
-**Self-contained cut cycle**: Each variant manages its own internal state. On tap, it runs its lift animation and reveals a locally-generated random card (random rank + random suit). Reset button clears the state.
-
-**Files**: `components/CuttingSampler.jsx` (new), `components/AdminPanel.jsx` (modified)
-
-[Back to TOC](#table-of-contents)
-
-### Step 2.3: Wire up "Use This Style" persistence 🤖
-
-**localStorage key**: `cribbage-deckcut-style`
-**Values**: `'angled'` | `'side-edge'` | `'isometric'` | `'classic'`
-**Default**: `'classic'` (current DeckCut unchanged)
-
-On CuttingSampler mount, read from localStorage to highlight the active style. On "Use This Style" click, write to localStorage. No API endpoint needed — client-side only.
+**Files**: `components/CuttingSampler.jsx`, `components/DeckCut.jsx`
 
 [Back to TOC](#table-of-contents)
 
 ---
 
-## Phase 3: Integrate Chosen Style into Game 🤖
+## Phase 2: Polish and Test 🤖
 
-### Step 3.1: DeckCut variant dispatcher 🤖
+### Step 2.1: Test with Playwright on localhost 🤖
 
-Modify `components/DeckCut.jsx` to accept a `variant` prop:
-- `'angled'` → render `AngledDeck` from `DeckCutVariants.jsx`
-- `'side-edge'` → render `SideEdgeDeck`
-- `'isometric'` → render `IsometricDeck`
-- `'classic'` or `undefined` → render current implementation (unchanged)
+- Start dev server
+- Login, open Admin Panel → Cutting tab
+- Verify `BookOpenDeck` renders without errors
+- Tap to cut, verify the flip animation plays
+- Take screenshots at each animation phase
+- Verify no console errors
 
-All variants receive the same props (`onCut`, `disabled`, `label`, `revealedCard`, `showCutAnimation`).
-
-**File**: `components/DeckCut.jsx`
+**File**: Test script (temporary, not committed)
 
 [Back to TOC](#table-of-contents)
 
-### Step 3.2: Pass variant prop from CribbageGame 🤖
+### Step 2.2: Test with all card back types 🤖
 
-In `components/CribbageGame.jsx`:
-- Read `localStorage.getItem('cribbage-deckcut-style')` on mount
-- Store in state: `const [deckCutStyle, setDeckCutStyle] = useState('classic')`
-- Pass `variant={deckCutStyle}` to all `<DeckCut>` renderings (both `cutting` and `cutForStarter` game states)
+Use the "Shuffle Card Back" button to verify the book-open animation works correctly with:
+- Painting card backs (WebP images)
+- SVG fullcard backs (inline SVG)
+- Icon fullcard backs (large emoji)
+- Standard icon backs (pattern + emoji + corners)
 
-**File**: `components/CribbageGame.jsx`
+The `backface-visibility: hidden` must work correctly with all render types.
 
 [Back to TOC](#table-of-contents)
 
 ---
 
-## Phase 4: Build, Deploy, and Verify 🤖👤
+## Phase 3: Build, Deploy, and Verify 🤖👤
 
-### Step 4.1: Build and deploy 🤖
+### Step 3.1: Build and deploy 🤖
 
 - Bump version in `lib/version.js`
 - `rm -rf .next && npm run build`
@@ -271,15 +262,19 @@ In `components/CribbageGame.jsx`:
 
 [Back to TOC](#table-of-contents)
 
-### Step 4.2: Compare variants in Admin Panel and select one 👤
+### Step 3.2: Verify on Android 👤
 
 1. Open Admin Panel → Cutting tab
-2. Tap "Shuffle Card Back" a few times to see variants with different card types
-3. Tap each deck to test the cut animation
-4. Tap "Reset" to try again
-5. Select "Use This Style" on the preferred variant
-6. Start a new game — verify the game uses the selected cutting style
-7. Test both cut-for-dealer and cut-for-starter scenarios
+2. Find the Book-Open variant
+3. Tap the deck — verify:
+   - Deck splits at a random point in the edge band
+   - Top stack rotates over (like opening a book)
+   - Card back disappears as it rotates past 90 degrees
+   - Cut card face appears on the underside
+   - Final state: revealed card resting above the bottom stack
+4. Tap "Shuffle Card Back" and try with different card types
+5. Tap "Use This" to set as active
+6. Start a new game — verify the book-open animation plays for both cut-for-dealer and cut-for-starter
 
 [Back to TOC](#table-of-contents)
 
@@ -289,9 +284,8 @@ In `components/CribbageGame.jsx`:
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `components/DeckCut.jsx` | Modify | Export `DeckCardFace`/`RevealedCard`, add `variant` prop dispatcher |
-| `components/DeckCutVariants.jsx` | **Create** | Three variant components: `AngledDeck`, `SideEdgeDeck`, `IsometricDeck` |
-| `components/CuttingSampler.jsx` | **Create** | Admin tab content with CardBackContext wrapping, shuffle, reset, style selection |
-| `components/AdminPanel.jsx` | Modify | Add "Cutting" tab button and content routing |
-| `components/CribbageGame.jsx` | Modify | Read persisted style from localStorage, pass as `variant` prop |
+| `components/DeckCutVariants.jsx` | Modify | Add `BookOpenDeck` component |
+| `components/DeckCutShared.jsx` | Read only | Shared `DeckCardFace` and `RevealedCard` |
+| `components/CuttingSampler.jsx` | Modify | Add book-open to variant list |
+| `components/DeckCut.jsx` | Modify | Add `'book-open'` to variant dispatcher |
 | `lib/version.js` | Modify | Bump version |

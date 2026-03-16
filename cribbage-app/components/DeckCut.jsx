@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useCardBack } from './CardBackContext';
 import { DeckCardFace, RevealedCard } from './DeckCutShared';
-import { AngledDeck, SideEdgeDeck, IsometricDeck } from './DeckCutVariants';
+import { AngledDeck, SideEdgeDeck, IsometricDeck, BookOpenDeck } from './DeckCutVariants';
 
 // Re-export shared components for backward compatibility
 export { DeckCardFace, RevealedCard } from './DeckCutShared';
@@ -28,6 +28,7 @@ export default function DeckCut({
   variant = 'classic'
 }) {
   // Dispatch to variant components if not classic
+  if (variant === 'book-open') return <BookOpenDeck onCut={onCut} disabled={disabled} label={label} revealedCard={revealedCard} showCutAnimation={showCutAnimation} />;
   if (variant === 'angled') return <AngledDeck onCut={onCut} disabled={disabled} label={label} revealedCard={revealedCard} showCutAnimation={showCutAnimation} />;
   if (variant === 'side-edge') return <SideEdgeDeck onCut={onCut} disabled={disabled} label={label} revealedCard={revealedCard} showCutAnimation={showCutAnimation} />;
   if (variant === 'isometric') return <IsometricDeck onCut={onCut} disabled={disabled} label={label} revealedCard={revealedCard} showCutAnimation={showCutAnimation} />;
