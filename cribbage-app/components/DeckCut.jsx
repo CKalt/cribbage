@@ -10,7 +10,7 @@ import { useCardBack } from './CardBackContext';
  * Renders the card back design at a custom size (larger than CardBack component supports).
  * Replicates the rendering logic from CardBack.jsx for all card types.
  */
-function DeckCardFace({ width = 120, height = 168 }) {
+export function DeckCardFace({ width = 120, height = 168 }) {
   const design = useCardBack();
   const isFullcard = design.type === 'fullcard' || design.type === 'painting';
   const isEmoji = design.centerIcon && design.centerIcon.length > 1;
@@ -98,7 +98,7 @@ function DeckCardFace({ width = 120, height = 168 }) {
 /**
  * A revealed playing card face (rank + suit on white background)
  */
-function RevealedCard({ card, className = '' }) {
+export function RevealedCard({ card, className = '' }) {
   if (!card) return null;
   const isRed = card.suit === '♥' || card.suit === '♦';
   return (
@@ -127,8 +127,20 @@ export default function DeckCut({
   disabled = false,
   label = '',
   revealedCard = null,
-  showCutAnimation = false
+  showCutAnimation = false,
+  variant = 'classic'
 }) {
+  // Dispatch to variant components if not classic
+  if (variant && variant !== 'classic') {
+    const VariantComponent = require('./DeckCutVariants')[
+      variant === 'angled' ? 'AngledDeck' :
+      variant === 'side-edge' ? 'SideEdgeDeck' :
+      variant === 'isometric' ? 'IsometricDeck' : null
+    ];
+    if (VariantComponent) {
+      return <VariantComponent onCut={onCut} disabled={disabled} label={label} revealedCard={revealedCard} showCutAnimation={showCutAnimation} />;
+    }
+  }
   const [hasCut, setHasCut] = useState(false);
   const [liftPhase, setLiftPhase] = useState('idle'); // idle | lifting | lifted | fading | done
   const cardBack = useCardBack();

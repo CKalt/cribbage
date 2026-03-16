@@ -66,6 +66,12 @@ export default function CribbageGame({ onLogout }) {
   const disabledCardBacksRef = useRef([]);
   const [cardBack, setCardBack] = useState(() => pickCardBack(Date.now()));
   const [showCardBackPreview, setShowCardBackPreview] = useState(false);
+  const [deckCutStyle, setDeckCutStyle] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cribbage-deckcut-style') || 'classic';
+    }
+    return 'classic';
+  });
 
   // Fetch disabled card back IDs on mount
   useEffect(() => {
@@ -3048,6 +3054,7 @@ export default function CribbageGame({ onLogout }) {
                         label={!playerCutCard ? '' : ''}
                         revealedCard={playerCutCard && !computerCutCard ? playerCutCard : null}
                         showCutAnimation={!!playerCutCard && !computerCutCard}
+                        variant={deckCutStyle}
                       />
                     ) : (
                       /* Phase 3: Computer cuts from the same deck */
@@ -3056,6 +3063,7 @@ export default function CribbageGame({ onLogout }) {
                         label=""
                         revealedCard={computerCutCard}
                         showCutAnimation={true}
+                        variant={deckCutStyle}
                       />
                     )}
                   </div>
@@ -3121,6 +3129,7 @@ export default function CribbageGame({ onLogout }) {
                         label={pendingCutCard ? '' : 'Computer is cutting...'}
                         revealedCard={pendingCutCard}
                         showCutAnimation={!!pendingCutCard}
+                        variant={deckCutStyle}
                       />
                     ) : (
                       // Player is non-dealer, they cut
@@ -3130,6 +3139,7 @@ export default function CribbageGame({ onLogout }) {
                         label="Cut for the starter card"
                         revealedCard={pendingCutCard}
                         showCutAnimation={!!pendingCutCard}
+                        variant={deckCutStyle}
                       />
                     )}
                   </div>

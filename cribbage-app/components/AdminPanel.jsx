@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { getAllCardBacks } from '@/lib/cardBacks';
 import { CardBackPreview } from './CardBack';
+import CuttingSampler from './CuttingSampler';
 
 /**
  * Admin Panel - shows game stats and bug reports for all users
@@ -171,6 +172,16 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
           >
             Card Backs
           </button>
+          <button
+            onClick={() => setActiveTab('cutting')}
+            className={`px-3 py-1 text-sm rounded ${
+              activeTab === 'cutting'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Cutting
+          </button>
         </div>
 
         {/* Content */}
@@ -302,6 +313,9 @@ export default function AdminPanel({ isOpen, onClose, userEmail }) {
                 </>
               )}
             </div>
+          ) : activeTab === 'cutting' ? (
+            /* Cutting Experience Tab */
+            <CuttingSampler />
           ) : (
             /* Bug Reports Tab */
             <div className="space-y-2">
