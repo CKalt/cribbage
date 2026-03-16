@@ -172,6 +172,7 @@ export default function CribbageGame({ onLogout }) {
   const playerHandContainerRef = useRef(null);
   const deckPileRef = useRef(null);
   const needsRecoveryDealRef = useRef(false); // Set ONLY during restore when hands >= 3
+  const boardZoomedRef = useRef(false); // Pause deal animation while board is zoomed
 
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
@@ -1122,9 +1123,22 @@ export default function CribbageGame({ onLogout }) {
     });
   };
 
+  // Wait for board zoom to close before continuing deal animation
+  const waitForZoomClose = (callback) => {
+    if (boardZoomedRef.current) {
+      setTimeout(() => waitForZoomClose(callback), 200);
+    } else {
+      callback();
+    }
+  };
+
   // Recursively deal cards one at a time with flight animation
   // currentDealer passed explicitly to avoid stale closure on subsequent hands
   const dealNextCard = (index, playerCards, computerCards, currentDealer) => {
+    if (boardZoomedRef.current) {
+      waitForZoomClose(() => dealNextCard(index, playerCards, computerCards, currentDealer));
+      return;
+    }
     if (index >= 12) {
       setDealPhase('flipping');
       startDealFlip(0);
@@ -1183,6 +1197,10 @@ export default function CribbageGame({ onLogout }) {
 
   // Stagger-flip player cards face-up one by one
   const startDealFlip = (index) => {
+    if (boardZoomedRef.current) {
+      waitForZoomClose(() => startDealFlip(index));
+      return;
+    }
     if (index >= 6) {
       // Wait for last card's 400ms flip animation to complete before transitioning
       // (bug #100: 300ms was too short — last card got stuck mid-scaleX on mobile)
@@ -3226,6 +3244,7 @@ export default function CribbageGame({ onLogout }) {
                     if (pbp !== undefined) setPlayerBackPeg(pbp);
                     if (cbp !== undefined) setComputerBackPeg(cbp);
                   }}
+                  onZoomChange={(zoomed) => { boardZoomedRef.current = zoomed; }}
                 />
 
                 {/* Dealer indicator */}

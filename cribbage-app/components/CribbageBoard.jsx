@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from 'react';
  * @param {number} playerScore - Player's current score (0-121)
  * @param {number} computerScore - Computer's current score (0-121)
  */
-export default function CribbageBoard({ playerScore, computerScore, initialPlayerBackPeg, initialComputerBackPeg, onBackPegChange }) {
+export default function CribbageBoard({ playerScore, computerScore, initialPlayerBackPeg, initialComputerBackPeg, onBackPegChange, onZoomChange }) {
   // Track back peg positions (the previous score before last move)
   // This emulates real cribbage where you leapfrog two pegs
   // Use saved back peg positions when available (restored games), otherwise score-1
@@ -157,6 +157,7 @@ export default function CribbageBoard({ playerScore, computerScore, initialPlaye
     setPanOffset({ x: 0, y: 0 });
     lastPanOffset.current = { x: 0, y: 0 };
     setShowZoom(true);
+    onZoomChange?.(true);
   };
 
   // Pan handlers for touch/mouse
@@ -339,12 +340,12 @@ export default function CribbageBoard({ playerScore, computerScore, initialPlaye
       {showZoom && (
         <div
           className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
-          onClick={() => setShowZoom(false)}
+          onClick={() => { setShowZoom(false); onZoomChange?.(false); }}
         >
           {/* Close button */}
           <button
             className="absolute top-4 right-4 text-white text-3xl z-50 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center"
-            onClick={() => setShowZoom(false)}
+            onClick={() => { setShowZoom(false); onZoomChange?.(false); }}
           >
             &times;
           </button>

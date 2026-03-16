@@ -1,12 +1,12 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b225-20260316';
+export const APP_VERSION = 'v0.3.0-b226-20260316';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Fixed: cards no longer bunched together during discard — full faces visible
-- Fixed: no more ghost card appearing before discard
+- Dealing pauses while the cribbage board is zoomed in
+- Fixed: cards no longer bunched together during discard
 - Fixed: no longer forced to say "Go" twice during pegging
-- Fixed: switching screens mid-count no longer risks re-counting the same hand
+- Fixed: switching screens mid-count no longer risks re-counting
 
 Happy playing!`;
 
