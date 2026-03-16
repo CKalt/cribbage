@@ -456,6 +456,27 @@ export default function CribbageGame({ onLogout }) {
     isLoadingGame, createCurrentSnapshot, saveGameState, actualScore,
   ]);
 
+  // Force immediate save when page becomes hidden (user switches tabs/apps).
+  // Prevents race condition where count submission isn't persisted within
+  // the 500ms debounce window, causing re-count on re-login (bug #132).
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && !isLoadingGame && shouldSaveGame(gameState)) {
+        // Cancel any pending debounced save
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        const snapshot = createCurrentSnapshot();
+        if (hasSignificantChange(lastSavedStateRef.current, snapshot)) {
+          saveGameState(snapshot);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isLoadingGame, gameState, createCurrentSnapshot, saveGameState]);
+
   // Recovery deal: if restored with counting already complete, deal next hand after delay
   useEffect(() => {
     if (needsRecoveryDealRef.current && gameState === 'counting') {
@@ -1707,7 +1728,22 @@ export default function CribbageGame({ onLogout }) {
       setMessage(`Computer plays ${card.rank}${card.suit} (count: ${newCount})`);
 
       if (playerPlayHand.length > 0) {
-        setCurrentPlayer('player');
+        // If player already said Go and still can't play at the new count,
+        // don't force them to say Go again — let the computer keep playing (bug #124/#130)
+        const playerCanPlayNow = playerPlayHand.some(c => newCount + c.value <= 31);
+        if (lastGoPlayer === 'player' && !playerCanPlayNow) {
+          const computerCanContinue = newComputerPlayHand.some(c => newCount + c.value <= 31);
+          if (computerCanContinue) {
+            setCurrentPlayer('computer');
+          } else {
+            // Neither can play — award last card to computer (last to play)
+            setCurrentPlayer('player');
+            setPendingScore({ player: 'computer', points: 1, reason: 'One for last card' });
+            setMessage('Computer gets 1 point for last card - Click Accept');
+          }
+        } else {
+          setCurrentPlayer('player');
+        }
       } else {
         const canContinue = newComputerPlayHand.some(c => newCount + c.value <= 31);
         if (!canContinue && newComputerPlayHand.length > 0) {
@@ -1717,7 +1753,7 @@ export default function CribbageGame({ onLogout }) {
         }
       }
     }
-  }, [currentCount, allPlayedCards, computerPlayHand, playerPlayHand, computerPlayedCards]);
+  }, [currentCount, allPlayedCards, computerPlayHand, playerPlayHand, computerPlayedCards, lastGoPlayer]);
 
   // Computer makes a play - useEffect
   useEffect(() => {
@@ -1872,13 +1908,27 @@ export default function CribbageGame({ onLogout }) {
       setMessage(`You played ${card.rank}${card.suit} (count: ${newCount})`);
       // Only hand control to computer if it has cards to play (bug #97)
       if (computerPlayHand.length > 0) {
-        setCurrentPlayer('computer');
+        // If computer already said Go and still can't play at the new count,
+        // don't make it say Go again — let the player keep playing (bug #124/#130)
+        const computerCanPlayNow = computerPlayHand.some(c => newCount + c.value <= 31);
+        if (lastGoPlayer === 'computer' && !computerCanPlayNow) {
+          const playerCanContinue = newPlayerPlayHand.some(c => newCount + c.value <= 31);
+          if (playerCanContinue) {
+            setCurrentPlayer('player');
+          } else {
+            // Neither can play — award last card to player (last to play)
+            setPendingScore({ player: 'player', points: 1, reason: 'One for last card' });
+            setMessage('You get 1 point for last card - Click Accept');
+          }
+        } else {
+          setCurrentPlayer('computer');
+        }
       } else {
         // Computer has no cards — player continues playing remaining cards
         setCurrentPlayer('player');
       }
     }
-  }, [currentCount, allPlayedCards, playerPlayHand, computerPlayHand, playerPlayedCards]);
+  }, [currentCount, allPlayedCards, playerPlayHand, computerPlayHand, playerPlayedCards, lastGoPlayer]);
 
   // Player makes a play (with card flight animation)
   const playerPlay = (card, cardEvent) => {

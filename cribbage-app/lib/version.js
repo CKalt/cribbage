@@ -1,14 +1,12 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b223-20260316';
+export const APP_VERSION = 'v0.3.0-b224-20260316';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Fixed: no longer forced to say "Go" twice during pegging when you can't play
+- Fixed: switching screens mid-count no longer risks re-counting the same hand
 - Painting cards now show cream border + ornate frame with no extra CSS border
-- Auto-crop tooling removes white background, preserves artwork framing
 - Tap any face-down card for a full-screen preview
-- "In the style of" artist credits with mini biographies
-- During counting, non-active hands are dimmed so it's clear which hand to count
-- Yellow highlight stays visible during score feedback
 
 Happy playing!`;
 
