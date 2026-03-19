@@ -173,6 +173,7 @@ export default function CribbageGame({ onLogout }) {
   const deckPileRef = useRef(null);
   const needsRecoveryDealRef = useRef(false); // Set ONLY during restore when hands >= 3
   const boardZoomedRef = useRef(false); // Pause deal animation while board is zoomed
+  const dealSafetyTimerRef = useRef(null); // Watchdog: force-finish deal if animation stalls
 
   // Crib reveal animation state
   const [cribRevealPhase, setCribRevealPhase] = useState('idle'); // 'idle' | 'revealing' | 'done'
@@ -477,6 +478,30 @@ export default function CribbageGame({ onLogout }) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isLoadingGame, gameState, createCurrentSnapshot, saveGameState]);
+
+  // When page becomes visible again during deal animation, force-finish immediately.
+  // Mobile browsers suspend CSS animations and JS timers when backgrounded, which can
+  // leave the deal chain stuck with fewer than 6 visible cards.
+  useEffect(() => {
+    const handleVisibleDuringDeal = () => {
+      if (document.visibilityState === 'visible' && gameState === 'dealing') {
+        console.warn('[DealSafety] Page became visible during deal — forcing finish');
+        if (dealSafetyTimerRef.current) {
+          clearTimeout(dealSafetyTimerRef.current);
+          dealSafetyTimerRef.current = null;
+        }
+        setFlyingCard(null);
+        setDealPhase('idle');
+        setDealFlipIndex(-1);
+        setDealtPlayerCards([]);
+        setDealtComputerCards([]);
+        setGameState('cribSelect');
+        setMessage('Select 2 cards for the crib');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibleDuringDeal);
+    return () => document.removeEventListener('visibilitychange', handleVisibleDuringDeal);
+  }, [gameState]);
 
   // Recovery deal: if restored with counting already complete, deal next hand after delay
   useEffect(() => {
@@ -1107,6 +1132,9 @@ export default function CribbageGame({ onLogout }) {
     const moment = [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)];
     setComputerDiscardMoment(moment);
 
+    // Clear any stale discard animation state from previous hand
+    setDiscardingCards([]);
+
     // Start deal animation
     setGameState('dealing');
     setDealPhase('dealing');
@@ -1114,6 +1142,27 @@ export default function CribbageGame({ onLogout }) {
     setDealtComputerCards([]);
     setDealFlipIndex(-1);
     setMessage('Dealing...');
+
+    // Safety watchdog: if deal animation stalls (e.g. phone backgrounded, animation
+    // callbacks lost), force-finish after 10s so the player isn't stuck with hidden cards.
+    if (dealSafetyTimerRef.current) clearTimeout(dealSafetyTimerRef.current);
+    dealSafetyTimerRef.current = setTimeout(() => {
+      dealSafetyTimerRef.current = null;
+      // Only intervene if we're still stuck in dealing
+      setGameState(prev => {
+        if (prev === 'dealing') {
+          console.warn('[DealSafety] Deal animation stalled — forcing finish');
+          setFlyingCard(null);
+          setDealPhase('idle');
+          setDealFlipIndex(-1);
+          setDealtPlayerCards([]);
+          setDealtComputerCards([]);
+          setMessage('Select 2 cards for the crib');
+          return 'cribSelect';
+        }
+        return prev;
+      });
+    }, 10000);
 
     // Wait for DOM to render deck pile and hand containers, then start dealing
     requestAnimationFrame(() => {
@@ -1213,6 +1262,11 @@ export default function CribbageGame({ onLogout }) {
 
   // Animation complete — transition to cribSelect
   const finishDeal = (playerCardsOverride, computerCardsOverride) => {
+    // Cancel safety watchdog — deal completed normally
+    if (dealSafetyTimerRef.current) {
+      clearTimeout(dealSafetyTimerRef.current);
+      dealSafetyTimerRef.current = null;
+    }
     const pCards = playerCardsOverride || playerHand;
     const cCards = computerCardsOverride || computerHand;
     setDealPhase('idle');

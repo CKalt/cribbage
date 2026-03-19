@@ -1,12 +1,10 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b226-20260316';
+export const APP_VERSION = 'v0.3.0-b227-20260319';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
-- Dealing pauses while the cribbage board is zoomed in
-- Fixed: cards no longer bunched together during discard
-- Fixed: no longer forced to say "Go" twice during pegging
-- Fixed: switching screens mid-count no longer risks re-counting
+- Fixed: deal animation no longer gets stuck showing fewer cards on mobile
+- Deal recovers automatically if interrupted by phone sleep or app switching
 
 Happy playing!`;
 
