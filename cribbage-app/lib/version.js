@@ -1,8 +1,9 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b228-20260323';
+export const APP_VERSION = 'v0.3.0-b229-20260323';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Fixed: no longer asked to say "Go" when the computer has no cards
 - Crib pile now shows a card back at all times (no more blank placeholder)
 - Fixed: deal animation no longer gets stuck showing fewer cards on mobile
 

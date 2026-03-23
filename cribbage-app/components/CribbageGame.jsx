@@ -1996,8 +1996,15 @@ export default function CribbageGame({ onLogout }) {
           setCurrentPlayer('computer');
         }
       } else {
-        // Computer has no cards — player continues playing remaining cards
-        setCurrentPlayer('player');
+        // Computer has no cards — check if player can continue
+        const playerCanContinue = newPlayerPlayHand.some(c => newCount + c.value <= 31);
+        if (playerCanContinue) {
+          setCurrentPlayer('player');
+        } else {
+          // Neither can play — player was last to play, award Go point and reset count
+          setPendingScore({ player: 'player', points: 1, reason: 'One for last card' });
+          setMessage('You get 1 point for Go - Click Accept');
+        }
       }
     }
   }, [currentCount, allPlayedCards, playerPlayHand, computerPlayHand, playerPlayedCards, lastGoPlayer]);
