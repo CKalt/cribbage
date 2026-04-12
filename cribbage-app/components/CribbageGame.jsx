@@ -1592,7 +1592,9 @@ export default function CribbageGame({ onLogout }) {
     const needsLastCard = pendingScore.needsLastCard;
     setPendingScore(null);
 
-    setLastGoPlayer(null);
+    // Don't clear lastGoPlayer here — it must persist until the count resets
+    // (at 31 or after a Go point). Clearing it on every Accept wipes the
+    // "already said Go" memory and forces the player to say Go again (#143).
 
     // If game ended due to win, stop processing
     if (gameEnded) return;

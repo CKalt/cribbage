@@ -16,13 +16,21 @@ import { useCardBack } from './CardBackContext';
  */
 export default function FlyingCard({ card, startRect, endRect, onComplete, faceDown = false, className = 'flying-card' }) {
   const ref = useRef(null);
+  const completedRef = useRef(false);
   const cardBack = useCardBack();
 
+  // Guard: ensure onComplete fires exactly once, even if both
+  // onAnimationEnd and the safety timeout trigger.
+  const fireOnce = () => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    if (onComplete) onComplete();
+  };
+
   useEffect(() => {
+    completedRef.current = false;
     // Safety: if animation doesn't fire onAnimationEnd, clean up after timeout
-    const timer = setTimeout(() => {
-      if (onComplete) onComplete();
-    }, 500);
+    const timer = setTimeout(fireOnce, 500);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -49,9 +57,7 @@ export default function FlyingCard({ card, startRect, endRect, onComplete, faceD
         '--fly-x': `${flyX}px`,
         '--fly-y': `${flyY}px`,
       }}
-      onAnimationEnd={() => {
-        if (onComplete) onComplete();
-      }}
+      onAnimationEnd={fireOnce}
     >
       {faceDown ? (
         <div
