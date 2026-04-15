@@ -109,6 +109,7 @@ export default function CribbageGame({ onLogout }) {
   const [selectedCards, setSelectedCards] = useState([]);
   const [peggingSelectedCard, setPeggingSelectedCard] = useState(null);
   const [discardingCards, setDiscardingCards] = useState([]);
+  const [peggingFlyingCard, setPeggingFlyingCard] = useState(null); // card being animated to play area
 
   // Play phase state
   const [playerPlayHand, setPlayerPlayHand] = useState([]);
@@ -1132,8 +1133,9 @@ export default function CribbageGame({ onLogout }) {
     const moment = [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)];
     setComputerDiscardMoment(moment);
 
-    // Clear any stale discard animation state from previous hand
+    // Clear any stale animation state from previous hand
     setDiscardingCards([]);
+    setPeggingFlyingCard(null);
 
     // Start deal animation
     setGameState('dealing');
@@ -2030,6 +2032,8 @@ export default function CribbageGame({ onLogout }) {
     } : null;
 
     if (startRect && endRect) {
+      // Hide card in hand immediately so it doesn't show behind the flying card
+      setPeggingFlyingCard(card);
       // Start animation, defer state update until animation completes
       setFlyingCard({
         card,
@@ -2038,6 +2042,7 @@ export default function CribbageGame({ onLogout }) {
         isComputer: false,
         onComplete: () => {
           setFlyingCard(null);
+          setPeggingFlyingCard(null);
           applyPlayerPlay(card);
         }
       });
@@ -2060,6 +2065,7 @@ export default function CribbageGame({ onLogout }) {
         width: areaRect.width,
         height: areaRect.height,
       };
+      setPeggingFlyingCard(peggingSelectedCard);
       setFlyingCard({
         card: peggingSelectedCard,
         startRect,
@@ -2067,6 +2073,7 @@ export default function CribbageGame({ onLogout }) {
         isComputer: false,
         onComplete: () => {
           setFlyingCard(null);
+          setPeggingFlyingCard(null);
           applyPlayerPlay(peggingSelectedCard);
         },
       });
@@ -3620,6 +3627,7 @@ export default function CribbageGame({ onLogout }) {
                             gameState === 'play' ? playerPlayHand :
                             playerHand).map((card, idx) => {
                             const isBeingDiscarded = discardingCards.some(d => d.rank === card.rank && d.suit === card.suit);
+                            const isFlyingToPlay = peggingFlyingCard && peggingFlyingCard.rank === card.rank && peggingFlyingCard.suit === card.suit;
                             const isDealHidden = gameState === 'dealing' && idx >= dealtPlayerCards.length;
                             const isFlipping = gameState === 'dealing' && dealPhase === 'flipping' && idx <= dealFlipIndex;
                             const isDealFaceDown = gameState === 'dealing' && (!isFlipping);
@@ -3629,6 +3637,7 @@ export default function CribbageGame({ onLogout }) {
                               // Explicit transform reset prevents stuck scaleX from interrupted flip animation (bug #100)
                               ...(!isFlipping ? { transform: 'none' } : {}),
                               ...(isBeingDiscarded ? { visibility: 'hidden' } : {}),
+                              ...(isFlyingToPlay ? { visibility: 'hidden' } : {}),
                               ...(isDealHidden ? { visibility: 'hidden' } : {})
                             }}>
                               {gameState === 'play' && peggingSelectedCard &&

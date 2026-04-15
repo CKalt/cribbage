@@ -1,11 +1,11 @@
 // Single source of truth for app version
-export const APP_VERSION = 'v0.3.0-b230-20260412';
+export const APP_VERSION = 'v0.3.0-b231-20260415';
 export const RELEASE_NOTE = `Thank you for playing Cribbage! 🎴
 
 New in this release:
+- Fixed: ghost card no longer appears in hand when playing during pegging
 - Fixed: no longer forced to say "Go" twice in the same pegging round
 - Fixed: computer card no longer appears duplicated in the play area
-- Fixed: no longer asked to say "Go" when the computer has no cards
 
 Happy playing!`;
 
