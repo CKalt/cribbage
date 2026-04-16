@@ -2032,9 +2032,9 @@ export default function CribbageGame({ onLogout }) {
     } : null;
 
     if (startRect && endRect) {
-      // Hide card in hand via DOM immediately — React state batching would
-      // leave it visible for a paint frame, causing a ghost card flash.
-      cardEvent?.currentTarget?.closest('[data-card-wrapper]')?.style.setProperty('visibility', 'hidden');
+      // Hide card in hand — the CSS animation starts at opacity:0 for one
+      // frame to give React time to commit this state before the flying card
+      // appears, eliminating the ghost card flash.
       setPeggingFlyingCard(card);
       // Start animation, defer state update until animation completes
       setFlyingCard({
@@ -2067,8 +2067,6 @@ export default function CribbageGame({ onLogout }) {
         width: areaRect.width,
         height: areaRect.height,
       };
-      // Hide card via DOM immediately to avoid ghost card flash
-      selectedEl?.closest('[data-card-wrapper]')?.style.setProperty('visibility', 'hidden');
       setPeggingFlyingCard(peggingSelectedCard);
       setFlyingCard({
         card: peggingSelectedCard,
