@@ -2032,7 +2032,9 @@ export default function CribbageGame({ onLogout }) {
     } : null;
 
     if (startRect && endRect) {
-      // Hide card in hand immediately so it doesn't show behind the flying card
+      // Hide card in hand via DOM immediately — React state batching would
+      // leave it visible for a paint frame, causing a ghost card flash.
+      cardEvent?.currentTarget?.closest('[data-card-wrapper]')?.style.setProperty('visibility', 'hidden');
       setPeggingFlyingCard(card);
       // Start animation, defer state update until animation completes
       setFlyingCard({
@@ -2065,6 +2067,8 @@ export default function CribbageGame({ onLogout }) {
         width: areaRect.width,
         height: areaRect.height,
       };
+      // Hide card via DOM immediately to avoid ghost card flash
+      selectedEl?.closest('[data-card-wrapper]')?.style.setProperty('visibility', 'hidden');
       setPeggingFlyingCard(peggingSelectedCard);
       setFlyingCard({
         card: peggingSelectedCard,
@@ -3632,7 +3636,7 @@ export default function CribbageGame({ onLogout }) {
                             const isFlipping = gameState === 'dealing' && dealPhase === 'flipping' && idx <= dealFlipIndex;
                             const isDealFaceDown = gameState === 'dealing' && (!isFlipping);
                             return (
-                            <div key={`${card.rank}${card.suit}`} className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`} style={{
+                            <div key={`${card.rank}${card.suit}`} data-card-wrapper className={`relative ${isFlipping ? 'card-flip-reveal' : ''}`} style={{
                               marginTop: idx % 2 === 1 ? '4px' : '0',
                               // Explicit transform reset prevents stuck scaleX from interrupted flip animation (bug #100)
                               ...(!isFlipping ? { transform: 'none' } : {}),
