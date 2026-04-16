@@ -121,16 +121,10 @@
   }
 }
 
-/* Card flight animation for pegging.
-   Starts at opacity 0 for 1 frame so the source card can be hidden by
-   React before the flying card becomes visible — eliminates ghost card. */
+/* Card flight animation for pegging */
 @keyframes cardFly {
   0% {
     transform: translate(0, 0) scale(1);
-    opacity: 0;
-  }
-  3% {
-    transform: translate(calc(var(--fly-x) * 0.03), calc(var(--fly-y) * 0.03)) scale(1);
     opacity: 1;
   }
   50% {

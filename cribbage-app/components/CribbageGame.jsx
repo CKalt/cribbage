@@ -2032,11 +2032,10 @@ export default function CribbageGame({ onLogout }) {
     } : null;
 
     if (startRect && endRect) {
-      // Hide card in hand — the CSS animation starts at opacity:0 for one
-      // frame to give React time to commit this state before the flying card
-      // appears, eliminating the ghost card flash.
-      setPeggingFlyingCard(card);
-      // Start animation, defer state update until animation completes
+      // Remove card from hand immediately so it vanishes before the
+      // flying animation starts — no ghost card possible.
+      setPlayerPlayHand(prev => prev.filter(c => !(c.rank === card.rank && c.suit === card.suit)));
+      // Start animation, apply scoring/turn logic when animation completes
       setFlyingCard({
         card,
         startRect,
@@ -2044,7 +2043,6 @@ export default function CribbageGame({ onLogout }) {
         isComputer: false,
         onComplete: () => {
           setFlyingCard(null);
-          setPeggingFlyingCard(null);
           applyPlayerPlay(card);
         }
       });
@@ -2067,7 +2065,7 @@ export default function CribbageGame({ onLogout }) {
         width: areaRect.width,
         height: areaRect.height,
       };
-      setPeggingFlyingCard(peggingSelectedCard);
+      setPlayerPlayHand(prev => prev.filter(c => !(c.rank === peggingSelectedCard.rank && c.suit === peggingSelectedCard.suit)));
       setFlyingCard({
         card: peggingSelectedCard,
         startRect,
@@ -2075,7 +2073,6 @@ export default function CribbageGame({ onLogout }) {
         isComputer: false,
         onComplete: () => {
           setFlyingCard(null);
-          setPeggingFlyingCard(null);
           applyPlayerPlay(peggingSelectedCard);
         },
       });
