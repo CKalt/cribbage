@@ -1855,6 +1855,8 @@ export default function CribbageGame({ onLogout }) {
           } : null;
 
           if (startRect && endRect) {
+            // Remove card from hand immediately so no ghost card lingers
+            setComputerPlayHand(prev => prev.filter(c => !(c.rank === card.rank && c.suit === card.suit)));
             setFlyingCard({
               card,
               startRect,
